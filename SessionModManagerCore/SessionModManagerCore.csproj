@@ -5,7 +5,7 @@
     <AssemblyName>SessionModManagerCore</AssemblyName>
     <RootNamespace>SessionModManagerCore</RootNamespace>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <DocumentationFile>$(ProjectDir)SessionMapSwitcherCore\SessionModManagerCore.xml</DocumentationFile>
+    <DocumentationFile>$(ProjectDir)SessionModManagerCore.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
