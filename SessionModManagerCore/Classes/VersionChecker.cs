@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using Avantgarde.Core;
 using SessionMapSwitcherCore.Classes;
+using System.Collections.Generic;
 
 namespace SessionModManagerCore.Classes
 {
@@ -49,6 +50,7 @@ namespace SessionModManagerCore.Classes
                 if (IsNewVersionAvailable.HasValue == false)
                 {
                     IsNewVersionAvailable = UpdaterInstance.CheckForUpdates();
+                    DeleteOldVersionFiles();
                 }
 
                 return IsNewVersionAvailable.GetValueOrDefault(false);
@@ -79,6 +81,44 @@ namespace SessionModManagerCore.Classes
 
             return BoolWithMessage.True();
         }
+
+
+        #region Methods Related to Cleaning up from versions < 2.2.0.0
+
+        /// <summary>
+        /// List of files that are used in version older than 2.2.0.0
+        /// These will be deleted if they exist in the app directory
+        /// </summary>
+        private static List<string> _filesToDelete = new List<string>() { "NAppUpdate.Framework.dll", "SessionMapSwitcher.exe", "SessionMapSwitcher.exe.config" };
+
+        /// <summary>
+        /// Delete files used in versions older than 2.2.0.0
+        /// </summary>
+        private static void DeleteOldVersionFiles()
+        {
+            // check if SessionMapSwitcher.exe process is running
+            string currentProcName = Process.GetCurrentProcess().ProcessName;
+
+            if (currentProcName.Contains("SessionMapSwitcher"))
+            {
+                // We do not want to delete the extra files until we finish updating 2.2.0.0 by downloading the SessionModManager.exe file and relaunching using that proc
+                // ... we download the newly named .exe by running the update process (the version is set to 2.1.5.0 in ag_settings.json to trigger an update)
+                // ... note that the .exes are the same except for the name
+                return;
+            }
+
+            foreach (string filename in _filesToDelete)
+            {
+                string fullPath = Path.Combine(AppContext.BaseDirectory, filename);
+
+                if (File.Exists(fullPath))
+                {
+                    File.Delete(fullPath);
+                }
+            }
+        }
+
+        #endregion
 
     }
 }

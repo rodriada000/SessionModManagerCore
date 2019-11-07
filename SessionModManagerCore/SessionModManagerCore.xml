@@ -325,6 +325,17 @@
             and copies the latest files.
             </summary>
         </member>
+        <member name="F:SessionModManagerCore.Classes.VersionChecker._filesToDelete">
+            <summary>
+            List of files that are used in version older than 2.2.0.0
+            These will be deleted if they exist in the app directory
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.VersionChecker.DeleteOldVersionFiles">
+            <summary>
+            Delete files used in versions older than 2.2.0.0
+            </summary>
+        </member>
         <member name="P:DownloadableMap.ZipFileName">
             <summary>
             Name of zip file that will be downloaded for this map with the '.zip' extension
