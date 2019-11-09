@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using SessionMapSwitcherCore.Utils;
+using SessionModManagerCore.Classes;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,32 +18,6 @@ namespace SessionMapSwitcherCore.Classes
             {
                 return Path.Combine(SessionPath.ToContent, MetaFolderName);
             }
-        }
-
-        /// <summary>
-        /// Recursively searches folders for a .umap file that has the valid Session gamemode and returns the name of it
-        /// </summary>
-        public static string GetMapFileNameFromFolder(string folder)
-        {
-            foreach (string fileName in Directory.GetFiles(folder))
-            {
-                if (fileName.EndsWith(".umap") && MapListItem.HasGameMode(fileName))
-                {
-                    FileInfo fileInfo = new FileInfo(fileName);
-                    return fileInfo.Name;
-                }
-            }
-
-            foreach (string dir in Directory.GetDirectories(folder))
-            {
-                string mapName = GetMapFileNameFromFolder(dir);
-                if (mapName != "")
-                {
-                    return mapName;
-                }
-            }
-
-            return "";
         }
 
         /// <summary>
@@ -160,7 +137,7 @@ namespace SessionMapSwitcherCore.Classes
 
 
                     MapListItem foundMap = maps.Where(m => m.DirectoryPath == dirPath && m.MapName == mapName).FirstOrDefault();
-                    
+
                     if (foundMap != null)
                     {
                         foundMap.CustomName = customName;
@@ -170,7 +147,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception)
             {
-                
+
             }
         }
 
@@ -183,6 +160,85 @@ namespace SessionMapSwitcherCore.Classes
             if (Directory.Exists(FullPathToMetaFolder) == false)
             {
                 Directory.CreateDirectory(FullPathToMetaFolder);
+            }
+        }
+
+        public static MapMetaData CreateMapMetaData(string sourceMapFolder)
+        {
+            MapMetaData metaData = new MapMetaData();
+
+            MapListItem validMap = GetFirstValidMapInFolder(sourceMapFolder);
+
+            metaData.MapName = validMap.MapName;
+            metaData.MapFileDirectory = validMap.DirectoryPath;
+            metaData.FilePaths = FileUtils.GetAllFilesInDirectory(sourceMapFolder);
+            metaData.IsHiddenByUser = false;
+
+            return metaData;
+        }
+
+        public static MapListItem GetFirstValidMapInFolder(string sourceMapFolder)
+        {
+            foreach (string file in Directory.GetFiles(sourceMapFolder))
+            {
+                FileInfo fileInfo = new FileInfo(file);
+
+                if (fileInfo.Extension == ".umap")
+                {
+                    MapListItem map = new MapListItem()
+                    {
+                        FullPath = file,
+                        MapName = fileInfo.NameWithoutExtension()
+                    };
+                    map.Validate();
+
+                    if (map.IsValid)
+                    {
+                        return map;
+                    }
+                }
+            }
+
+            foreach (string dir in Directory.GetDirectories(sourceMapFolder))
+            {
+                MapListItem validMap = GetFirstValidMapInFolder(dir);
+
+                if (validMap != null)
+                {
+                    return validMap;
+                }
+            }
+
+            return null;
+        }
+
+        public static MapMetaData LoadMapMetaData(string mapName)
+        {
+            try
+            {
+                string fileName = $"{mapName}_meta.json";
+                string fileContents = File.ReadAllText(fileName);
+
+                return JsonConvert.DeserializeObject<MapMetaData>(fileContents);
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
+        }
+
+        public static void SaveMapMetaData(MapMetaData metaData)
+        {
+            try
+            {
+                string jsonToSave = JsonConvert.SerializeObject(metaData);
+                string fileName = $"{metaData.MapName}_meta.json";
+
+                File.WriteAllText(Path.Combine(FullPathToMetaFolder, fileName), jsonToSave);
+            }
+            catch (Exception e)
+            {
+                return;
             }
         }
     }

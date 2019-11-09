@@ -221,6 +221,33 @@ namespace SessionMapSwitcherCore.Utils
             return new BoolWithMessage(false, "Unsupported file type.");
         }
 
+
+        public static List<string> GetAllFilesInDirectory(string directoryPath)
+        {
+            List<string> allFiles = new List<string>();
+
+            if (Directory.Exists(directoryPath) == false)
+            {
+                return allFiles;
+            }
+
+            foreach (string file in Directory.GetFiles(directoryPath))
+            {
+                allFiles.Add(file);
+            }
+
+            foreach (string dir in Directory.GetDirectories(directoryPath))
+            {
+                List<string> subDirFiles = GetAllFilesInDirectory(dir);
+
+                if (subDirFiles.Count > 0)
+                {
+                    allFiles.AddRange(subDirFiles);
+                }
+            }
+
+            return allFiles;
+        }
     }
 
 }

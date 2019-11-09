@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using MapSwitcherUnitTests.Helpers;
@@ -78,6 +79,24 @@ namespace MapSwitcherUnitTests
             BoolWithMessage result = FileUtils.ExtractZipFile(pathToZip, extractPath);
 
             Assert.IsFalse(result.Result);
+        }
+
+        [TestMethod]
+        public void Test_GetAllFilesInDirectory_ReturnsCorrectResult()
+        {
+            string sourceDir = Path.Combine(TestPaths.ToTestFilesFolder, "folder_with_files");
+
+            List<string> expectedResult = new List<string>() { Path.Combine(sourceDir, "empty.txt"), Path.Combine(sourceDir, "subfolder", "empty.txt") };
+
+            List<string> actualResult = FileUtils.GetAllFilesInDirectory(sourceDir);
+        }
+
+        [TestMethod]
+        public void Test_GetAllFilesInDirectory_InvalidDir_ReturnsEmptyList()
+        {
+            List<string> actualResult = FileUtils.GetAllFilesInDirectory("not a dir");
+
+            Assert.AreEqual(0, actualResult.Count);
         }
     }
 }

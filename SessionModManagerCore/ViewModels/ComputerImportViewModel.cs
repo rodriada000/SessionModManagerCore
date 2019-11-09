@@ -1,5 +1,6 @@
 ﻿using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
+using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -174,7 +175,7 @@ namespace SessionMapSwitcherCore.ViewModels
             task.ContinueWith(continuationTask);
         }
 
-        internal Task<BoolWithMessage> ImportMapAsync(bool isReimport = false)
+        internal Task<BoolWithMessage> ImportMapAsync(bool allowReimport = false)
         {
             Task<BoolWithMessage> task = Task.Factory.StartNew(() =>
             {
@@ -209,20 +210,25 @@ namespace SessionMapSwitcherCore.ViewModels
                     sourceFolderToCopy = PathToFileOrFolder;
                 }
 
-
                 FileUtils.CopyDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
+
+                MapMetaData metaData = MetaDataManager.CreateMapMetaData(sourceFolderToCopy);
 
                 if (IsZipFileImport && Directory.Exists(PathToTempUnzipFolder))
                 {
                     // remove unzipped temp files
                     Directory.Delete(PathToTempUnzipFolder, true);
                 }
-                else if (isReimport == false)
+                else if (allowReimport)
                 {
+                    metaData.OriginalImportPath = sourceFolderToCopy;
+
                     // make .meta file to tag where the imported map came from to support the 'Re-import' feature
-                    string mapName = MetaDataManager.GetMapFileNameFromFolder(sourceFolderToCopy);
-                    BoolWithMessage result = MetaDataManager.TrackMapLocation(mapName, sourceFolderToCopy);
+                    //string mapName = MetaDataManager.GetMapFileNameFromFolder(sourceFolderToCopy);
+                    //BoolWithMessage result = MetaDataManager.TrackMapLocation(mapName, sourceFolderToCopy);
                 }
+
+                MetaDataManager.SaveMapMetaData(metaData);
 
                 return new BoolWithMessage(true);
             });

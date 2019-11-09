@@ -120,11 +120,6 @@
             Interface to represent a map switcher for EzPz and Unpacked versions of the game
             </summary>
         </member>
-        <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.GetMapFileNameFromFolder(System.String)">
-            <summary>
-            Recursively searches folders for a .umap file that has the valid Session gamemode and returns the name of it
-            </summary>
-        </member>
         <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.TrackMapLocation(System.String,System.String)">
             <summary>
             Creates a .meta file in the folder 'MapSwitcherMetaData' to store the original import source folder location.
@@ -293,6 +288,22 @@
         <member name="F:SessionMapSwitcherCore.ViewModels.UpdateViewModel.LatestReleaseUrl">
             <summary>
             url to the latest github release of the application
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.MapMetaData.OriginalImportPath">
+            <summary>
+            path to folder that was imported into Content.
+            Used for Re-import feature
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.MapMetaData.MapFileDirectory">
+            <summary>
+            Path to directory where .umap file exists
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.MapMetaData.FilePaths">
+            <summary>
+            List of absolute paths to files that were imported for the map
             </summary>
         </member>
         <member name="T:SessionModManagerCore.Classes.VersionChecker">
