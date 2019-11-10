@@ -89,6 +89,8 @@ namespace MapSwitcherUnitTests
             List<string> expectedResult = new List<string>() { Path.Combine(sourceDir, "empty.txt"), Path.Combine(sourceDir, "subfolder", "empty.txt") };
 
             List<string> actualResult = FileUtils.GetAllFilesInDirectory(sourceDir);
+
+            Assert.IsTrue(actualResult.TrueForAll(s => expectedResult.Contains(s)));
         }
 
         [TestMethod]

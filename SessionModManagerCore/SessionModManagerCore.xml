@@ -151,6 +151,13 @@
             Creates folder to Meta data folder if it does not exists
             </summary>
         </member>
+        <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.ReplaceSourceMapPathWithPathToContent(System.String,System.String)">
+            <summary>
+            Returns a new absolute file path replacing <paramref name="sourceMapFolder"/> with <see cref="P:SessionMapSwitcherCore.Classes.SessionPath.ToContent"/>
+            </summary>
+            <param name="sourceMapFolder"> path to replace with <see cref="P:SessionMapSwitcherCore.Classes.SessionPath.ToContent"/>. </param>
+            <param name="absoluteFilePath"> path to file that is in the <paramref name="sourceMapFolder"/>. </param>
+        </member>
         <member name="P:SessionMapSwitcherCore.Classes.SessionPath.ToNYCFolder">
             <summary>
             Returns absolute path to the NYC folder in Session game directory. Requires <see cref="T:SessionMapSwitcherCore.Classes.SessionPath"/>.

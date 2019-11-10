@@ -57,6 +57,36 @@
     <None Include="TestFiles\CustomTexture_Replaces_Jenkem_Tshirt.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Include="TestFiles\Mock_Map_Files\cool_valid_map\coolmap.uexp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Map_Files\cool_valid_map\coolmap.umap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Map_Files\cool_valid_map\coolmap_BuiltData.uasset">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Map_Files\cool_valid_map\coolmap_BuiltData.ubulk">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Map_Files\cool_valid_map\coolmap_BuiltData.uexp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Map_Files\some_folder\cool_valid_map\coolmap.uexp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Map_Files\some_folder\cool_valid_map\coolmap.umap">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Map_Files\some_folder\cool_valid_map\coolmap_BuiltData.uasset">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Map_Files\some_folder\cool_valid_map\coolmap_BuiltData.ubulk">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Map_Files\some_folder\cool_valid_map\coolmap_BuiltData.uexp">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="TestFiles\Mock_Map_Files\testmap.uexp">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -170,11 +170,37 @@ namespace SessionMapSwitcherCore.Classes
             MapListItem validMap = GetFirstValidMapInFolder(sourceMapFolder);
 
             metaData.MapName = validMap.MapName;
-            metaData.MapFileDirectory = validMap.DirectoryPath;
+            metaData.MapFileDirectory = ReplaceSourceMapPathWithPathToContent(sourceMapFolder, validMap.DirectoryPath);
+
             metaData.FilePaths = FileUtils.GetAllFilesInDirectory(sourceMapFolder);
+
+            // modify file paths to match the target folder Session "Content" folder
+            for (int i = 0; i < metaData.FilePaths.Count; i++)
+            {
+                metaData.FilePaths[i] = ReplaceSourceMapPathWithPathToContent(sourceMapFolder, metaData.FilePaths[i]);
+            }
+
             metaData.IsHiddenByUser = false;
 
             return metaData;
+        }
+
+        /// <summary>
+        /// Returns a new absolute file path replacing <paramref name="sourceMapFolder"/> with <see cref="SessionPath.ToContent"/>
+        /// </summary>
+        /// <param name="sourceMapFolder"> path to replace with <see cref="SessionPath.ToContent"/>. </param>
+        /// <param name="absoluteFilePath"> path to file that is in the <paramref name="sourceMapFolder"/>. </param>
+        private static string ReplaceSourceMapPathWithPathToContent(string sourceMapFolder, string absoluteFilePath)
+        {
+            if (absoluteFilePath.IndexOf(sourceMapFolder) < 0)
+            {
+                return "";
+            }
+
+            int startIndex = sourceMapFolder.Length + absoluteFilePath.IndexOf(sourceMapFolder);
+            string relativePath = absoluteFilePath.Substring(startIndex + 1);
+
+            return Path.Combine(SessionPath.ToContent, relativePath);
         }
 
         public static MapListItem GetFirstValidMapInFolder(string sourceMapFolder)
@@ -212,11 +238,13 @@ namespace SessionMapSwitcherCore.Classes
             return null;
         }
 
-        public static MapMetaData LoadMapMetaData(string mapName)
+        public static MapMetaData LoadMapMetaData(MapListItem mapItem)
         {
             try
             {
-                string fileName = $"{mapName}_meta.json";
+                DirectoryInfo dirInfo = new DirectoryInfo(mapItem.DirectoryPath);
+
+                string fileName = $"{dirInfo.Name}_{mapItem.MapName}_meta.json";
                 string fileContents = File.ReadAllText(fileName);
 
                 return JsonConvert.DeserializeObject<MapMetaData>(fileContents);
@@ -231,8 +259,9 @@ namespace SessionMapSwitcherCore.Classes
         {
             try
             {
+                string fileName = metaData.GetJsonFileName();
+
                 string jsonToSave = JsonConvert.SerializeObject(metaData);
-                string fileName = $"{metaData.MapName}_meta.json";
 
                 File.WriteAllText(Path.Combine(FullPathToMetaFolder, fileName), jsonToSave);
             }
