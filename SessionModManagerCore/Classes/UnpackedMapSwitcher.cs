@@ -12,6 +12,8 @@ namespace SessionMapSwitcherCore.Classes
     /// </summary>
     public class UnpackedMapSwitcher : IMapSwitcher
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         public MapListItem DefaultSessionMap { get; }
         internal MapListItem FirstLoadedMap { get; set; }
 
@@ -80,6 +82,7 @@ namespace SessionMapSwitcherCore.Classes
                         fullTargetFilePath += targetFileName;
                     }
 
+                    Logger.Info($"... copying {fileName} -> {fullTargetFilePath}");
                     File.Copy(fileName, fullTargetFilePath, true);
                 }
             }
@@ -108,6 +111,7 @@ namespace SessionMapSwitcherCore.Classes
                 // only delete custom map files, not NYC01 files
                 if (fileName.Contains("NYC01_") == false)
                 {
+                    Logger.Info($"... deleting {fileName}");
                     File.Delete(fileName);
                 }
             }
@@ -118,6 +122,7 @@ namespace SessionMapSwitcherCore.Classes
 
             if (SessionPath.IsSessionRunning() && File.Exists(nycMapFilePath))
             {
+                Logger.Info($"... Session running - deleting {nycMapFilePath}");
                 File.Delete(nycMapFilePath);
             }
         }
@@ -174,6 +179,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 return BoolWithMessage.False($"Failed to load {map.MapName}: {e.Message}");
             }
         }
@@ -192,6 +198,8 @@ namespace SessionMapSwitcherCore.Classes
                 {
                     string fullPath = Path.Combine(SessionPath.ToOriginalSessionMapFiles, $"{fileNamePrefix}{fileExt}");
                     string targetPath = Path.Combine(SessionPath.ToNYCFolder, $"{fileNamePrefix}{fileExt}");
+
+                    Logger.Info($"Copying {fullPath} -> {targetPath}");
                     File.Copy(fullPath, targetPath, true);
                 }
 
@@ -201,6 +209,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 return BoolWithMessage.False($"Failed to load Original Session Game Map : {e.Message}");
             }
         }
@@ -265,6 +274,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 string errorMsg = $"Failed to backup original map files: {e.Message}";
                 return BoolWithMessage.False(errorMsg);
             }

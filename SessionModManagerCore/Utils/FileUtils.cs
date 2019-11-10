@@ -12,6 +12,8 @@ namespace SessionMapSwitcherCore.Utils
 {
     public class FileUtils
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         internal static void CopyDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToExclude, bool doContainsSearch)
         {
             if (filesToExclude == null)
@@ -33,7 +35,14 @@ namespace SessionMapSwitcherCore.Utils
                 ContainsSearchForFiles = doContainsSearch
             };
 
-            CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+            try
+            {
+                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
         }
 
         internal static void CopyDirectoryRecursively(string sourceDirName, string destDirName)
@@ -45,7 +54,14 @@ namespace SessionMapSwitcherCore.Utils
                 ContainsSearchForFiles = false
             };
 
-            CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+            try
+            {
+                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
         }
 
         internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToInclude)
@@ -59,7 +75,14 @@ namespace SessionMapSwitcherCore.Utils
                 ContainsSearchForFiles = false
             };
 
-            CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+            try
+            {
+                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
         }
 
         internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName)
@@ -71,7 +94,14 @@ namespace SessionMapSwitcherCore.Utils
                 ContainsSearchForFiles = false
             };
 
-            CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+            try
+            {
+                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
         }
 
         private static void CopyOrMoveDirectoryRecursively(string sourceDirName, string destDirName, CopySettings settings)
@@ -154,29 +184,41 @@ namespace SessionMapSwitcherCore.Utils
         {
             try
             {
+                Logger.Info($"extracting .zip {pathToZip} ...");
+
                 using (ZipArchive archive = ZipFile.OpenRead(pathToZip))
                 {
+                    Logger.Info("... Opened .zip for read");
+
                     foreach (ZipArchiveEntry entry in archive.Entries)
                     {
                         string fullFileName = Path.Combine(extractPath, entry.FullName);
                         string entryPath = Path.GetDirectoryName(fullFileName);
 
+                        Logger.Info($"... {fullFileName} -> {entryPath}");
+
                         if (Directory.Exists(entryPath) == false)
                         {
+                            Logger.Info($"... creating missing directory {entryPath}");
                             Directory.CreateDirectory(entryPath);
                         }
 
                         bool isFileToExtract = (Path.GetFileName(fullFileName) != "");
 
+                        Logger.Info($"... {fullFileName}, isFileToExtract: {isFileToExtract}");
+
                         if (isFileToExtract)
                         {
+                            Logger.Info($"...... extracting");
                             entry.ExtractToFile(Path.GetFullPath(fullFileName), overwrite: true);
+                            Logger.Info($"......... extracted!");
                         }
                     }
                 }
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 return new BoolWithMessage(false, e.Message);
             }
 
@@ -187,20 +229,30 @@ namespace SessionMapSwitcherCore.Utils
         {
             try
             {
+                Logger.Info($"extracting .rar {pathToRar} ...");
+
+
                 using (RarArchive archive = RarArchive.Open(pathToRar))
                 {
+                    Logger.Info("... Opened .rar for read");
+
                     foreach (RarArchiveEntry entry in archive.Entries.Where(entry => !entry.IsDirectory))
                     {
+                        Logger.Info($"...... extracting {entry.Key}");
+
                         entry.WriteToDirectory(extractPath, new ExtractionOptions()
                         {
                             ExtractFullPath = true,
                             Overwrite = true
                         });
+
+                        Logger.Info($"......... extracted!");
                     }
                 }
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 return new BoolWithMessage(false, e.Message);
             }
 
@@ -218,6 +270,7 @@ namespace SessionMapSwitcherCore.Utils
                 return ExtractRarFile(pathToFile, extractPath);
             }
 
+            Logger.Warn($"Unsupported file type: {pathToFile}");
             return new BoolWithMessage(false, "Unsupported file type.");
         }
 

@@ -9,6 +9,8 @@ namespace SessionMapSwitcherCore.Utils
 {
     public class DownloadUtils
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         public delegate void ProgressChangedHandler(long? totalFileSize, long totalBytesDownloaded, double? progressPercentage);
 
         public static event ProgressChangedHandler ProgressChanged;
@@ -26,6 +28,8 @@ namespace SessionMapSwitcherCore.Utils
                 task.Wait(10000);
 
                 HttpResponseMessage response = task.Result;
+                Logger.Info($"response received: {response.StatusCode} - {response.ReasonPhrase}");
+
                 // Check that response was successful or throw exception
                 response.EnsureSuccessStatusCode();
 
@@ -48,6 +52,8 @@ namespace SessionMapSwitcherCore.Utils
                 requestTask.Wait();
 
                 HttpResponseMessage response = requestTask.Result;
+
+                Logger.Info($"response received: {response.StatusCode} - {response.ReasonPhrase}");
                 // Check that response was successful or throw exception
                 response.EnsureSuccessStatusCode();
 
@@ -110,6 +116,9 @@ namespace SessionMapSwitcherCore.Utils
 
                 using (HttpResponseMessage response = await client.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancelToken))
                 {
+                    Logger.Info($"response received: {response.StatusCode} - {response.ReasonPhrase}");
+
+
                     long? totalBytes = response.Content.Headers.ContentLength;
 
                     // You must use as stream to have control over buffering and number of bytes read/received

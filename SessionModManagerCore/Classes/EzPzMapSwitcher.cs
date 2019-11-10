@@ -11,6 +11,8 @@ namespace SessionMapSwitcherCore.Classes
     /// </summary>
     public class EzPzMapSwitcher : IMapSwitcher
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         public MapListItem DefaultSessionMap { get; }
         internal MapListItem FirstLoadedMap { get; set; }
 
@@ -39,6 +41,9 @@ namespace SessionMapSwitcherCore.Classes
             {
                 return false;
             }
+
+            Logger.Info($"Copying Map Files for {map.MapName}");
+
 
             // copy all files related to map to game directory
             foreach (string fileName in Directory.GetFiles(map.DirectoryPath))
@@ -69,7 +74,7 @@ namespace SessionMapSwitcherCore.Classes
                     }
 
 
-
+                    Logger.Info($"... copying {fileName} -> {fullTargetFilePath}");
                     File.Copy(fileName, fullTargetFilePath, overwrite: true);
                 }
             }
@@ -122,6 +127,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 return BoolWithMessage.False($"Failed to load {map.MapName}: {e.Message}");
             }
         }
@@ -139,6 +145,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 return BoolWithMessage.False($"Failed to load Original Session Game Map : {e.Message}");
             }
         }
@@ -155,6 +162,7 @@ namespace SessionMapSwitcherCore.Classes
 
             foreach (string fileName in Directory.GetFiles(SessionPath.ToNYCFolder))
             {
+                Logger.Info($"... deleting file {fileName}");
                 File.Delete(fileName);
             }
         }
@@ -174,10 +182,12 @@ namespace SessionMapSwitcherCore.Classes
                 var parser = new FileIniDataParser();
                 parser.Parser.Configuration.AllowDuplicateKeys = true;
                 IniData iniFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
+
                 return iniFile["/Script/EngineSettings.GameMapsSettings"]["GameDefaultMap"];
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.Error(e);
                 return "";
             }
         }
@@ -190,18 +200,22 @@ namespace SessionMapSwitcherCore.Classes
                 return false;
             }
 
-            var parser = new FileIniDataParser();
-            parser.Parser.Configuration.AllowDuplicateKeys = true;
-            IniData iniFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
-            iniFile["/Script/EngineSettings.GameMapsSettings"]["GameDefaultMap"] = defaultMapValue;
-
             try
             {
+                var parser = new FileIniDataParser();
+                parser.Parser.Configuration.AllowDuplicateKeys = true;
+                IniData iniFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
+
+                iniFile["/Script/EngineSettings.GameMapsSettings"]["GameDefaultMap"] = defaultMapValue;
+
                 parser.WriteFile(SessionPath.ToUserEngineIniFile, iniFile);
+
+                Logger.Info($"... GameDefaultMap set to {defaultMapValue}");
                 return true;
             }
-            catch(Exception)
+            catch(Exception e)
             {
+                Logger.Error(e);
                 return false;
             }            
         }
