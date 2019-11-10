@@ -32,7 +32,7 @@
 
         public UpdateViewModel()
         {
-            HeaderMessage = "A new version of Session Map Switcher is available to download. You can view what's changed below.";
+            HeaderMessage = "A new version of Session Mod Manager is available to download. You can view what's changed below.";
             IsBrowserVisible = false;
         }
     }

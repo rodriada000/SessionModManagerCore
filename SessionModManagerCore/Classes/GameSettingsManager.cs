@@ -9,6 +9,8 @@ namespace SessionMapSwitcherCore.Classes
 {
     public static class GameSettingsManager
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         private static double _gravity;
         public static double Gravity { get => _gravity; set => _gravity = value; }
 
@@ -71,6 +73,7 @@ namespace SessionMapSwitcherCore.Classes
                 Gravity = -980;
                 SkipIntroMovie = false;
 
+                Logger.Error(e);
                 return BoolWithMessage.False($"Could not get game settings: {e.Message}");
             }
         }
@@ -103,6 +106,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 return BoolWithMessage.False($"Failed to update object count: {e.Message}");
             }
         }
@@ -159,6 +163,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 return BoolWithMessage.False($"Failed to update gravity and/or skip movie: {e.Message}");
             }
 
@@ -213,6 +218,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e, "Failed to get object count");
                 return BoolWithMessage.False($"Failed to get object count: {e.Message}");
             }
         }
@@ -280,6 +286,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e, "Failed to set object count");
                 return BoolWithMessage.False($"Failed to set object count: {e.Message}");
             }
         }
@@ -335,6 +342,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e, "Failed to rename Movies folder");
                 return BoolWithMessage.False($"Failed to rename Movies folder: {e.Message}");
             }
 

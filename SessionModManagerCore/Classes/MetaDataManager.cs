@@ -7,6 +7,8 @@ namespace SessionMapSwitcherCore.Classes
 {
     public class MetaDataManager
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         public const string MetaFolderName = "MapSwitcherMetaData";
 
         public static string FullPathToMetaFolder
@@ -65,6 +67,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e, "failed to track map");
                 return new BoolWithMessage(false, e.Message);
             }
         }
@@ -77,8 +80,9 @@ namespace SessionMapSwitcherCore.Classes
 
                 return File.ReadAllText(trackingFileName);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.Error(e, "failed to get map location");
                 return "";
             }
         }
@@ -123,8 +127,9 @@ namespace SessionMapSwitcherCore.Classes
 
                 File.WriteAllLines(pathToMetaFile, linesToWrite.ToArray());
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Logger.Error(e, "failed to write custom map props to file");
                 return false;
             }
 
@@ -168,9 +173,9 @@ namespace SessionMapSwitcherCore.Classes
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                
+                Logger.Error(e, "failed to set custom map props from file");
             }
         }
 

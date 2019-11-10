@@ -62,6 +62,8 @@ namespace SessionMapSwitcherCore.Classes
 
         private const string CryptoJsonGitHubUrl = "https://raw.githubusercontent.com/rodriada000/SessionMapSwitcher/url_updates/docs/direct_cryptojsonDownloadLink.txt";
 
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         /// <summary>
         /// Handles the entire patching process
         /// ... download zip files
@@ -73,6 +75,8 @@ namespace SessionMapSwitcherCore.Classes
             this.PathToSession = pathToSession;
             bool didEzPzDownload = false;
             bool didUnrealPakDownload = false;
+
+            Logger.Info("Starting EzPz Patch Process ...");
 
             // download the zip file in the background
             Task t = Task.Factory.StartNew(() =>
@@ -113,6 +117,7 @@ namespace SessionMapSwitcherCore.Classes
             {
                 if (!didUnrealPakDownload || !didEzPzDownload)
                 {
+                    Logger.Warn("Failed to download files, cannot continue");
                     PatchCompleted(false);
                     return;
                 }
@@ -215,6 +220,8 @@ namespace SessionMapSwitcherCore.Classes
         private bool DownloadCryptoJsonFile()
         {
             ProgressChanged("Downloading crypto.json file ...");
+            Logger.Info("downloading crypto.json ...");
+
 
             try
             {
@@ -230,14 +237,18 @@ namespace SessionMapSwitcherCore.Classes
                 ProgressChanged("Downloading crypto.json file -  downloading actual file ...");
                 var downloadTask = DownloadUtils.DownloadFileToFolderAsync(directLinkToZip, SessionPath.ToCryptoJsonFile, System.Threading.CancellationToken.None);
                 downloadTask.Wait();
+
+                Logger.Info("... download complete");
             }
             catch (AggregateException e)
             {
+                Logger.Error(e);
                 ProgressChanged($"Failed to download crypto.json: {e.InnerExceptions[0].Message}. Cannot continue.");
                 return false;
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 ProgressChanged($"Failed to download crypto.json: {e.Message}. Cannot continue.");
                 return false;
             }
@@ -253,23 +264,31 @@ namespace SessionMapSwitcherCore.Classes
         {
             ProgressChanged("Starting Session EzPz Mod. Click 'Patch' when the window opens then close it after completion ...");
 
-            using (Process proc = new Process())
+            try
             {
-                proc.StartInfo.UseShellExecute = true;
-                proc.StartInfo.WorkingDirectory = @"C:\Windows\System32";
-                proc.StartInfo.FileName = @"C:\Windows\System32\cmd.exe";
-                proc.StartInfo.Arguments = $"/C \"\"{SessionPath.ToPaks}\\{EzPzExeName}\" \"{this.PathToSession}\"\"";
-                proc.StartInfo.CreateNoWindow = true;
-                proc.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-
-                if (IsRunningAsAdmin)
+                using (Process proc = new Process())
                 {
-                    proc.StartInfo.Verb = "runas";
-                }
+                    proc.StartInfo.UseShellExecute = true;
+                    proc.StartInfo.WorkingDirectory = @"C:\Windows\System32";
+                    proc.StartInfo.FileName = @"C:\Windows\System32\cmd.exe";
+                    proc.StartInfo.Arguments = $"/C \"\"{SessionPath.ToPaks}\\{EzPzExeName}\" \"{this.PathToSession}\"\"";
+                    proc.StartInfo.CreateNoWindow = true;
+                    proc.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
 
-                proc.Start();
-                proc.WaitForExit();
+                    if (IsRunningAsAdmin)
+                    {
+                        proc.StartInfo.Verb = "runas";
+                    }
+
+                    proc.Start();
+                    proc.WaitForExit();
+                }
             }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
+
         }
 
         /// <summary>
@@ -278,31 +297,41 @@ namespace SessionMapSwitcherCore.Classes
         private void ExtractGameFilesFromPak()
         {
             ProgressChanged("Starting UnrealPak.exe ...");
+            Logger.Info("Extracting game files with UnrealPak.exe ...");
 
             List<string> filesToExtract = new List<string>() { "SessionGame/Content/ObjectPlacement/Blueprints/PBP_ObjectPlacementInventory.uexp" };
 
-            foreach (string file in filesToExtract)
+            try
             {
-                using (Process proc = new Process())
+                foreach (string file in filesToExtract)
                 {
-                    ProgressChanged($"Extracting file: {file} ...");
-
-                    proc.StartInfo.WorkingDirectory = SessionPath.ToPaks;
-                    proc.StartInfo.FileName = Path.Combine(SessionPath.ToPaks, "UnrealPak.exe");
-                    proc.StartInfo.Arguments = $"-cryptokeys=\"crypto.json\" -Extract \"{SessionPath.ToPakFile}\" \"..\\..\\..\" -Filter=\"{file}\"";
-                    proc.StartInfo.CreateNoWindow = false;
-
-                    if (IsRunningAsAdmin)
+                    using (Process proc = new Process())
                     {
-                        proc.StartInfo.Verb = "runas";
+                        ProgressChanged($"Extracting file: {file} ...");
+
+                        proc.StartInfo.WorkingDirectory = SessionPath.ToPaks;
+                        proc.StartInfo.FileName = Path.Combine(SessionPath.ToPaks, "UnrealPak.exe");
+                        proc.StartInfo.Arguments = $"-cryptokeys=\"crypto.json\" -Extract \"{SessionPath.ToPakFile}\" \"..\\..\\..\" -Filter=\"{file}\"";
+                        proc.StartInfo.CreateNoWindow = false;
+
+                        if (IsRunningAsAdmin)
+                        {
+                            proc.StartInfo.Verb = "runas";
+                        }
+
+                        proc.Start();
+
+
+                        proc.WaitForExit();
                     }
-
-                    proc.Start();
-
-
-                    proc.WaitForExit();
                 }
             }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
+
+
         }
 
         /// <summary>
@@ -355,20 +384,26 @@ namespace SessionMapSwitcherCore.Classes
 
                 // visit github to get current anon file download link
                 ProgressChanged("Downloading Session EzPz Mod .zip file - getting download url from git ...");
+                Logger.Info("Downloading Session EzPz Mod .zip file ...");
+
                 string downloadUrl = DownloadUtils.GetTxtDocumentFromGitHubRepo(EzPzGitHubUrl);
 
                 downloadUrl = downloadUrl.TrimEnd(new char[] { ' ', '\n' });
 
                 var downloadTask = DownloadUtils.DownloadFileToFolderAsync(downloadUrl, Path.Combine(SessionPath.ToPaks, DownloadedPatchFileName), System.Threading.CancellationToken.None);
                 downloadTask.Wait();
+
+                Logger.Info("... download complete");
             }
             catch (AggregateException e)
             {
+                Logger.Error(e);
                 ProgressChanged($"Failed to download .zip file: {e.InnerExceptions[0].Message}. Cannot continue.");
                 return false;
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 ProgressChanged($"Failed to download .zip file: {e.Message}. Cannot continue.");
                 return false;
             }
@@ -387,6 +422,7 @@ namespace SessionMapSwitcherCore.Classes
         internal bool DownloadUnrealPackZip()
         {
             ProgressChanged("Downloading UnrealPak .zip file ...");
+            Logger.Info("UnrealPak.zip downloading");
 
             try
             {
@@ -402,14 +438,18 @@ namespace SessionMapSwitcherCore.Classes
                 ProgressChanged("Downloading UnrealPak .zip file -  downloading actual file ...");
                 var downloadTask = DownloadUtils.DownloadFileToFolderAsync(directLinkToZip, Path.Combine(SessionPath.ToPaks, DownloadedZipFileName), System.Threading.CancellationToken.None);
                 downloadTask.Wait();
+
+                Logger.Info("... download complete");
             }
             catch (AggregateException e)
             {
+                Logger.Error(e);
                 ProgressChanged($"Failed to download .zip file: {e.InnerExceptions[0].Message}. Cannot continue.");
                 return false;
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 ProgressChanged($"Failed to download .zip file: {e.Message}. Cannot continue.");
                 return false;
             }
@@ -444,6 +484,7 @@ namespace SessionMapSwitcherCore.Classes
 
             try
             {
+                Logger.Info($"Copying files from {PathToUnrealEngine}");
                 string pathToUnrealPak = Path.Combine(new string[] { PathToUnrealEngine, "Engine", "Binaries", "Win64" });
 
                 foreach (string file in Directory.GetFiles(pathToUnrealPak))
@@ -461,6 +502,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 return BoolWithMessage.False($"Failed to copy unrealpak files: {e.Message}");
             }
         }

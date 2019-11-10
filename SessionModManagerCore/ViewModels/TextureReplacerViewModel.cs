@@ -9,6 +9,8 @@ namespace SessionMapSwitcherCore.ViewModels
 {
     public class TextureReplacerViewModel : ViewModelBase
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         private string _pathToFile;
         private const string _tempZipFolder = "Temp_Texture_Unzipped";
 
@@ -109,6 +111,7 @@ namespace SessionMapSwitcherCore.ViewModels
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 MessageChanged?.Invoke($"Failed to copy texture files: {e.Message}");
                 return;
             }
@@ -122,11 +125,13 @@ namespace SessionMapSwitcherCore.ViewModels
             DeleteTempZipFolder();
             Directory.CreateDirectory(PathToTempFolder);
 
+            Logger.Info($"Extracting {PathToFile}...");
 
             // extract to temp location
             BoolWithMessage didExtract = FileUtils.ExtractCompressedFile(PathToFile, PathToTempFolder);
             if (didExtract.Result == false)
             {
+                Logger.Warn($"... failed to extract: {didExtract.Message}");
                 MessageChanged?.Invoke($"Failed to extract file: {didExtract.Message}");
                 return;
             }
@@ -138,12 +143,14 @@ namespace SessionMapSwitcherCore.ViewModels
             // validate at least one texture file is in the zip
             if (foundTextureName == "")
             {
+                Logger.Warn("... failed to find a .uasset file");
                 MessageChanged?.Invoke($"Failed to find a .uasset file inside the extracted folders.");
                 return;
             }
 
             do
             {
+                Logger.Info($"... found texture {foundTextureName}");
                 foundTextures.Add(foundTextureName);
 
                 textureFileInfo = new FileInfo(foundTextureName);
@@ -173,13 +180,14 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 try
                 {
-                    DeleteCurrentTextureFiles(originalTextureName, targetFolder);
 
+                    DeleteCurrentTextureFiles(originalTextureName, targetFolder);
                     // find and copy files in source dir that match the .uasset name
                     CopyNewTextureFilesToGame(textureFileInfo, targetFolder, originalTextureName);
                 }
                 catch (Exception e)
                 {
+                    Logger.Error(e);
                     MessageChanged?.Invoke($"Failed to copy texture files: {e.Message}");
                     return;
                 }
@@ -203,6 +211,7 @@ namespace SessionMapSwitcherCore.ViewModels
             }
             catch (Exception e)
             {
+                Logger.Error(e);
                 MessageChanged?.Invoke($"Failed to copy texture files: {e.Message}");
                 return;
             }
@@ -213,6 +222,7 @@ namespace SessionMapSwitcherCore.ViewModels
             // delete temp folder with unzipped files
             if (Directory.Exists(PathToTempFolder))
             {
+                Logger.Info("... deleting temp zip");
                 Directory.Delete(PathToTempFolder, true);
             }
         }
@@ -234,6 +244,8 @@ namespace SessionMapSwitcherCore.ViewModels
                     }).ToList();
 
 
+
+                    Logger.Info($"... copying folder {folder} -> {Path.Combine(SessionPath.ToContent, folderInfo.Name)}");
                     FileUtils.CopyDirectoryRecursively(folder, Path.Combine(SessionPath.ToContent, folderInfo.Name), filesToExclude: fileNames, foldersToExclude: null, doContainsSearch: true);
                 }
             }
@@ -343,6 +355,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
             if (Directory.Exists(targetFolder) == false)
             {
+                Logger.Info($"... creating missing directory {targetFolder}");
                 Directory.CreateDirectory(targetFolder);
             }
 
@@ -353,6 +366,8 @@ namespace SessionMapSwitcherCore.ViewModels
                 if (info.NameWithoutExtension() == textureFileName)
                 {
                     string targetPath = Path.Combine(targetFolder, $"{textureName}{info.Extension}");
+
+                    Logger.Info($"... copying {file} -> {targetPath}");
                     File.Copy(file, targetPath, overwrite: true);
                 }
             }
@@ -374,6 +389,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 if (existingFile.Contains(textureFileName))
                 {
+                    Logger.Info($"... deleting current texture {existingFile}");
                     File.Delete(existingFile);
                 }
             }

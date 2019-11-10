@@ -14,6 +14,8 @@ namespace SessionModManagerCore.Classes
     /// </summary>
     public static class VersionChecker
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         private static Updater _updater;
 
         /// <summary>
@@ -57,6 +59,7 @@ namespace SessionModManagerCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e, "failed to check for updates");
                 return false;
             }
         }
@@ -75,6 +78,7 @@ namespace SessionModManagerCore.Classes
                 }
                 catch (Exception e)
                 {
+                    Logger.Error(e, "failed to launch update process");
                     return BoolWithMessage.False($"An error occurred while trying to update: {e.Message}");
                 }
             }
