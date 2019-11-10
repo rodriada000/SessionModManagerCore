@@ -60,6 +60,14 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        public bool IsReplaceButtonEnabled
+        {
+            get
+            {
+                return EzPzPatcher.IsGamePatched() || UnpackUtils.IsSessionUnpacked();
+            }
+        }
+
         public void ReplaceTextures()
         {
             InitTexturePaths();
@@ -249,6 +257,14 @@ namespace SessionMapSwitcherCore.ViewModels
                     FileUtils.CopyDirectoryRecursively(folder, Path.Combine(SessionPath.ToContent, folderInfo.Name), filesToExclude: fileNames, foldersToExclude: null, doContainsSearch: true);
                 }
             }
+        }
+
+        /// <summary>
+        /// Enable or disable the 'Replace' button based on the game being patched/unpacked
+        /// </summary>
+        public void TriggerPropertyChanged()
+        {
+            NotifyPropertyChanged(nameof(IsReplaceButtonEnabled));
         }
 
         /// <summary>
