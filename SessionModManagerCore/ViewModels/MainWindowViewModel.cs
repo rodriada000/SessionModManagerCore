@@ -1,11 +1,14 @@
 ﻿using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Classes.Interfaces;
 using SessionMapSwitcherCore.Utils;
+using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+
 
 namespace SessionMapSwitcherCore.ViewModels
 {
@@ -35,7 +38,6 @@ namespace SessionMapSwitcherCore.ViewModels
                                                                  "Right-click anywhere and click 'View Help ...' to open the readme",
                                                                  "Use Project Watcher to auto-import your map after you cooked it in Unreal Engine",
                                                                };
-
 
         public string SessionPathTextInput
         {
@@ -386,6 +388,23 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        public void ReloadAvailableMapsInBackground(bool showLoadingMessage = true)
+        {
+            if (showLoadingMessage)
+            {
+                UserMessage = $"Reloading Available Maps ...";
+            }
+
+            InputControlsEnabled = false;
+
+            Task t = Task.Factory.StartNew(() => LoadAvailableMaps());
+
+            t.ContinueWith((antecedent) =>
+            {
+                InputControlsEnabled = true;
+            });
+        }
+
         public bool LoadAvailableMaps()
         {
             lock (collectionLock)
@@ -415,7 +434,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 return false;
             }
 
-            MetaDataManager.SetCustomPropertiesForMaps(AvailableMaps);
+            MetaDataManager.SetCustomPropertiesForMaps(AvailableMaps, createIfNotExists: true);
 
             lock (collectionLock)
             {
@@ -516,21 +535,23 @@ namespace SessionMapSwitcherCore.ViewModels
                 return;
             }
 
+            MapMetaData existingMetaData = MetaDataManager.LoadMapMetaData(selectedItem);
+
             ComputerImportViewModel importViewModel = new ComputerImportViewModel()
             {
                 IsZipFileImport = false,
-                PathInput = MetaDataManager.GetOriginalImportLocation(selectedItem.MapName)
+                PathInput = MetaDataManager.GetOriginalImportLocation(selectedItem)
             };
 
             UserMessage = "Re-importing in progress ...";
 
-            importViewModel.ImportMapAsyncAndContinueWith(isReimport: true,
-                (antecedent) =>
+            importViewModel.ImportMapAsyncAndContinueWith((antecedent) =>
                 {
                     if (antecedent.Result.Result)
                     {
-                        UserMessage = "Map Re-imported Successfully!";
-                        LoadAvailableMaps();
+                        UserMessage = "Map Re-imported Successfully! Reloading maps ...";
+                        MetaDataManager.SaveMapMetaData(existingMetaData); // re-save meta data to keep original import path and other custom properties
+                        ReloadAvailableMapsInBackground(showLoadingMessage: false);
                     }
                     else
                     {
@@ -756,6 +777,73 @@ namespace SessionMapSwitcherCore.ViewModels
 
             _patcher = null;
             InputControlsEnabled = true;
+        }
+
+        public void DeleteSelectedMap(MapListItem mapToDelete)
+        {
+            MapMetaData metaData = MetaDataManager.LoadMapMetaData(mapToDelete);
+
+            if (metaData == null)
+            {
+                UserMessage = $"Failed to get meta data for map: {mapToDelete.DisplayName}";
+                return;
+            }
+
+            if (metaData.FilePaths?.Count == 0)
+            {
+                UserMessage = $"List of files to delete is unknown for {mapToDelete.DisplayName}. You must manually delete the map files from the following folder: {mapToDelete.DirectoryPath}";
+                return;
+            }
+
+            try
+            {
+                foreach (string file in metaData.FilePaths)
+                {
+                    if (File.Exists(file))
+                    {
+                        File.Delete(file);
+                    }
+                }
+
+                string currentDir = mapToDelete.DirectoryPath;
+
+                if (currentDir != SessionPath.ToContent)
+                {
+                    List<string> remainingFiles = FileUtils.GetAllFilesInDirectory(currentDir);
+
+                    // iteratively go up parent folder structure to delete empty folders after files have been deleted
+                    while (remainingFiles.Count == 0 && currentDir != SessionPath.ToContent)
+                    {
+                        string dirToDelete = currentDir;
+
+                        DirectoryInfo dirInfo = new DirectoryInfo(currentDir);
+                        currentDir = dirInfo.Parent.FullName; // get path to parent directory to check next
+
+                        Directory.Delete(dirToDelete, true);
+
+                        if (currentDir != SessionPath.ToContent)
+                        {
+                            remainingFiles = FileUtils.GetAllFilesInDirectory(currentDir); // get list of files from parent dir to check next
+                        }
+                    }
+                }
+
+                // lastly delete meta data file
+                string pathToMetaData = Path.Combine(MetaDataManager.FullPathToMetaFolder, metaData.GetJsonFileName());
+                if (File.Exists(pathToMetaData))
+                {
+                    File.Delete(pathToMetaData);
+                }
+
+                UserMessage = $"{mapToDelete.DisplayName} has been deleted! Reloading maps ...";
+                ReloadAvailableMapsInBackground(showLoadingMessage: false);
+            }
+            catch (Exception e)
+            {
+                UserMessage = $"Failed to delete files: {e.Message}";
+                return;
+            }
+
         }
 
         #endregion

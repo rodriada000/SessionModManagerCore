@@ -1,5 +1,6 @@
 ﻿using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
+using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,8 +10,6 @@ namespace SessionMapSwitcherCore.ViewModels
 {
     public class ComputerImportViewModel : ViewModelBase
     {
-        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
-
         public static readonly List<string> FilesToExclude = new List<string>() { "DefaultEngine.ini", "DefaultGame.ini" };
         public static readonly List<string> AllStockFoldersToExclude = new List<string> { "Animation", "Art", "Audio", "Challenges", "Character", "Cinematics", "Customization", "Data", "FilmerMode", "KickStarter", "Localization", "MainHUB", "Menus", "Mixer", "Movies", "ObjectPlacement", "Paks", "PartyGames", "Skateboard", "Skeletons", "Splash", "TEMP", "Transit", "Tutorial", "VideoEditor" };
 
@@ -123,7 +122,7 @@ namespace SessionMapSwitcherCore.ViewModels
             this.PathInput = "";
         }
 
-        public void BeginImportMapAsync(bool isReimport = false)
+        public void BeginImportMapAsync()
         {
             UserMessage = "Importing Map ...";
 
@@ -139,11 +138,17 @@ namespace SessionMapSwitcherCore.ViewModels
 
             IsImporting = true;
 
-            Task<BoolWithMessage> task = ImportMapAsync(isReimport);
+            Task<BoolWithMessage> task = ImportMapAsync();
 
             task.ContinueWith((antecedent) =>
             {
                 IsImporting = false;
+
+                if (antecedent.IsFaulted)
+                {
+                    UserMessage = "An error occurred importing the map.";
+                    return;
+                }
 
                 if (antecedent.Result.Result)
                 {
@@ -151,7 +156,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
                 else
                 {
-                    UserMessage = $"Map failed to import: {antecedent.Result.Message}";
+                    UserMessage = $"Failed to import map: {antecedent.Result.Message}";
                 }
             });
         }
@@ -174,13 +179,13 @@ namespace SessionMapSwitcherCore.ViewModels
             return pathToMapFiles;
         }
 
-        internal void ImportMapAsyncAndContinueWith(bool isReimport, Action<Task<BoolWithMessage>> continuationTask)
+        internal void ImportMapAsyncAndContinueWith(Action<Task<BoolWithMessage>> continuationTask)
         {
-            Task<BoolWithMessage> task = ImportMapAsync(isReimport);
+            Task<BoolWithMessage> task = ImportMapAsync();
             task.ContinueWith(continuationTask);
         }
 
-        internal Task<BoolWithMessage> ImportMapAsync(bool isReimport = false)
+        internal Task<BoolWithMessage> ImportMapAsync()
         {
             Task<BoolWithMessage> task = Task.Factory.StartNew(() =>
             {
@@ -188,9 +193,10 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (IsZipFileImport)
                 {
+                    // extract compressed file before copying
                     if (File.Exists(PathToFileOrFolder) == false)
                     {
-                        return new BoolWithMessage(false, $"{PathToFileOrFolder} does not exist.");
+                        return BoolWithMessage.False($"{PathToFileOrFolder} does not exist.");
                     }
 
                     // extract files first before copying
@@ -200,37 +206,57 @@ namespace SessionMapSwitcherCore.ViewModels
                     if (didExtract.Result == false)
                     {
                         UserMessage = $"Failed to extract file: {didExtract.Message}";
-                        return new BoolWithMessage(false, $"Failed to extract: {didExtract.Message}.");
+                        return BoolWithMessage.False($"Failed to extract: {didExtract.Message}.");
                     }
 
                     sourceFolderToCopy = EnsurePathToMapFilesIsCorrect(PathToTempUnzipFolder);
                 }
                 else
                 {
+                    // validate folder exists and contains a valid map file
                     if (Directory.Exists(PathToFileOrFolder) == false)
                     {
-                        return new BoolWithMessage(false, $"{PathToFileOrFolder} does not exist.");
+                        return BoolWithMessage.False($"{PathToFileOrFolder} does not exist.");
                     }
 
                     sourceFolderToCopy = PathToFileOrFolder;
+
+                    bool hasValidMap = MetaDataManager.DoesValidMapExistInFolder(sourceFolderToCopy);
+
+                    if (hasValidMap == false)
+                    {
+                        return BoolWithMessage.False($"{PathToFileOrFolder} does not contain a valid .umap file to import.");
+                    }
                 }
 
+                if (IsZipFileImport)
+                {
+                    FileUtils.MoveDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
+                }
+                else
+                {
+                    FileUtils.CopyDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
+                }
 
-                FileUtils.CopyDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
+                // create meta data for new map and save to disk
+                MapMetaData metaData = MetaDataManager.CreateMapMetaData(sourceFolderToCopy, true);
+
+                if (IsZipFileImport == false && metaData != null)
+                {
+                    metaData.OriginalImportPath = sourceFolderToCopy;
+                }
+
+                MetaDataManager.SaveMapMetaData(metaData);
+
 
                 if (IsZipFileImport && Directory.Exists(PathToTempUnzipFolder))
                 {
                     // remove unzipped temp files
                     Directory.Delete(PathToTempUnzipFolder, true);
                 }
-                else if (isReimport == false)
-                {
-                    // make .meta file to tag where the imported map came from to support the 'Re-import' feature
-                    string mapName = MetaDataManager.GetMapFileNameFromFolder(sourceFolderToCopy);
-                    BoolWithMessage result = MetaDataManager.TrackMapLocation(mapName, sourceFolderToCopy);
-                }
 
-                return new BoolWithMessage(true);
+                return BoolWithMessage.True();
+
             });
 
             return task;

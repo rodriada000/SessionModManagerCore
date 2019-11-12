@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using SessionMapSwitcherCore.Utils;
+using SessionModManagerCore.Classes;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,8 +10,6 @@ namespace SessionMapSwitcherCore.Classes
 {
     public class MetaDataManager
     {
-        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
-
         public const string MetaFolderName = "MapSwitcherMetaData";
 
         public static string FullPathToMetaFolder
@@ -19,117 +20,42 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
-        /// <summary>
-        /// Recursively searches folders for a .umap file that has the valid Session gamemode and returns the name of it
-        /// </summary>
-        public static string GetMapFileNameFromFolder(string folder)
+
+        internal static string GetOriginalImportLocation(MapListItem map)
         {
-            foreach (string fileName in Directory.GetFiles(folder))
+            MapMetaData metaData = LoadMapMetaData(map);
+
+            if (metaData == null)
             {
-                if (fileName.EndsWith(".umap") && MapListItem.HasGameMode(fileName))
-                {
-                    FileInfo fileInfo = new FileInfo(fileName);
-                    return fileInfo.Name;
-                }
-            }
-
-            foreach (string dir in Directory.GetDirectories(folder))
-            {
-                string mapName = GetMapFileNameFromFolder(dir);
-                if (mapName != "")
-                {
-                    return mapName;
-                }
-            }
-
-            return "";
-        }
-
-        /// <summary>
-        /// Creates a .meta file in the folder 'MapSwitcherMetaData' to store the original import source folder location.
-        /// </summary>
-        internal static BoolWithMessage TrackMapLocation(string mapName, string sourceFolderToCopy)
-        {
-            string umapExt = ".umap";
-
-            try
-            {
-                if (mapName.EndsWith(umapExt))
-                {
-                    mapName = mapName.Substring(0, mapName.Length - umapExt.Length);
-                }
-
-                CreateMetaDataFolder();
-
-                string trackingFileName = Path.Combine(FullPathToMetaFolder, $".meta_{mapName}");
-                File.WriteAllText(trackingFileName, sourceFolderToCopy);
-                return new BoolWithMessage(true);
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e, "failed to track map");
-                return new BoolWithMessage(false, e.Message);
-            }
-        }
-
-        internal static string GetOriginalImportLocation(string mapName)
-        {
-            try
-            {
-                string trackingFileName = Path.Combine(FullPathToMetaFolder, $".meta_{mapName}");
-
-                return File.ReadAllText(trackingFileName);
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e, "failed to get map location");
                 return "";
             }
+
+            return metaData.OriginalImportPath;
         }
 
-        public static bool IsImportLocationStored(string mapName)
+        public static bool IsImportLocationStored(MapListItem map)
         {
-            return GetOriginalImportLocation(mapName) != "";
+            return String.IsNullOrEmpty(GetOriginalImportLocation(map)) == false;
         }
+
 
         /// <summary>
-        /// Creates a file 'customNames.meta' if it does not exist and writes
-        /// the custom names of maps to the file.
+        /// Loops over maps and updates meta .json files with new custom properties
         /// </summary>
-        /// <returns> true if file updated; false if exception thrown </returns>
-        /// <remarks>
-        /// The map directory and map name is used as the Key to the custom name and is written to the file like so:
-        /// MapDirectory | MapName | CustomName | IsHidden
-        /// </remarks>
+        /// <returns> true if files updated; false if exception thrown </returns>
         public static bool WriteCustomMapPropertiesToFile(IEnumerable<MapListItem> maps)
         {
             try
             {
                 CreateMetaDataFolder();
 
-                List<string> linesToWrite = new List<string>();
-
                 foreach (MapListItem map in maps)
                 {
-                    // only write maps to meta data file that users have set custom properties for
-                    if (String.IsNullOrWhiteSpace(map.CustomName) == false || map.IsHiddenByUser)
-                    {
-                        linesToWrite.Add(map.MetaData);
-                    }
+                    WriteCustomMapPropertiesToFile(map);
                 }
-
-                string pathToMetaFile = Path.Combine(FullPathToMetaFolder, "customNames.meta");
-
-                if (File.Exists(pathToMetaFile))
-                {
-                    File.Delete(pathToMetaFile);
-                }
-
-                File.WriteAllLines(pathToMetaFile, linesToWrite.ToArray());
             }
             catch (Exception e)
             {
-                Logger.Error(e, "failed to write custom map props to file");
                 return false;
             }
 
@@ -137,46 +63,65 @@ namespace SessionMapSwitcherCore.Classes
         }
 
         /// <summary>
-        /// Gets the custom map names from 'customNames.meta' file and updates
-        /// list of maps with their custom names.
+        /// Loops over each map and gets the custom properties from their respective meta .json file
         /// </summary>
-        /// <param name="maps"></param>
-        /// <remarks>
-        /// customNames.meta uses the map directory and the map name as the Key to find the correct custom map name
-        /// </remarks>
-        internal static void SetCustomPropertiesForMaps(IEnumerable<MapListItem> maps)
+        internal static void SetCustomPropertiesForMaps(IEnumerable<MapListItem> maps, bool createIfNotExists = false)
         {
             try
             {
-                string pathToMetaFile = Path.Combine(FullPathToMetaFolder, "customNames.meta");
-
-                if (File.Exists(pathToMetaFile) == false)
+                foreach (MapListItem map in maps)
                 {
-                    return;
-                }
-
-                foreach (string line in File.ReadAllLines(pathToMetaFile))
-                {
-                    string[] parts = line.Split(new char[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-                    string dirPath = parts[0].Trim();
-                    string mapName = parts[1].Trim();
-                    string customName = parts[2].Trim();
-                    string isHidden = parts[3].Trim();
-
-
-                    MapListItem foundMap = maps.Where(m => m.DirectoryPath == dirPath && m.MapName == mapName).FirstOrDefault();
-                    
-                    if (foundMap != null)
-                    {
-                        foundMap.CustomName = customName;
-                        foundMap.IsHiddenByUser = (isHidden.Equals("true", StringComparison.OrdinalIgnoreCase));
-                    }
+                    SetCustomPropertiesForMap(map, createIfNotExists);
                 }
             }
             catch (Exception e)
             {
-                Logger.Error(e, "failed to set custom map props from file");
+
             }
+        }
+
+        /// <summary>
+        /// Gets the meta .json for the map if it exists and updates
+        /// the custom name and IsHiddenByUser property
+        /// </summary>
+        public static void SetCustomPropertiesForMap(MapListItem map, bool createIfNotExists = false)
+        {
+            MapMetaData savedMetaData = LoadMapMetaData(map);
+
+            if (savedMetaData == null)
+            {
+                if (createIfNotExists)
+                {
+                    savedMetaData = CreateMapMetaData(map);
+                    SaveMapMetaData(savedMetaData);
+                }
+                else
+                {
+                    return;
+                }
+            }
+
+            map.IsHiddenByUser = savedMetaData.IsHiddenByUser;
+            map.CustomName = savedMetaData.CustomName;
+        }
+
+        /// <summary>
+        /// Updates the meta .json files for the maps with the new
+        /// custom names and if it is hidden.
+        /// </summary>
+        public static void WriteCustomMapPropertiesToFile(MapListItem map)
+        {
+            MapMetaData metaDataToSave = LoadMapMetaData(map);
+
+            if (metaDataToSave == null)
+            {
+                return;
+            }
+
+            metaDataToSave.IsHiddenByUser = map.IsHiddenByUser;
+            metaDataToSave.CustomName = map.CustomName;
+
+            SaveMapMetaData(metaDataToSave);
         }
 
 
@@ -189,6 +134,169 @@ namespace SessionMapSwitcherCore.Classes
             {
                 Directory.CreateDirectory(FullPathToMetaFolder);
             }
+        }
+
+        public static MapMetaData CreateMapMetaData(string sourceMapFolder, bool findMapFiles)
+        {
+            MapMetaData metaData = new MapMetaData();
+            metaData.IsHiddenByUser = false;
+            metaData.CustomName = "";
+
+            MapListItem validMap = GetFirstMapInFolder(sourceMapFolder, isValid: true);
+
+            if (validMap == null)
+            {
+                return null;
+            }
+
+            metaData.MapName = validMap.MapName;
+            metaData.MapFileDirectory = ReplaceSourceMapPathWithPathToContent(sourceMapFolder, validMap.DirectoryPath);
+
+            if (findMapFiles)
+            { 
+                metaData.FilePaths = FileUtils.GetAllFilesInDirectory(sourceMapFolder);
+
+                // modify file paths to match the target folder Session "Content" folder
+                for (int i = 0; i < metaData.FilePaths.Count; i++)
+                {
+                    metaData.FilePaths[i] = ReplaceSourceMapPathWithPathToContent(sourceMapFolder, metaData.FilePaths[i]);
+                }
+            }
+            else
+            {
+                metaData.FilePaths = new List<string>();
+            }
+
+            return metaData;
+        }
+
+        public static MapMetaData CreateMapMetaData(MapListItem map)
+        {
+            MapMetaData metaData = new MapMetaData();
+
+            metaData.MapName = map.MapName;
+            metaData.MapFileDirectory = map.DirectoryPath;
+            metaData.FilePaths = new List<string>();
+            metaData.IsHiddenByUser = map.IsHiddenByUser;
+            metaData.CustomName = map.CustomName;
+
+            return metaData;
+        }
+
+        /// <summary>
+        /// Returns a new absolute file path replacing <paramref name="sourceMapFolder"/> with <see cref="SessionPath.ToContent"/>
+        /// </summary>
+        /// <param name="sourceMapFolder"> path to replace with <see cref="SessionPath.ToContent"/>. </param>
+        /// <param name="absoluteFilePath"> path to file that is in the <paramref name="sourceMapFolder"/>. </param>
+        private static string ReplaceSourceMapPathWithPathToContent(string sourceMapFolder, string absoluteFilePath)
+        {
+            if (absoluteFilePath.IndexOf(sourceMapFolder) < 0)
+            {
+                return "";
+            }
+
+            int startIndex = sourceMapFolder.Length + absoluteFilePath.IndexOf(sourceMapFolder);
+
+            if (startIndex >= absoluteFilePath.Length)
+            {
+                return SessionPath.ToContent;
+            }
+
+            string relativePath = absoluteFilePath.Substring(startIndex + 1);
+            return Path.Combine(SessionPath.ToContent, relativePath);
+        }
+
+        public static MapListItem GetFirstMapInFolder(string sourceMapFolder, bool isValid)
+        {
+            foreach (string file in Directory.GetFiles(sourceMapFolder, "*.umap"))
+            {
+                FileInfo fileInfo = new FileInfo(file);
+
+                MapListItem map = new MapListItem()
+                {
+                    FullPath = file,
+                    MapName = fileInfo.NameWithoutExtension()
+                };
+                map.Validate();
+
+                if (map.IsValid == isValid)
+                {
+                    return map;
+                }
+            }
+
+            foreach (string dir in Directory.GetDirectories(sourceMapFolder))
+            {
+                MapListItem foundMap = GetFirstMapInFolder(dir, isValid);
+
+                if (foundMap != null)
+                {
+                    return foundMap;
+                }
+            }
+
+            return null;
+        }
+
+        internal static bool DoesValidMapExistInFolder(string sourceFolder)
+        {
+            return GetFirstMapInFolder(sourceFolder, isValid: true) != null;
+        }
+
+        public static MapMetaData LoadMapMetaData(MapListItem mapItem)
+        {
+            try
+            {
+                DirectoryInfo dirInfo = new DirectoryInfo(mapItem.DirectoryPath);
+
+                string fileName = $"{dirInfo.Name}_{mapItem.MapName}_meta.json";
+                string pathToFile = Path.Combine(FullPathToMetaFolder, fileName);
+
+                string fileContents = File.ReadAllText(pathToFile);
+
+                return JsonConvert.DeserializeObject<MapMetaData>(fileContents);
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
+        }
+
+        public static void SaveMapMetaData(MapMetaData metaData)
+        {
+            if (metaData == null)
+            {
+                return;
+            }
+
+            try
+            {
+                CreateMetaDataFolder();
+
+                string fileName = metaData.GetJsonFileName();
+                string pathToFile = Path.Combine(FullPathToMetaFolder, fileName);
+
+
+                string jsonToSave = JsonConvert.SerializeObject(metaData);
+
+                File.WriteAllText(pathToFile, jsonToSave);
+            }
+            catch (Exception e)
+            {
+                return;
+            }
+        }
+
+        public static bool HasPathToMapFilesStored(MapListItem map)
+        {
+            MapMetaData metaData = LoadMapMetaData(map);
+
+            if (metaData != null)
+            {
+                return metaData.FilePaths?.Count > 0;
+            }
+
+            return false;
         }
     }
 }

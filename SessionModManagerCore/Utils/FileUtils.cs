@@ -64,15 +64,25 @@ namespace SessionMapSwitcherCore.Utils
             }
         }
 
-        internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToInclude)
+        internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToExclude, bool doContainsSearch)
         {
+            if (filesToExclude == null)
+            {
+                filesToExclude = new List<string>();
+            }
+
+            if (foldersToExclude == null)
+            {
+                foldersToExclude = new List<string>();
+            }
+
             CopySettings settings = new CopySettings()
             {
                 IsMovingFiles = true,
                 CopySubFolders = true,
                 ExcludeFiles = filesToExclude,
-                ExcludeFolders = foldersToInclude,
-                ContainsSearchForFiles = false
+                ExcludeFolders = foldersToExclude,
+                ContainsSearchForFiles = doContainsSearch
             };
 
             try
@@ -274,6 +284,33 @@ namespace SessionMapSwitcherCore.Utils
             return new BoolWithMessage(false, "Unsupported file type.");
         }
 
+
+        public static List<string> GetAllFilesInDirectory(string directoryPath)
+        {
+            List<string> allFiles = new List<string>();
+
+            if (Directory.Exists(directoryPath) == false)
+            {
+                return allFiles;
+            }
+
+            foreach (string file in Directory.GetFiles(directoryPath))
+            {
+                allFiles.Add(file);
+            }
+
+            foreach (string dir in Directory.GetDirectories(directoryPath))
+            {
+                List<string> subDirFiles = GetAllFilesInDirectory(dir);
+
+                if (subDirFiles.Count > 0)
+                {
+                    allFiles.AddRange(subDirFiles);
+                }
+            }
+
+            return allFiles;
+        }
     }
 
 }

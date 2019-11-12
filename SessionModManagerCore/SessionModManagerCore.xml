@@ -120,41 +120,40 @@
             Interface to represent a map switcher for EzPz and Unpacked versions of the game
             </summary>
         </member>
-        <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.GetMapFileNameFromFolder(System.String)">
-            <summary>
-            Recursively searches folders for a .umap file that has the valid Session gamemode and returns the name of it
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.TrackMapLocation(System.String,System.String)">
-            <summary>
-            Creates a .meta file in the folder 'MapSwitcherMetaData' to store the original import source folder location.
-            </summary>
-        </member>
         <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.WriteCustomMapPropertiesToFile(System.Collections.Generic.IEnumerable{MapListItem})">
             <summary>
-            Creates a file 'customNames.meta' if it does not exist and writes
-            the custom names of maps to the file.
+            Loops over maps and updates meta .json files with new custom properties
             </summary>
-            <returns> true if file updated; false if exception thrown </returns>
-            <remarks>
-            The map directory and map name is used as the Key to the custom name and is written to the file like so:
-            MapDirectory | MapName | CustomName | IsHidden
-            </remarks>
+            <returns> true if files updated; false if exception thrown </returns>
         </member>
-        <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.SetCustomPropertiesForMaps(System.Collections.Generic.IEnumerable{MapListItem})">
+        <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.SetCustomPropertiesForMaps(System.Collections.Generic.IEnumerable{MapListItem},System.Boolean)">
             <summary>
-            Gets the custom map names from 'customNames.meta' file and updates
-            list of maps with their custom names.
+            Loops over each map and gets the custom properties from their respective meta .json file
             </summary>
-            <param name="maps"></param>
-            <remarks>
-            customNames.meta uses the map directory and the map name as the Key to find the correct custom map name
-            </remarks>
+        </member>
+        <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.SetCustomPropertiesForMap(MapListItem,System.Boolean)">
+            <summary>
+            Gets the meta .json for the map if it exists and updates
+            the custom name and IsHiddenByUser property
+            </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.WriteCustomMapPropertiesToFile(MapListItem)">
+            <summary>
+            Updates the meta .json files for the maps with the new
+            custom names and if it is hidden.
+            </summary>
         </member>
         <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.CreateMetaDataFolder">
             <summary>
             Creates folder to Meta data folder if it does not exists
             </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.Classes.MetaDataManager.ReplaceSourceMapPathWithPathToContent(System.String,System.String)">
+            <summary>
+            Returns a new absolute file path replacing <paramref name="sourceMapFolder"/> with <see cref="P:SessionMapSwitcherCore.Classes.SessionPath.ToContent"/>
+            </summary>
+            <param name="sourceMapFolder"> path to replace with <see cref="P:SessionMapSwitcherCore.Classes.SessionPath.ToContent"/>. </param>
+            <param name="absoluteFilePath"> path to file that is in the <paramref name="sourceMapFolder"/>. </param>
         </member>
         <member name="P:SessionMapSwitcherCore.Classes.SessionPath.ToNYCFolder">
             <summary>
@@ -294,6 +293,28 @@
             <summary>
             url to the latest github release of the application
             </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.MapMetaData.OriginalImportPath">
+            <summary>
+            path to folder that was imported into Content.
+            Used for Re-import feature
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.MapMetaData.MapFileDirectory">
+            <summary>
+            Path to directory where .umap file exists
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.MapMetaData.FilePaths">
+            <summary>
+            List of absolute paths to files that were imported for the map
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.MapMetaData.GetJsonFileName">
+            <summary>
+            Returns the name of the json file that this meta data is saved as
+            </summary>
+            <returns></returns>
         </member>
         <member name="T:SessionModManagerCore.Classes.VersionChecker">
             <summary>
