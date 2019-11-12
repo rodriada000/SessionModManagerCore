@@ -272,6 +272,11 @@
             Copies other folders (not stock game folders) from unzipped temp folder into games Content folder
             </summary>
         </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.TextureReplacerViewModel.TriggerPropertyChanged">
+            <summary>
+            Enable or disable the 'Replace' button based on the game being patched/unpacked
+            </summary>
+        </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.TextureReplacerViewModel.UnzippedTempFolderHasOtherFolders">
             <summary>
             Return true if unzipped temp folder has subfolders other than the games stock folders e.g. 'Customization' folder

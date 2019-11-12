@@ -232,15 +232,6 @@ namespace SessionMapSwitcherCore.ViewModels
                     }
                 }
 
-                if (IsZipFileImport)
-                {
-                    FileUtils.MoveDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
-                }
-                else
-                {
-                    FileUtils.CopyDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
-                }
-
                 // create meta data for new map and save to disk
                 MapMetaData metaData = MetaDataManager.CreateMapMetaData(sourceFolderToCopy, true);
 
@@ -250,6 +241,16 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
 
                 MetaDataManager.SaveMapMetaData(metaData);
+
+                // copy/move files
+                if (IsZipFileImport)
+                {
+                    FileUtils.MoveDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
+                }
+                else
+                {
+                    FileUtils.CopyDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
+                }
 
 
                 if (IsZipFileImport && Directory.Exists(PathToTempUnzipFolder))
