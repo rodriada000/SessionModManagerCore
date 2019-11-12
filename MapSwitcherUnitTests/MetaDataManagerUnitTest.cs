@@ -14,7 +14,7 @@ namespace MapSwitcherUnitTests
         [TestMethod]
         public void Test_GetFirstValidMapInFolder_ValidMap_ReturnsMapListItem()
         {
-            MapListItem actualResult = MetaDataManager.GetFirstValidMapInFolder(Path.Combine(TestPaths.ToTestFilesFolder, "Mock_Map_Files"));
+            MapListItem actualResult = MetaDataManager.GetFirstMapInFolder(Path.Combine(TestPaths.ToTestFilesFolder, "Mock_Map_Files"), true);
 
             Assert.AreEqual("testmap", actualResult.MapName);
         }
@@ -32,7 +32,7 @@ namespace MapSwitcherUnitTests
                                                  Path.Combine(SessionPath.ToContent, "coolmap_BuiltData.ubulk")}
             };
 
-            MapMetaData actualResult = MetaDataManager.CreateMapMetaData(pathToMapImporting);
+            MapMetaData actualResult = MetaDataManager.CreateMapMetaData(pathToMapImporting, true);
 
             actualResult.FilePaths.TrueForAll(s => expectedResult.FilePaths.Contains(s));
             expectedResult.FilePaths.TrueForAll(s => actualResult.FilePaths.Contains(s));
@@ -53,10 +53,54 @@ namespace MapSwitcherUnitTests
                                                  Path.Combine(SessionPath.ToContent, "cool_valid_map", "coolmap_BuiltData.ubulk")}
             };
 
-            MapMetaData actualResult = MetaDataManager.CreateMapMetaData(pathToMapImporting);
+            MapMetaData actualResult = MetaDataManager.CreateMapMetaData(pathToMapImporting, true);
 
             actualResult.FilePaths.TrueForAll(s => expectedResult.FilePaths.Contains(s));
             expectedResult.FilePaths.TrueForAll(s => actualResult.FilePaths.Contains(s));
+        }
+
+        [TestMethod]
+        public void Test_SaveMapMetaData_Saves_File()
+        {
+            SessionPath.ToSession = TestPaths.ToSessionTestFolder;
+
+            MapMetaData testMetaData = new MapMetaData()
+            {
+                FilePaths = new List<string>() { "test1", "test2" },
+                CustomName = "Test Custom Name",
+                MapName = "MapName",
+                IsHiddenByUser = false,
+                OriginalImportPath = "",
+                MapFileDirectory = "Path\\To\\Content\\MapName_Folder"
+            };
+
+            MetaDataManager.SaveMapMetaData(testMetaData);
+
+            string pathToExpectedFile = Path.Combine(MetaDataManager.FullPathToMetaFolder, "MapName_Folder_MapName_meta.json");
+
+            Assert.IsTrue(File.Exists(pathToExpectedFile));
+        }
+
+        [TestMethod]
+        public void Test_SaveMapMetaData_Saves_Correct_Json()
+        {
+            SessionPath.ToSession = TestPaths.ToSessionTestFolder;
+
+            MapMetaData testMetaData = new MapMetaData()
+            {
+                FilePaths = new List<string>() { "test1", "test2" },
+                CustomName = "Test Custom Name",
+                MapName = "MapName",
+                IsHiddenByUser = false,
+                OriginalImportPath = "",
+                MapFileDirectory = "Path\\To\\Content\\MapName_Folder"
+            };
+
+            MetaDataManager.SaveMapMetaData(testMetaData);
+
+            string pathToSavedFile = Path.Combine(MetaDataManager.FullPathToMetaFolder, testMetaData.GetJsonFileName());
+
+            Assert.AreEqual(Newtonsoft.Json.JsonConvert.SerializeObject(testMetaData), File.ReadAllText(pathToSavedFile));
         }
     }
 }

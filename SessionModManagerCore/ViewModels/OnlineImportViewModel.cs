@@ -212,7 +212,7 @@ namespace SessionMapSwitcherCore.ViewModels
             HeaderMessage = $"Downloading and copying map files. This may take a couple of minutes. Click '{ImportButtonText}' to stop ...";
 
             bool didDownload = false;
-            BoolWithMessage didExtract = null;
+            BoolWithMessage didImport = null;
 
             tokenSource = new System.Threading.CancellationTokenSource();
             cancelToken = tokenSource.Token;
@@ -249,8 +249,18 @@ namespace SessionMapSwitcherCore.ViewModels
                     DownloadUtils.ProgressChanged -= DownloadUtils_ProgressChanged;
                 }
 
-                HeaderMessage = "Extracting downloaded .zip ...";
-                didExtract = FileUtils.ExtractCompressedFile(pathToZip, SessionPath.ToContent);
+                HeaderMessage = "Extracting downloaded .zip and copying files ...";
+
+                ComputerImportViewModel computerImport = new ComputerImportViewModel()
+                {
+                    IsZipFileImport = true,
+                    PathInput = pathToZip
+                };
+
+                Task<BoolWithMessage> importTask = computerImport.ImportMapAsync();
+                importTask.Wait();
+
+                didImport = importTask.Result;
             });
 
 
@@ -264,9 +274,9 @@ namespace SessionMapSwitcherCore.ViewModels
                     return;
                 }
 
-                if (didExtract?.Result == false)
+                if (didImport?.Result == false)
                 {
-                    HeaderMessage = $"Failed to extract map files: {didExtract?.Message}.";
+                    HeaderMessage = $"Failed to import map files: {didImport?.Message}.";
                     MapImported?.Invoke(false);
                     return;
                 }

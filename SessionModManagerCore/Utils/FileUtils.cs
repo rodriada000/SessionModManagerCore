@@ -48,15 +48,25 @@ namespace SessionMapSwitcherCore.Utils
             CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
         }
 
-        internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToInclude)
+        internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToExclude, bool doContainsSearch)
         {
+            if (filesToExclude == null)
+            {
+                filesToExclude = new List<string>();
+            }
+
+            if (foldersToExclude == null)
+            {
+                foldersToExclude = new List<string>();
+            }
+
             CopySettings settings = new CopySettings()
             {
                 IsMovingFiles = true,
                 CopySubFolders = true,
                 ExcludeFiles = filesToExclude,
-                ExcludeFolders = foldersToInclude,
-                ContainsSearchForFiles = false
+                ExcludeFolders = foldersToExclude,
+                ContainsSearchForFiles = doContainsSearch
             };
 
             CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
