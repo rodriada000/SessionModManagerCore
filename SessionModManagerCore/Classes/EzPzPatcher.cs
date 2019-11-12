@@ -89,9 +89,11 @@ namespace SessionMapSwitcherCore.Classes
                 if (IsEzPzExeDownloaded() == false && SkipEzPzPatchStep == false)
                 {
                     didEzPzDownload = DownloadEzPzModZip();
+                    Logger.Info($"didEzPzDownload: {didEzPzDownload}");
                 }
                 else
                 {
+                    Logger.Info($"... skipping ezpz download");
                     didEzPzDownload = true;
                 }
 
@@ -110,11 +112,22 @@ namespace SessionMapSwitcherCore.Classes
                         didUnrealPakDownload = DownloadCryptoJsonFile();
                     }
                 }
+                else
+                {
+                    Logger.Info($"... skipping unrealpak download");
+                }
 
             });
 
             t.ContinueWith((task) =>
             {
+                if (task.IsFaulted)
+                {
+                    Logger.Error(task.Exception, "patch task faulted");
+                    PatchCompleted(false);
+                    return;
+                }
+
                 if (!didUnrealPakDownload || !didEzPzDownload)
                 {
                     Logger.Warn("Failed to download files, cannot continue");
@@ -162,10 +175,24 @@ namespace SessionMapSwitcherCore.Classes
 
                 if (SkipEzPzPatchStep == false)
                 {
+                    Logger.Info($"IsEzPzExeDownloaded() = {IsEzPzExeDownloaded()}");
+
                     if (IsEzPzExeDownloaded() == false)
                     {
                         ProgressChanged("Extracting EzPz .zip files ...");
-                        BoolWithMessage isEzPzExtracted = FileUtils.ExtractZipFile(Path.Combine(SessionPath.ToPaks, DownloadedPatchFileName), SessionPath.ToPaks);
+                        BoolWithMessage isEzPzExtracted = BoolWithMessage.False("");
+
+                        try
+                        {
+                            isEzPzExtracted = FileUtils.ExtractZipFile(Path.Combine(SessionPath.ToPaks, DownloadedPatchFileName), SessionPath.ToPaks);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.Error(e, "failed to extract zip");
+                            ProgressChanged($"Failed to unzip file: {e.Message}. Cannot continue.");
+                            isEzPzExtracted.Message = e.Message;
+                            PatchCompleted(false);
+                        }
 
                         if (isEzPzExtracted.Result == false)
                         {
@@ -380,7 +407,7 @@ namespace SessionMapSwitcherCore.Classes
 
             try
             {
-                DownloadUtils.ProgressChanged += DownloadUtils_ProgressChanged; ;
+                DownloadUtils.ProgressChanged += DownloadUtils_ProgressChanged;
 
                 // visit github to get current anon file download link
                 ProgressChanged("Downloading Session EzPz Mod .zip file - getting download url from git ...");
@@ -409,7 +436,10 @@ namespace SessionMapSwitcherCore.Classes
             }
             finally
             {
+                Logger.Info("... unsubscribing to event");
                 DownloadUtils.ProgressChanged -= DownloadUtils_ProgressChanged;
+                Logger.Info("... unsubscribed");
+
             }
 
             return true;

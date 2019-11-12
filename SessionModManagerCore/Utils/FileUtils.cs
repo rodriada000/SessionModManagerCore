@@ -196,7 +196,7 @@ namespace SessionMapSwitcherCore.Utils
             {
                 Logger.Info($"extracting .zip {pathToZip} ...");
 
-                using (ZipArchive archive = ZipFile.OpenRead(pathToZip))
+                using (ZipArchive archive = OpenRead(pathToZip))
                 {
                     Logger.Info("... Opened .zip for read");
 
@@ -220,7 +220,13 @@ namespace SessionMapSwitcherCore.Utils
                         if (isFileToExtract)
                         {
                             Logger.Info($"...... extracting");
-                            entry.ExtractToFile(Path.GetFullPath(fullFileName), overwrite: true);
+                            using (Stream deflatedStream = entry.Open())
+                            {
+                                using (FileStream fileStream = File.Create(fullFileName))
+                                {
+                                    deflatedStream.CopyTo(fileStream);
+                                }
+                            }
                             Logger.Info($"......... extracted!");
                         }
                     }
@@ -285,6 +291,11 @@ namespace SessionMapSwitcherCore.Utils
         }
 
 
+        public static ZipArchive OpenRead(string filename)
+        {
+            return new ZipArchive(File.OpenRead(filename), ZipArchiveMode.Read);
+        }
+
         public static List<string> GetAllFilesInDirectory(string directoryPath)
         {
             List<string> allFiles = new List<string>();
@@ -311,6 +322,7 @@ namespace SessionMapSwitcherCore.Utils
 
             return allFiles;
         }
+
     }
 
 }

@@ -203,8 +203,19 @@ namespace SessionMapSwitcherCore.ViewModels
                     }
 
                     // extract files first before copying
-                    Directory.CreateDirectory(PathToTempUnzipFolder);
-                    BoolWithMessage didExtract = FileUtils.ExtractCompressedFile(PathToFileOrFolder, PathToTempUnzipFolder);
+                    BoolWithMessage didExtract = BoolWithMessage.False("");
+
+                    try
+                    {
+                        Directory.CreateDirectory(PathToTempUnzipFolder);
+                        didExtract = FileUtils.ExtractCompressedFile(PathToFileOrFolder, PathToTempUnzipFolder);
+                    }
+                    catch (Exception e)
+                    {
+                        Logger.Error(e, "failed to extract zip");
+                        didExtract.Message = e.Message;
+                    }
+
 
                     if (didExtract.Result == false)
                     {

@@ -14,6 +14,8 @@ namespace SessionMapSwitcherCore.ViewModels
 {
     public class MainWindowViewModel : ViewModelBase
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         #region Data Members And Properties
 
         private string _sessionPath;
@@ -724,6 +726,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private void Patch_ProgressChanged(string message)
         {
+            Logger.Info(message);
             UserMessage = message;
         }
 
