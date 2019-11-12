@@ -10,6 +10,8 @@ namespace SessionMapSwitcherCore.ViewModels
 {
     public class ComputerImportViewModel : ViewModelBase
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         public static readonly List<string> FilesToExclude = new List<string>() { "DefaultEngine.ini", "DefaultGame.ini" };
         public static readonly List<string> AllStockFoldersToExclude = new List<string> { "Animation", "Art", "Audio", "Challenges", "Character", "Cinematics", "Customization", "Data", "FilmerMode", "KickStarter", "Localization", "MainHUB", "Menus", "Mixer", "Movies", "ObjectPlacement", "Paks", "PartyGames", "Skateboard", "Skeletons", "Splash", "TEMP", "Transit", "Tutorial", "VideoEditor" };
 
@@ -146,6 +148,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (antecedent.IsFaulted)
                 {
+                    Logger.Warn(antecedent.Exception, "import task uncaught exception");
                     UserMessage = "An error occurred importing the map.";
                     return;
                 }

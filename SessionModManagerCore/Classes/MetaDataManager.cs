@@ -10,6 +10,8 @@ namespace SessionMapSwitcherCore.Classes
 {
     public class MetaDataManager
     {
+        private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
         public const string MetaFolderName = "MapSwitcherMetaData";
 
         public static string FullPathToMetaFolder
@@ -56,6 +58,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e, "failed to write custom map properties to file");
                 return false;
             }
 
@@ -76,7 +79,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
-
+                Logger.Error(e, "Failed to set custom map properties");
             }
         }
 
@@ -258,6 +261,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e, "failed to load map meta data");
                 return null;
             }
         }
@@ -283,6 +287,7 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
+                Logger.Error(e, "failed to save map meta data");
                 return;
             }
         }
