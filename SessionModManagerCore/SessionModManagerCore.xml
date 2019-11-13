@@ -239,6 +239,13 @@
             </summary>
             <returns> true if file was renamed; false otherwise. </returns>
         </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.GetManifestsAsync(System.Boolean,System.Boolean)">
+            <summary>
+            Downloads manifest files and refreshes <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.FilteredAssetList"/> after successful download.
+            </summary>
+            <param name="forceRefresh"> force download the manifests again</param>
+            <param name="getSelectedOnly"> only download manifests for the selected asset categories </param>
+        </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.ComputerImportViewModel.EnsurePathToMapFilesIsCorrect(System.String)">
             <summary>
             This will check if the folder path to a map has the 'Content' folder and returns path to the maps 'Content folder if so

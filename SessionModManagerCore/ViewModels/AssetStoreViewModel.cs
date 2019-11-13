@@ -40,6 +40,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private object filteredListLock = new object();
         private object allListLock = new object();
+        private object manifestFileLock = new object();
 
         private bool _displayAll;
         private bool _displayMaps;
@@ -108,9 +109,10 @@ namespace SessionMapSwitcherCore.ViewModels
                 NotifyPropertyChanged(nameof(DisplayShirts));
                 NotifyPropertyChanged(nameof(DisplayPants));
                 NotifyPropertyChanged(nameof(DisplayShoes));
-                RefreshFilteredAssetList();
+                LazilyGetSelectedManifestsAndRefreshFilteredAssetList();
             }
         }
+
         public bool DisplayMaps
         {
             get { return _displayMaps; }
@@ -118,9 +120,10 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _displayMaps = value;
                 NotifyPropertyChanged();
-                RefreshFilteredAssetList();
+                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Maps);
             }
         }
+
         public bool DisplayDecks
         {
             get { return _displayDecks; }
@@ -128,7 +131,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _displayDecks = value;
                 NotifyPropertyChanged();
-                RefreshFilteredAssetList();
+                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Decks);
             }
         }
         public bool DisplayGriptapes
@@ -138,7 +141,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _displayGriptapes = value;
                 NotifyPropertyChanged();
-                RefreshFilteredAssetList();
+                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Griptapes);
             }
         }
         public bool DisplayTrucks
@@ -148,7 +151,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _displayTrucks = value;
                 NotifyPropertyChanged();
-                RefreshFilteredAssetList();
+                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Trucks);
             }
         }
         public bool DisplayWheels
@@ -158,7 +161,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _displayWheels = value;
                 NotifyPropertyChanged();
-                RefreshFilteredAssetList();
+                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Wheels);
             }
         }
         public bool DisplayHats
@@ -168,7 +171,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _displayHats = value;
                 NotifyPropertyChanged();
-                RefreshFilteredAssetList();
+                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Hats);
             }
         }
         public bool DisplayShirts
@@ -178,7 +181,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _displayShirts = value;
                 NotifyPropertyChanged();
-                RefreshFilteredAssetList();
+                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Shirts);
             }
         }
         public bool DisplayPants
@@ -188,7 +191,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _displayPants = value;
                 NotifyPropertyChanged();
-                RefreshFilteredAssetList();
+                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Pants);
             }
         }
         public bool DisplayShoes
@@ -198,7 +201,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _displayShoes = value;
                 NotifyPropertyChanged();
-                RefreshFilteredAssetList();
+                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Shoes);
             }
         }
 
@@ -403,7 +406,71 @@ namespace SessionMapSwitcherCore.ViewModels
             DisplayMaps = true;
         }
 
+        private void LazilyGetSelectedManifestsAndRefreshFilteredAssetList()
+        {
+            var selectedCategories = GetSelectedCategories();
 
+            if (selectedCategories.Count == 0)
+            {
+                RefreshFilteredAssetList();
+                return;
+            }
+
+            foreach (AssetCategory cat in selectedCategories)
+            {
+                LazilyGetManifestsAndRefreshFilteredAssetList(cat);
+            }
+        }
+
+        private void LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory category)
+        {
+            if (ManifestFilesExists(category))
+            {
+                //manifest files already downloaded so just refresh list
+                RefreshFilteredAssetList();
+                return;
+            }
+
+            Task t = Task.Factory.StartNew(() =>
+            {
+                if (HasAuthenticated == false)
+                {
+                    TryAuthenticate();
+                }
+
+                lock (manifestFileLock)
+                {
+                    AssetManager.GetAssetManifests(category, new Progress<IDownloadProgress>(p => UserMessage = $"Downloading {category.Value} manifests: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."));
+                }
+            });
+
+            t.ContinueWith((result) =>
+            {
+                if (result.IsFaulted)
+                {
+                    Logger.Error(result.Exception);
+                    UserMessage = $"Failed to get manifests for {category.Value}";
+                    return;
+                }
+
+                UserMessage = $"{category.Value} manifests downloaded ...";
+                RefreshFilteredAssetList();
+            });
+        }
+
+        private bool ManifestFilesExists(AssetCategory category)
+        {
+            string pathToManifestTempFolder = Path.Combine(AppContext.BaseDirectory, StorageManager.MANIFESTS_TEMP);
+            string pathToManifestFiles = Path.Combine(pathToManifestTempFolder, category.Value);
+
+            return Directory.Exists(pathToManifestFiles) && Directory.GetFiles(pathToManifestFiles).Length > 0;
+        }
+
+        /// <summary>
+        /// Downloads manifest files and refreshes <see cref="FilteredAssetList"/> after successful download.
+        /// </summary>
+        /// <param name="forceRefresh"> force download the manifests again</param>
+        /// <param name="getSelectedOnly"> only download manifests for the selected asset categories </param>
         public void GetManifestsAsync(bool forceRefresh = false, bool getSelectedOnly = false)
         {
             if (forceRefresh == false && IsManifestsDownloaded)
@@ -427,7 +494,10 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
                 else
                 {
-                    AssetManager.GetAllAssetManifests();
+                    lock (manifestFileLock)
+                    {
+                        AssetManager.GetAllAssetManifests();
+                    }
                 }
             });
 
@@ -454,17 +524,15 @@ namespace SessionMapSwitcherCore.ViewModels
 
             foreach (AssetCategory cat in selectedCategories)
             {
-                AssetManager.GetAssetManifests(cat, new Progress<IDownloadProgress>(p => UserMessage = $"Downloading asset: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."));
+                lock (manifestFileLock)
+                {
+                    AssetManager.GetAssetManifests(cat, new Progress<IDownloadProgress>(p => UserMessage = $"Downloading {cat.Value} manifests: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."));
+                }
             }
         }
 
         public void RefreshFilteredAssetList()
         {
-            if (IsManifestsDownloaded == false)
-            {
-                return;
-            }
-
             List<AssetCategory> categories = GetSelectedCategories();
             List<AssetViewModel> newList = new List<AssetViewModel>();
 
@@ -566,9 +634,22 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private void LoadAssetsFromManifest(AssetCategory category)
         {
-            if (IsAssetsLoaded(category) == false)
+            if (IsAssetsLoaded(category) == false || HasNewAssetManifests(category))
             {
-                List<Asset> assets = AssetManager.GenerateAssets(category);
+                List<Asset> assets = new List<Asset>();
+
+                lock (manifestFileLock)
+                {
+                    assets = AssetManager.GenerateAssets(category);
+                }
+
+                // remove existing assets to avoid duplicates or stale data
+                lock (allListLock)
+                {
+                    AllAssets.RemoveAll((a) => a.AssetCategory == category.Value);
+                }
+
+                // add new assets loaded generated from manifest files
                 foreach (Asset asset in assets)
                 {
                     if (asset == null)
@@ -580,6 +661,27 @@ namespace SessionMapSwitcherCore.ViewModels
                     }
                 }
             }
+        }
+
+        private bool HasNewAssetManifests(AssetCategory category)
+        {
+            string pathToManifests = Path.Combine(AppContext.BaseDirectory, StorageManager.MANIFESTS_TEMP, category.Value);
+
+            if (Directory.Exists(pathToManifests) == false)
+            {
+                return false;
+            }
+
+            int manifestFileCount = 0; 
+
+            lock (manifestFileLock)
+            {
+                manifestFileCount = Directory.GetFiles(pathToManifests).Length;
+            }
+
+            int assetInMemoryCount = GetAssetsByCategory(category).Count();
+
+            return assetInMemoryCount != manifestFileCount;
         }
 
         private bool IsAssetsLoaded(AssetCategory category)
@@ -619,6 +721,10 @@ namespace SessionMapSwitcherCore.ViewModels
                 if (File.Exists(pathToThumbnail) == false)
                 {
                     AssetManager.DownloadAssetThumbnail(SelectedAsset.Asset, pathToThumbnail, new Progress<IDownloadProgress>(p => UserMessage = $"fetching preview image: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."), true);
+                }
+                else
+                {
+                    UserMessage = "";
                 }
 
                 PreviewImageSource = new Uri(pathToThumbnail).AbsolutePath;
