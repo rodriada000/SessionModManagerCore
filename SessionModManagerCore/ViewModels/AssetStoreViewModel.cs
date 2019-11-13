@@ -572,8 +572,10 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 return installedMaps.Any(m => m.AssetName == SelectedAsset.Asset.AssetName);
             }
-
-            return false;
+            else
+            {
+                return MetaDataManager.GetTextureMetaDataByName(SelectedAsset.Asset.AssetName) != null;
+            }
         }
 
         private IEnumerable<AssetViewModel> GetAssetsByCategory(AssetCategory cat)
@@ -857,7 +859,8 @@ namespace SessionMapSwitcherCore.ViewModels
                 // replace texture
                 TextureReplacerViewModel replacerViewModel = new TextureReplacerViewModel()
                 {
-                    PathToFile = pathToDownload
+                    PathToFile = pathToDownload,
+                    AssetToInstall = assetToInstall.Asset
                 };
                 replacerViewModel.MessageChanged += TextureReplacerViewModel_MessageChanged;
                 replacerViewModel.ReplaceTextures();
@@ -879,9 +882,12 @@ namespace SessionMapSwitcherCore.ViewModels
 
         public void RemoveSelectedAssetAsync()
         {
-            if (SelectedAsset.AssetCategory == AssetCategory.Maps.Value)
+            AssetViewModel assetToRemove = SelectedAsset;
+            BoolWithMessage deleteResult = BoolWithMessage.False("");
+
+            if (assetToRemove.AssetCategory == AssetCategory.Maps.Value)
             {
-                MapMetaData mapToDelete = MetaDataManager.GetAllMetaDataForMaps()?.Where(m => m.AssetName == SelectedAsset.Asset.AssetName).FirstOrDefault();
+                MapMetaData mapToDelete = MetaDataManager.GetAllMetaDataForMaps()?.Where(m => m.AssetName == assetToRemove.Asset.AssetName).FirstOrDefault();
 
                 if (mapToDelete == null)
                 {
@@ -889,14 +895,27 @@ namespace SessionMapSwitcherCore.ViewModels
                     return;
                 }
 
-                BoolWithMessage deleteResult = FileUtils.DeleteMapFiles(mapToDelete);
+                deleteResult = MetaDataManager.DeleteMapFiles(mapToDelete);
+            }
+            else
+            {
+                TextureMetaData textureToDelete = MetaDataManager.GetTextureMetaDataByName(assetToRemove.Asset.AssetName);
 
-                UserMessage = deleteResult.Message;
-
-                if (deleteResult.Result)
+                if (textureToDelete == null)
                 {
-                    RefreshPreviewForSelected();
+                    UserMessage = $"Failed to find meta data to delete texture files for {assetToRemove.Asset.AssetName}...";
+                    return;
                 }
+
+                deleteResult = MetaDataManager.DeleteTextureFiles(textureToDelete);
+            }
+
+
+            UserMessage = deleteResult.Message;
+
+            if (deleteResult.Result)
+            {
+                RefreshPreviewForSelected();
             }
         }
 

@@ -15,8 +15,10 @@ namespace SessionMapSwitcherCore.Utils
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-        internal static void CopyDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToExclude, bool doContainsSearch)
+        internal static List<string> CopyDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToExclude, bool doContainsSearch)
         {
+            List<string> filesCopied = new List<string>();
+
             if (filesToExclude == null)
             {
                 filesToExclude = new List<string>();
@@ -38,12 +40,14 @@ namespace SessionMapSwitcherCore.Utils
 
             try
             {
-                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings, filesCopied);
             }
             catch (Exception e)
             {
                 Logger.Error(e);
             }
+
+            return filesCopied;
         }
 
         internal static void CopyDirectoryRecursively(string sourceDirName, string destDirName)
@@ -115,8 +119,13 @@ namespace SessionMapSwitcherCore.Utils
             }
         }
 
-        private static void CopyOrMoveDirectoryRecursively(string sourceDirName, string destDirName, CopySettings settings)
+        private static void CopyOrMoveDirectoryRecursively(string sourceDirName, string destDirName, CopySettings settings, List<string> copiedFiles = null)
         {
+            if (copiedFiles == null)
+            {
+                copiedFiles = new List<string>();
+            }
+
             if (settings.ExcludeFiles == null)
             {
                 settings.ExcludeFiles = new List<string>();
@@ -167,6 +176,8 @@ namespace SessionMapSwitcherCore.Utils
                 {
                     file.CopyTo(temppath, true);
                 }
+
+                copiedFiles.Add(temppath);
             }
 
             // If copying subdirectories, copy them and their contents to new location.
@@ -182,7 +193,7 @@ namespace SessionMapSwitcherCore.Utils
                     }
 
                     string tempPath = Path.Combine(destDirName, subdir.Name);
-                    CopyOrMoveDirectoryRecursively(subdir.FullName, tempPath, settings);
+                    CopyOrMoveDirectoryRecursively(subdir.FullName, tempPath, settings, copiedFiles);
                 }
             }
         }
@@ -313,42 +324,29 @@ namespace SessionMapSwitcherCore.Utils
             return allFiles;
         }
 
-        public static BoolWithMessage DeleteMapFiles(MapMetaData metaData)
+        public static BoolWithMessage DeleteFiles(List<string> filesToDelete)
         {
-
-            if (metaData == null)
-            {
-                return BoolWithMessage.False($"meta data is null");
-            }
-
-            if (metaData.FilePaths?.Count == 0)
-            {
-                return BoolWithMessage.False($"List of files to delete is unknown for {metaData.MapName}. You must manually delete the map files from the following folder: {metaData.MapFileDirectory}");
-            }
-
             try
             {
-                HashSet<string> possibleFoldersToDelete = new HashSet<string>(); // this will be a list of directories where files were deleted; if these directories are empty then they will be deleted
+                HashSet<string> possibleFoldersToDelete = new HashSet<string>(); // this will be a list of directories where files were deleted; if these directories are empty then they will also be deleted
 
-                foreach (string file in metaData.FilePaths)
+                foreach (string file in filesToDelete)
                 {
                     if (File.Exists(file))
                     {
                         FileInfo fileInfo = new FileInfo(file);
-                        
+
                         if (possibleFoldersToDelete.Contains(fileInfo.DirectoryName) == false)
                         {
                             possibleFoldersToDelete.Add(fileInfo.DirectoryName);
                         }
-                        
+
 
                         File.Delete(file);
                     }
                 }
 
                 // delete the possible empty directories
-                List<string> filesInDir;
-
                 foreach (string folder in possibleFoldersToDelete)
                 {
                     // iteratively go up parent folder structure to delete empty folders after files have been deleted
@@ -356,7 +354,7 @@ namespace SessionMapSwitcherCore.Utils
 
                     if (Directory.Exists(currentDir) && currentDir != SessionPath.ToContent)
                     {
-                        List<string> remainingFiles = FileUtils.GetAllFilesInDirectory(currentDir);
+                        List<string> remainingFiles = GetAllFilesInDirectory(currentDir);
 
                         while (remainingFiles.Count == 0 && currentDir != SessionPath.ToContent)
                         {
@@ -369,20 +367,13 @@ namespace SessionMapSwitcherCore.Utils
 
                             if (currentDir != SessionPath.ToContent)
                             {
-                                remainingFiles = FileUtils.GetAllFilesInDirectory(currentDir); // get list of files from parent dir to check next
+                                remainingFiles = GetAllFilesInDirectory(currentDir); // get list of files from parent dir to check next
                             }
                         }
                     }
                 }
 
-                // lastly delete meta data file
-                string pathToMetaData = Path.Combine(MetaDataManager.FullPathToMetaFolder, metaData.GetJsonFileName());
-                if (File.Exists(pathToMetaData))
-                {
-                    File.Delete(pathToMetaData);
-                }
-
-                return BoolWithMessage.True($"{metaData.MapName} has been deleted!");
+                return BoolWithMessage.True();
             }
             catch (Exception e)
             {

@@ -783,7 +783,7 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             MapMetaData metaData = MetaDataManager.LoadMapMetaData(mapToDelete);
 
-            BoolWithMessage deleteResult = FileUtils.DeleteMapFiles(metaData);
+            BoolWithMessage deleteResult = MetaDataManager.DeleteMapFiles(metaData);
 
             if (deleteResult.Result)
             {

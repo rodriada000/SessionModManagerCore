@@ -1,5 +1,7 @@
-﻿using SessionMapSwitcherCore.Classes;
+﻿using SessionAssetStore;
+using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
+using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,6 +15,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private string _pathToFile;
         private const string _tempZipFolder = "Temp_Texture_Unzipped";
+
+        public Asset AssetToInstall { get; set; }
 
         public delegate void MessageChange(string message);
 
@@ -110,12 +114,21 @@ namespace SessionMapSwitcherCore.ViewModels
 
             targetFolder = Path.Combine(SessionPath.ToContent, targetFolder);
 
+            TextureMetaData metaData = new TextureMetaData()
+            {
+                AssetName = textureFileInfo.Name,
+                Name = textureFileInfo.Name
+            };
+
             try
             {
                 DeleteCurrentTextureFiles(originalTextureName, targetFolder);
 
                 // find and copy files in source dir that match the .uasset name
-                CopyNewTextureFilesToGame(textureFileInfo, targetFolder, originalTextureName);
+                List<string> filesCopied = CopyNewTextureFilesToGame(textureFileInfo, targetFolder, originalTextureName);
+                metaData.FilePaths.AddRange(filesCopied);
+
+                MetaDataManager.SaveTextureMetaData(metaData);
             }
             catch (Exception e)
             {
@@ -156,6 +169,15 @@ namespace SessionMapSwitcherCore.ViewModels
                 return;
             }
 
+            TextureMetaData newTextureMetaData = new TextureMetaData(AssetToInstall);
+
+            if (AssetToInstall == null)
+            {
+                // if not replacing from Asset Store then just use name of compressed file being used to replace textures
+                newTextureMetaData.AssetName = Path.GetFileName(PathToFile);
+                newTextureMetaData.Name = Path.GetFileName(PathToFile);
+            }
+
             do
             {
                 Logger.Info($"... found texture {foundTextureName}");
@@ -191,7 +213,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
                     DeleteCurrentTextureFiles(originalTextureName, targetFolder);
                     // find and copy files in source dir that match the .uasset name
-                    CopyNewTextureFilesToGame(textureFileInfo, targetFolder, originalTextureName);
+                    List<string> filesCopied = CopyNewTextureFilesToGame(textureFileInfo, targetFolder, originalTextureName);
+                    newTextureMetaData.FilePaths.AddRange(filesCopied);
                 }
                 catch (Exception e)
                 {
@@ -212,7 +235,8 @@ namespace SessionMapSwitcherCore.ViewModels
                 // copy other files to Content
                 if (UnzippedTempFolderHasOtherFolders())
                 {
-                    CopyOtherSubfoldersInTempDir(filesToExclude: foundTextures);
+                    List<string> otherFilesCopied = CopyOtherSubfoldersInTempDir(filesToExclude: foundTextures);
+                    newTextureMetaData.FilePaths.AddRange(otherFilesCopied);
                 }
 
                 DeleteTempZipFolder();
@@ -223,6 +247,9 @@ namespace SessionMapSwitcherCore.ViewModels
                 MessageChanged?.Invoke($"Failed to copy texture files: {e.Message}");
                 return;
             }
+
+            MetaDataManager.SaveTextureMetaData(newTextureMetaData);
+            AssetToInstall = null; // texture asset replaced so nullify it since done with object
         }
 
         private void DeleteTempZipFolder()
@@ -238,8 +265,10 @@ namespace SessionMapSwitcherCore.ViewModels
         /// <summary>
         /// Copies other folders (not stock game folders) from unzipped temp folder into games Content folder
         /// </summary>
-        private void CopyOtherSubfoldersInTempDir(List<string> filesToExclude)
+        private List<string> CopyOtherSubfoldersInTempDir(List<string> filesToExclude)
         {
+            List<string> filesCopied = new List<string>();
+
             foreach (string folder in Directory.GetDirectories(PathToTempFolder))
             {
                 DirectoryInfo folderInfo = new DirectoryInfo(folder);
@@ -254,9 +283,13 @@ namespace SessionMapSwitcherCore.ViewModels
 
 
                     Logger.Info($"... copying folder {folder} -> {Path.Combine(SessionPath.ToContent, folderInfo.Name)}");
-                    FileUtils.CopyDirectoryRecursively(folder, Path.Combine(SessionPath.ToContent, folderInfo.Name), filesToExclude: fileNames, foldersToExclude: null, doContainsSearch: true);
+                    
+                    List<string> copied = FileUtils.CopyDirectoryRecursively(folder, Path.Combine(SessionPath.ToContent, folderInfo.Name), filesToExclude: fileNames, foldersToExclude: null, doContainsSearch: true);
+                    filesCopied.AddRange(copied);
                 }
             }
+
+            return filesCopied;
         }
 
         /// <summary>
@@ -364,8 +397,9 @@ namespace SessionMapSwitcherCore.ViewModels
         /// <summary>
         /// Loop over all files in the folder that contains the <paramref name="newTexture"/> .uasset file and copy all other files related to texture (.uexp and .ubulk files) to the <paramref name="targetFolder"/>
         /// </summary>
-        private static void CopyNewTextureFilesToGame(FileInfo newTexture, string targetFolder, string textureName)
+        private static List<string> CopyNewTextureFilesToGame(FileInfo newTexture, string targetFolder, string textureName)
         {
+            List<string> filesCopied = new List<string>();
             string textureSourceDir = Path.GetDirectoryName(newTexture.FullName);
             string textureFileName = newTexture.NameWithoutExtension();
 
@@ -385,8 +419,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
                     Logger.Info($"... copying {file} -> {targetPath}");
                     File.Copy(file, targetPath, overwrite: true);
+                    filesCopied.Add(targetPath);
                 }
             }
+
+            return filesCopied;
         }
 
         /// <summary>

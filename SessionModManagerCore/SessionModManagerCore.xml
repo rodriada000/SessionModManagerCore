@@ -328,6 +328,21 @@
             </summary>
             <returns></returns>
         </member>
+        <member name="P:SessionModManagerCore.Classes.TextureMetaData.FilePaths">
+            <summary>
+            List of absolute paths to files that were copied for the texture
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.TextureMetaData.AssetName">
+            <summary>
+            Name of the asset file that this texture file came from
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.TextureMetaData.Name">
+            <summary>
+            Display name of the asset from the asset store
+            </summary>
+        </member>
         <member name="T:SessionModManagerCore.Classes.VersionChecker">
             <summary>
             Used to check if a new version of Session Mod Manager is available to download
