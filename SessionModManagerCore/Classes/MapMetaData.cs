@@ -11,6 +11,8 @@ namespace SessionModManagerCore.Classes
         
         public string CustomName { get; set; }
 
+        public string AssetName { get; set; }
+
         public bool IsHiddenByUser { get; set; }
 
         /// <summary>

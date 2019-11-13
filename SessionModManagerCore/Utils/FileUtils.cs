@@ -1,4 +1,5 @@
 ﻿using SessionMapSwitcherCore.Classes;
+using SessionModManagerCore.Classes;
 using SharpCompress.Archives;
 using SharpCompress.Archives.Rar;
 using SharpCompress.Common;
@@ -310,6 +311,84 @@ namespace SessionMapSwitcherCore.Utils
             }
 
             return allFiles;
+        }
+
+        public static BoolWithMessage DeleteMapFiles(MapMetaData metaData)
+        {
+
+            if (metaData == null)
+            {
+                return BoolWithMessage.False($"meta data is null");
+            }
+
+            if (metaData.FilePaths?.Count == 0)
+            {
+                return BoolWithMessage.False($"List of files to delete is unknown for {metaData.MapName}. You must manually delete the map files from the following folder: {metaData.MapFileDirectory}");
+            }
+
+            try
+            {
+                HashSet<string> possibleFoldersToDelete = new HashSet<string>(); // this will be a list of directories where files were deleted; if these directories are empty then they will be deleted
+
+                foreach (string file in metaData.FilePaths)
+                {
+                    if (File.Exists(file))
+                    {
+                        FileInfo fileInfo = new FileInfo(file);
+                        
+                        if (possibleFoldersToDelete.Contains(fileInfo.DirectoryName) == false)
+                        {
+                            possibleFoldersToDelete.Add(fileInfo.DirectoryName);
+                        }
+                        
+
+                        File.Delete(file);
+                    }
+                }
+
+                // delete the possible empty directories
+                List<string> filesInDir;
+
+                foreach (string folder in possibleFoldersToDelete)
+                {
+                    // iteratively go up parent folder structure to delete empty folders after files have been deleted
+                    string currentDir = folder;
+
+                    if (Directory.Exists(currentDir) && currentDir != SessionPath.ToContent)
+                    {
+                        List<string> remainingFiles = FileUtils.GetAllFilesInDirectory(currentDir);
+
+                        while (remainingFiles.Count == 0 && currentDir != SessionPath.ToContent)
+                        {
+                            string dirToDelete = currentDir;
+
+                            DirectoryInfo dirInfo = new DirectoryInfo(currentDir);
+                            currentDir = dirInfo.Parent.FullName; // get path to parent directory to check next
+
+                            Directory.Delete(dirToDelete, true);
+
+                            if (currentDir != SessionPath.ToContent)
+                            {
+                                remainingFiles = FileUtils.GetAllFilesInDirectory(currentDir); // get list of files from parent dir to check next
+                            }
+                        }
+                    }
+                }
+
+                // lastly delete meta data file
+                string pathToMetaData = Path.Combine(MetaDataManager.FullPathToMetaFolder, metaData.GetJsonFileName());
+                if (File.Exists(pathToMetaData))
+                {
+                    File.Delete(pathToMetaData);
+                }
+
+                return BoolWithMessage.True($"{metaData.MapName} has been deleted!");
+            }
+            catch (Exception e)
+            {
+                return BoolWithMessage.False($"Failed to delete files: {e.Message}");
+            }
+
         }
     }
 

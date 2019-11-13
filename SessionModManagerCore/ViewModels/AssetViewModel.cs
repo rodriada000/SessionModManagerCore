@@ -6,13 +6,14 @@ using System.Text;
 
 namespace SessionModManagerCore.ViewModels
 {
-    class AssetViewModel : ViewModelBase
+    public class AssetViewModel : ViewModelBase
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
         private string _name;
         private string _author;
         private string _description;
+        private string _assetCategory;
         private bool _isSelected;
 
         internal Asset Asset { get; set; }
@@ -57,12 +58,23 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public string AssetCategory
+        {
+            get { return _assetCategory; }
+            set
+            {
+                _assetCategory = value;
+                NotifyPropertyChanged();
+            }
+        }
+
         public AssetViewModel(Asset asset)
         {
             this.Asset = asset;
             Name = asset.Name;
             Description = asset.Description;
             Author = asset.Author;
+            AssetCategory = asset.Category;
             IsSelected = false;
         }
 

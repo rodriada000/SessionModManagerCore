@@ -156,7 +156,7 @@ namespace SessionMapSwitcherCore.Classes
             metaData.MapFileDirectory = ReplaceSourceMapPathWithPathToContent(sourceMapFolder, validMap.DirectoryPath);
 
             if (findMapFiles)
-            { 
+            {
                 metaData.FilePaths = FileUtils.GetAllFilesInDirectory(sourceMapFolder);
 
                 // modify file paths to match the target folder Session "Content" folder
@@ -250,6 +250,8 @@ namespace SessionMapSwitcherCore.Classes
         {
             try
             {
+                CreateMetaDataFolder();
+
                 DirectoryInfo dirInfo = new DirectoryInfo(mapItem.DirectoryPath);
 
                 string fileName = $"{dirInfo.Name}_{mapItem.MapName}_meta.json";
@@ -257,6 +259,21 @@ namespace SessionMapSwitcherCore.Classes
 
                 string fileContents = File.ReadAllText(pathToFile);
 
+                return JsonConvert.DeserializeObject<MapMetaData>(fileContents);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "failed to load map meta data");
+                return null;
+            }
+        }
+
+
+        public static MapMetaData LoadMapMetaData(string pathToJson)
+        {
+            try
+            {
+                string fileContents = File.ReadAllText(pathToJson);
                 return JsonConvert.DeserializeObject<MapMetaData>(fileContents);
             }
             catch (Exception e)
@@ -302,6 +319,24 @@ namespace SessionMapSwitcherCore.Classes
             }
 
             return false;
+        }
+
+        public static List<MapMetaData> GetAllMetaDataForMaps()
+        {
+            List<MapMetaData> maps = new List<MapMetaData>();
+            CreateMetaDataFolder();
+
+            foreach (string file in Directory.GetFiles(FullPathToMetaFolder, "*_meta.json"))
+            {
+                MapMetaData foundMetaData = LoadMapMetaData(file);
+
+                if (foundMetaData != null)
+                {
+                    maps.Add(foundMetaData);
+                }
+            }
+
+            return maps;
         }
     }
 }
