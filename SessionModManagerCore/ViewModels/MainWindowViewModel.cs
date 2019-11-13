@@ -103,6 +103,7 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _userMessage; }
             set
             {
+                Logger.Info($"UserMessage = {value}");
                 _userMessage = value;
                 NotifyPropertyChanged();
             }
@@ -189,7 +190,14 @@ namespace SessionMapSwitcherCore.ViewModels
                 return false;
             }
 
-            return (MapSwitcher as UnpackedMapSwitcher).IsOriginalMapFilesBackedUp();
+            UnpackedMapSwitcher mapSwitcher = (MapSwitcher as UnpackedMapSwitcher);
+
+            if (mapSwitcher != null)
+            {
+                return mapSwitcher.IsOriginalMapFilesBackedUp();
+            }
+
+            return false;
         }
 
         public bool SkipMovieIsChecked
@@ -205,6 +213,11 @@ namespace SessionMapSwitcherCore.ViewModels
         public void BackupOriginalMapFiles()
         {
             if (IsSessionUnpacked() == false)
+            {
+                return;
+            }
+
+            if ((MapSwitcher as UnpackedMapSwitcher) == null)
             {
                 return;
             }
