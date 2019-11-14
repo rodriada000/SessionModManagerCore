@@ -1,4 +1,5 @@
 ﻿using Google.Apis.Download;
+using Newtonsoft.Json;
 using SessionAssetStore;
 using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
@@ -80,6 +81,14 @@ namespace SessionMapSwitcherCore.ViewModels
             get
             {
                 return Path.Combine(AbsolutePathToStoreData, downloadsFolderName);
+            }
+        }
+
+        public static string AbsolutePathToTempManifests
+        {
+            get
+            {
+                return Path.Combine(AppContext.BaseDirectory, StorageManager.MANIFESTS_TEMP);
             }
         }
 
@@ -664,6 +673,9 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        /// <summary>
+        /// Returns list of AssetViewModels by category that exist in <see cref="AllAssets"/>
+        /// </summary>
         private IEnumerable<AssetViewModel> GetAssetsByCategory(AssetCategory cat)
         {
             IEnumerable<AssetViewModel> assetsInCategory = new List<AssetViewModel>();
@@ -676,6 +688,10 @@ namespace SessionMapSwitcherCore.ViewModels
             return assetsInCategory;
         }
 
+        /// <summary>
+        /// Returns list of <see cref="AssetCategory"/> that are set to true to display
+        /// by checking <see cref="DisplayDecks"/>, <see cref="DisplayGriptapes"/>, etc.
+        /// </summary>
         private List<AssetCategory> GetSelectedCategories()
         {
             List<AssetCategory> selectedCategories = new List<AssetCategory>();
@@ -720,9 +736,13 @@ namespace SessionMapSwitcherCore.ViewModels
             return selectedCategories;
         }
 
+        /// <summary>
+        /// Loads assets from the manifest files for a specific category into <see cref="AllAssets"/>.
+        /// Assets will be reloaded if there are new manifest files or changes to the manifest files.
+        /// </summary>
         private void LoadAssetsFromManifest(AssetCategory category)
         {
-            if (IsAssetsLoaded(category) == false || HasNewAssetManifests(category))
+            if (IsAssetsLoaded(category) == false || HasNewAssetManifests(category) || HasAssetManifestsChanged(category))
             {
                 List<Asset> assets = new List<Asset>();
 
@@ -751,9 +771,13 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        /// <summary>
+        /// Returns true if there exists more manifest files for a category versus the count 
+        /// of assets in <see cref="AllAssets"/>
+        /// </summary>
         private bool HasNewAssetManifests(AssetCategory category)
         {
-            string pathToManifests = Path.Combine(AppContext.BaseDirectory, StorageManager.MANIFESTS_TEMP, category.Value);
+            string pathToManifests = Path.Combine(AbsolutePathToTempManifests, category.Value);
 
             if (Directory.Exists(pathToManifests) == false)
             {
@@ -772,6 +796,72 @@ namespace SessionMapSwitcherCore.ViewModels
             return assetInMemoryCount != manifestFileCount;
         }
 
+        /// <summary>
+        /// Checks if the in-memory asset object has different values than the manifest file
+        /// </summary>
+        private bool HasAssetManifestsChanged(AssetCategory category)
+        {
+            string pathToManifests = Path.Combine(AbsolutePathToTempManifests, category.Value);
+
+            if (Directory.Exists(pathToManifests) == false)
+            {
+                return false;
+            }
+
+            string[] manifestFiles = { };
+
+            try
+            {
+                lock (manifestFileLock)
+                {
+                    manifestFiles = Directory.GetFiles(pathToManifests);
+                }
+
+                List<AssetViewModel> inMemoryAssets = GetAssetsByCategory(category).ToList();
+
+
+                foreach (string file in manifestFiles)
+                {
+                    string fileContents;
+
+                    lock (manifestFileLock)
+                    {
+                        fileContents = File.ReadAllText(file);
+                    }
+
+                    Asset assetFromFile = JsonConvert.DeserializeObject<Asset>(fileContents);
+
+                    Asset assetFromMemory = inMemoryAssets.Where(a => a.Asset.AssetName == assetFromFile.AssetName).Select(a => a.Asset).FirstOrDefault();
+
+                    if (assetFromMemory == null)
+                    {
+                        return true; // the asset does not exist in memory which is a change so return true
+                    }
+
+                    bool hasChanged = (assetFromMemory.Author != assetFromFile.Author ||
+                                       assetFromMemory.Category != assetFromFile.Category ||
+                                       assetFromMemory.Description != assetFromFile.Description ||
+                                       assetFromMemory.Name != assetFromFile.Name ||
+                                       assetFromMemory.Thumbnail != assetFromFile.Thumbnail);
+
+                    if (hasChanged)
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "failed to check if assets changed from manifest");
+                return false;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Returns true if there are ANY assets in <see cref="AllAssets"/> based on the given category
+        /// </summary>
         private bool IsAssetsLoaded(AssetCategory category)
         {
             bool hasAssets = false;
@@ -1062,7 +1152,15 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (uploadViewModel.HasAuthenticated)
                 {
-                    uploadViewModel.AssetManager.DeleteAsset(manifestFileName, assetToDelete.Asset);
+                    string selectedBucket = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreSelectedBucket);
+
+                    if (String.IsNullOrEmpty(selectedBucket))
+                    {
+                        UserMessage = "Failed to delete. Click 'Upload Asset' and set the Bucket before deleting your assets.";
+                        return;
+                    }
+
+                    uploadViewModel.AssetManager.DeleteAsset(selectedBucket, manifestFileName, assetToDelete.Asset);
                     UserMessage = $"Successfully deleted {assetToDelete.Name} from Asset Store!";
                     GetManifestsAsync(forceRefresh: true, getSelectedOnly: true);
                 }
@@ -1128,6 +1226,19 @@ namespace SessionMapSwitcherCore.ViewModels
             NotifyPropertyChanged(nameof(DisplayShirts));
             NotifyPropertyChanged(nameof(DisplayPants));
             NotifyPropertyChanged(nameof(DisplayShoes));
+        }
+
+        public List<string> GetAvailableBuckets()
+        {
+            try
+            {
+                return AssetManager.ListBuckets();
+            }
+            catch (Exception e)
+            {
+                Logger.Warn(e, "failed to get buckets");
+                return new List<string>();
+            }
         }
     }
 }
