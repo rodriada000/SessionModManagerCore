@@ -28,9 +28,11 @@ namespace SessionMapSwitcherCore.ViewModels
         private string _userMessage;
         private string _installButtonText;
         private string _removeButtonText;
-        private string _imageSource;
+        private Stream _imageSource;
         private string _selectedDescription;
         private string _selectedAuthor;
+        private bool _fetchAllPreviewImages;
+        private bool _deleteDownloadAfterInstall;
         private bool _isInstallButtonEnabled;
         private bool _isRemoveButtonEnabled;
         private bool _isLoadingManifests;
@@ -99,17 +101,9 @@ namespace SessionMapSwitcherCore.ViewModels
                 _displayPants = value;
                 _displayShoes = value;
 
-                NotifyPropertyChanged();
-                NotifyPropertyChanged(nameof(DisplayMaps));
-                NotifyPropertyChanged(nameof(DisplayDecks));
-                NotifyPropertyChanged(nameof(DisplayGriptapes));
-                NotifyPropertyChanged(nameof(DisplayTrucks));
-                NotifyPropertyChanged(nameof(DisplayWheels));
-                NotifyPropertyChanged(nameof(DisplayHats));
-                NotifyPropertyChanged(nameof(DisplayShirts));
-                NotifyPropertyChanged(nameof(DisplayPants));
-                NotifyPropertyChanged(nameof(DisplayShoes));
+                RaisePropertyChangedEventsForCategories();
                 LazilyGetSelectedManifestsAndRefreshFilteredAssetList();
+                UpdateAppSettingsWithSelectedCategories();
             }
         }
 
@@ -118,9 +112,13 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _displayMaps; }
             set
             {
-                _displayMaps = value;
-                NotifyPropertyChanged();
-                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Maps);
+                if (_displayMaps != value)
+                {
+                    _displayMaps = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Maps);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreMapsChecked, DisplayMaps.ToString());
+                }
             }
         }
 
@@ -129,9 +127,13 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _displayDecks; }
             set
             {
-                _displayDecks = value;
-                NotifyPropertyChanged();
-                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Decks);
+                if (_displayDecks != value)
+                {
+                    _displayDecks = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Decks);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreDecksChecked, DisplayDecks.ToString());
+                }
             }
         }
         public bool DisplayGriptapes
@@ -139,9 +141,13 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _displayGriptapes; }
             set
             {
-                _displayGriptapes = value;
-                NotifyPropertyChanged();
-                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Griptapes);
+                if (_displayGriptapes != value)
+                {
+                    _displayGriptapes = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Griptapes);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreGriptapesChecked, DisplayGriptapes.ToString());
+                }
             }
         }
         public bool DisplayTrucks
@@ -149,9 +155,13 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _displayTrucks; }
             set
             {
-                _displayTrucks = value;
-                NotifyPropertyChanged();
-                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Trucks);
+                if (_displayTrucks != value)
+                {
+                    _displayTrucks = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Trucks);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreTrucksChecked, DisplayTrucks.ToString());
+                }
             }
         }
         public bool DisplayWheels
@@ -159,9 +169,13 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _displayWheels; }
             set
             {
-                _displayWheels = value;
-                NotifyPropertyChanged();
-                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Wheels);
+                if (_displayWheels != value)
+                {
+                    _displayWheels = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Wheels);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreWheelsChecked, DisplayWheels.ToString());
+                }
             }
         }
 
@@ -170,9 +184,13 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _displayHats; }
             set
             {
-                _displayHats = value;
-                NotifyPropertyChanged();
-                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Hats);
+                if (_displayHats != value)
+                {
+                    _displayHats = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Hats);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreHatsChecked, DisplayHats.ToString());
+                }
             }
         }
         public bool DisplayShirts
@@ -180,9 +198,13 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _displayShirts; }
             set
             {
-                _displayShirts = value;
-                NotifyPropertyChanged();
-                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Shirts);
+                if (_displayShirts != value)
+                {
+                    _displayShirts = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Shirts);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreShirtsChecked, DisplayShirts.ToString());
+                }
             }
         }
         public bool DisplayPants
@@ -190,9 +212,13 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _displayPants; }
             set
             {
-                _displayPants = value;
-                NotifyPropertyChanged();
-                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Pants);
+                if (_displayPants != value)
+                {
+                    _displayPants = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Pants);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStorePantsChecked, DisplayPants.ToString());
+                }
             }
         }
         public bool DisplayShoes
@@ -200,9 +226,13 @@ namespace SessionMapSwitcherCore.ViewModels
             get { return _displayShoes; }
             set
             {
-                _displayShoes = value;
-                NotifyPropertyChanged();
-                LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Shoes);
+                if (_displayShoes != value)
+                {
+                    _displayShoes = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Shoes);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreShoesChecked, DisplayShoes.ToString());
+                }
             }
         }
 
@@ -294,7 +324,40 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public string PreviewImageSource
+        public bool FetchAllPreviewImages
+        {
+            get { return _fetchAllPreviewImages; }
+            set
+            {
+                if (_fetchAllPreviewImages != value)
+                {
+                    _fetchAllPreviewImages = value;
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.FetchAllPreviewImages, _fetchAllPreviewImages.ToString());
+                }
+
+                if (_fetchAllPreviewImages)
+                {
+                    DownloadAllPreviewImagesAsync();
+                }
+            }
+        }
+
+        public bool DeleteDownloadAfterInstall
+        {
+            get { return _deleteDownloadAfterInstall; }
+            set
+            {
+                if (_deleteDownloadAfterInstall != value)
+                {
+                    _deleteDownloadAfterInstall = value;
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.DeleteDownloadAfterAssetInstall, _deleteDownloadAfterInstall.ToString());
+                }
+            }
+        }
+
+
+
+        public Stream PreviewImageSource
         {
             get { return _imageSource; }
             set
@@ -337,6 +400,12 @@ namespace SessionMapSwitcherCore.ViewModels
         public bool IsManifestsDownloaded { get; set; }
 
         public bool HasAuthenticated { get; set; }
+
+
+        /// <summary>
+        /// used to determine if list of available maps should be refreshed when switching back to the main window
+        /// </summary>
+        public bool HasDownloadedMap { get; set; }
 
         public StorageManager AssetManager
         {
@@ -405,6 +474,17 @@ namespace SessionMapSwitcherCore.ViewModels
             IsInstallingAsset = false;
             HasAuthenticated = false;
             DisplayMaps = true;
+            SetSelectedCategoriesFromAppSettings();
+            FetchAllPreviewImages = AppSettingsUtil.GetAppSetting(SettingKey.FetchAllPreviewImages).Equals("true", StringComparison.OrdinalIgnoreCase);
+
+            if (AppSettingsUtil.GetAppSetting(SettingKey.DeleteDownloadAfterAssetInstall) == "")
+            {
+                DeleteDownloadAfterInstall = true; // default to true if does not exist in app config
+            }
+            else
+            {
+                DeleteDownloadAfterInstall = AppSettingsUtil.GetAppSetting(SettingKey.DeleteDownloadAfterAssetInstall).Equals("true", StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         private void LazilyGetSelectedManifestsAndRefreshFilteredAssetList()
@@ -512,6 +592,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 IsManifestsDownloaded = true;
                 IsLoadingManifests = false;
+
+                if (FetchAllPreviewImages)
+                {
+                    DownloadAllPreviewImagesAsync();
+                }
 
                 RefreshFilteredAssetList();
 
@@ -675,7 +760,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 return false;
             }
 
-            int manifestFileCount = 0; 
+            int manifestFileCount = 0;
 
             lock (manifestFileLock)
             {
@@ -732,7 +817,7 @@ namespace SessionMapSwitcherCore.ViewModels
                     AssetManager.DownloadAssetThumbnail(SelectedAsset.Asset, pathToThumbnail, new Progress<IDownloadProgress>(p => UserMessage = $"fetching preview image: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."), true);
                 }
 
-                PreviewImageSource = new Uri(pathToThumbnail).AbsolutePath;
+                PreviewImageSource = new MemoryStream(File.ReadAllBytes(pathToThumbnail));
             });
 
             t.ContinueWith((taskResult) =>
@@ -745,6 +830,29 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
             });
 
+        }
+
+        private void DownloadAllPreviewImagesAsync()
+        {
+            Task t = Task.Factory.StartNew(() =>
+            {
+                CreateRequiredFolders();
+
+                if (HasAuthenticated == false)
+                {
+                    TryAuthenticate();
+                }
+
+                foreach (AssetViewModel asset in AllAssets.ToList())
+                {
+                    string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, asset.Asset.Thumbnail);
+
+                    if (File.Exists(pathToThumbnail) == false)
+                    {
+                        AssetManager.DownloadAssetThumbnail(asset.Asset, pathToThumbnail, new Progress<IDownloadProgress>(p => UserMessage = $"fetching preview image: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."), true);
+                    }
+                }
+            });
         }
 
         public void RefreshInstallButtonText()
@@ -781,7 +889,7 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public void DownloadSelectedAssetAsync(bool deleteAfterInstall = true)
+        public void DownloadSelectedAssetAsync()
         {
             CreateRequiredFolders();
 
@@ -823,12 +931,17 @@ namespace SessionMapSwitcherCore.ViewModels
                     }
 
                     // lastly delete downloaded file
-                    if (deleteAfterInstall && File.Exists(pathToDownload))
+                    if (DeleteDownloadAfterInstall && File.Exists(pathToDownload))
                     {
                         File.Delete(pathToDownload);
                     }
 
                     RefreshPreviewForSelected();
+
+                    if (assetToDownload.AssetCategory == AssetCategory.Maps.Value)
+                    {
+                        HasDownloadedMap = true;
+                    }
 
                     IsInstallingAsset = false;
 
@@ -950,6 +1063,8 @@ namespace SessionMapSwitcherCore.ViewModels
                 if (uploadViewModel.HasAuthenticated)
                 {
                     uploadViewModel.AssetManager.DeleteAsset(manifestFileName, assetToDelete.Asset);
+                    UserMessage = $"Successfully deleted {assetToDelete.Name} from Asset Store!";
+                    GetManifestsAsync(forceRefresh: true, getSelectedOnly: true);
                 }
                 else
                 {
@@ -968,6 +1083,51 @@ namespace SessionMapSwitcherCore.ViewModels
                 Logger.Error(e, "Failed to delete asset from storage");
                 return;
             }
+        }
+
+        private void UpdateAppSettingsWithSelectedCategories()
+        {
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreDecksChecked, DisplayDecks.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreGriptapesChecked, DisplayGriptapes.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreHatsChecked, DisplayHats.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreMapsChecked, DisplayMaps.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStorePantsChecked, DisplayPants.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreShirtsChecked, DisplayShirts.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreShoesChecked, DisplayShoes.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreTrucksChecked, DisplayTrucks.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreWheelsChecked, DisplayWheels.ToString());
+        }
+
+        private void SetSelectedCategoriesFromAppSettings()
+        {
+            _displayDecks = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreDecksChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayGriptapes = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreGriptapesChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayHats = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreHatsChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayMaps = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreMapsChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayPants = AppSettingsUtil.GetAppSetting(SettingKey.AssetStorePantsChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayShirts = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreShirtsChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayShoes = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreShoesChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayTrucks = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreTrucksChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayWheels = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreWheelsChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+
+            _displayAll = DisplayDecks && DisplayGriptapes && DisplayHats && DisplayMaps && DisplayPants && DisplayShirts && DisplayShoes && DisplayTrucks && DisplayWheels;
+
+            RaisePropertyChangedEventsForCategories();
+            LazilyGetSelectedManifestsAndRefreshFilteredAssetList();
+        }
+
+        private void RaisePropertyChangedEventsForCategories()
+        {
+            NotifyPropertyChanged(nameof(DisplayAll));
+            NotifyPropertyChanged(nameof(DisplayMaps));
+            NotifyPropertyChanged(nameof(DisplayDecks));
+            NotifyPropertyChanged(nameof(DisplayGriptapes));
+            NotifyPropertyChanged(nameof(DisplayTrucks));
+            NotifyPropertyChanged(nameof(DisplayWheels));
+            NotifyPropertyChanged(nameof(DisplayHats));
+            NotifyPropertyChanged(nameof(DisplayShirts));
+            NotifyPropertyChanged(nameof(DisplayPants));
+            NotifyPropertyChanged(nameof(DisplayShoes));
         }
     }
 }

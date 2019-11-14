@@ -239,6 +239,11 @@
             </summary>
             <returns> true if file was renamed; false otherwise. </returns>
         </member>
+        <member name="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.HasDownloadedMap">
+            <summary>
+            used to determine if list of available maps should be refreshed when switching back to the main window
+            </summary>
+        </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.GetManifestsAsync(System.Boolean,System.Boolean)">
             <summary>
             Downloads manifest files and refreshes <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.FilteredAssetList"/> after successful download.
