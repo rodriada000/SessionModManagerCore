@@ -8,7 +8,20 @@ namespace SessionMapSwitcherCore.Utils
         PathToSession,
         ShowInvalidMaps,
         ProjectWatcherPath,
-        CustomWindowSize
+        CustomWindowSize,
+        PathToCredentialsJson,
+        UploaderAuthor,
+        FetchAllPreviewImages,
+        DeleteDownloadAfterAssetInstall,
+        AssetStoreMapsChecked,
+        AssetStoreDecksChecked,
+        AssetStoreGriptapesChecked,
+        AssetStoreTrucksChecked,
+        AssetStoreWheelsChecked,
+        AssetStoreHatsChecked,
+        AssetStorePantsChecked,
+        AssetStoreShirtsChecked,
+        AssetStoreShoesChecked
     }
 
     public class AppSettingsUtil

@@ -799,67 +799,13 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             MapMetaData metaData = MetaDataManager.LoadMapMetaData(mapToDelete);
 
-            if (metaData == null)
+            BoolWithMessage deleteResult = MetaDataManager.DeleteMapFiles(metaData);
+
+            if (deleteResult.Result)
             {
-                UserMessage = $"Failed to get meta data for map: {mapToDelete.DisplayName}";
-                return;
-            }
-
-            if (metaData.FilePaths?.Count == 0)
-            {
-                UserMessage = $"List of files to delete is unknown for {mapToDelete.DisplayName}. You must manually delete the map files from the following folder: {mapToDelete.DirectoryPath}";
-                return;
-            }
-
-            try
-            {
-                foreach (string file in metaData.FilePaths)
-                {
-                    if (File.Exists(file))
-                    {
-                        File.Delete(file);
-                    }
-                }
-
-                string currentDir = mapToDelete.DirectoryPath;
-
-                if (currentDir != SessionPath.ToContent)
-                {
-                    List<string> remainingFiles = FileUtils.GetAllFilesInDirectory(currentDir);
-
-                    // iteratively go up parent folder structure to delete empty folders after files have been deleted
-                    while (remainingFiles.Count == 0 && currentDir != SessionPath.ToContent)
-                    {
-                        string dirToDelete = currentDir;
-
-                        DirectoryInfo dirInfo = new DirectoryInfo(currentDir);
-                        currentDir = dirInfo.Parent.FullName; // get path to parent directory to check next
-
-                        Directory.Delete(dirToDelete, true);
-
-                        if (currentDir != SessionPath.ToContent)
-                        {
-                            remainingFiles = FileUtils.GetAllFilesInDirectory(currentDir); // get list of files from parent dir to check next
-                        }
-                    }
-                }
-
-                // lastly delete meta data file
-                string pathToMetaData = Path.Combine(MetaDataManager.FullPathToMetaFolder, metaData.GetJsonFileName());
-                if (File.Exists(pathToMetaData))
-                {
-                    File.Delete(pathToMetaData);
-                }
-
-                UserMessage = $"{mapToDelete.DisplayName} has been deleted! Reloading maps ...";
+                UserMessage = $"{deleteResult.Message} ... Reloading maps ...";
                 ReloadAvailableMapsInBackground(showLoadingMessage: false);
             }
-            catch (Exception e)
-            {
-                UserMessage = $"Failed to delete files: {e.Message}";
-                return;
-            }
-
         }
 
         #endregion

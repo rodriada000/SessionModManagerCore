@@ -14,11 +14,21 @@ namespace SessionMapSwitcherCore.Classes
 
         public const string MetaFolderName = "MapSwitcherMetaData";
 
+        public const string InstalledTextureFileName = "installed_textures.json";
+
         public static string FullPathToMetaFolder
         {
             get
             {
                 return Path.Combine(SessionPath.ToContent, MetaFolderName);
+            }
+        }
+
+        public static string PathToInstalledTextureFile
+        {
+            get
+            {
+                return Path.Combine(FullPathToMetaFolder, InstalledTextureFileName);
             }
         }
 
@@ -156,7 +166,7 @@ namespace SessionMapSwitcherCore.Classes
             metaData.MapFileDirectory = ReplaceSourceMapPathWithPathToContent(sourceMapFolder, validMap.DirectoryPath);
 
             if (findMapFiles)
-            { 
+            {
                 metaData.FilePaths = FileUtils.GetAllFilesInDirectory(sourceMapFolder);
 
                 // modify file paths to match the target folder Session "Content" folder
@@ -250,6 +260,8 @@ namespace SessionMapSwitcherCore.Classes
         {
             try
             {
+                CreateMetaDataFolder();
+
                 DirectoryInfo dirInfo = new DirectoryInfo(mapItem.DirectoryPath);
 
                 string fileName = $"{dirInfo.Name}_{mapItem.MapName}_meta.json";
@@ -257,6 +269,20 @@ namespace SessionMapSwitcherCore.Classes
 
                 string fileContents = File.ReadAllText(pathToFile);
 
+                return JsonConvert.DeserializeObject<MapMetaData>(fileContents);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "failed to load map meta data");
+                return null;
+            }
+        }
+
+        public static MapMetaData LoadMapMetaData(string pathToJson)
+        {
+            try
+            {
+                string fileContents = File.ReadAllText(pathToJson);
                 return JsonConvert.DeserializeObject<MapMetaData>(fileContents);
             }
             catch (Exception e)
@@ -281,7 +307,7 @@ namespace SessionMapSwitcherCore.Classes
                 string pathToFile = Path.Combine(FullPathToMetaFolder, fileName);
 
 
-                string jsonToSave = JsonConvert.SerializeObject(metaData);
+                string jsonToSave = JsonConvert.SerializeObject(metaData, Formatting.Indented);
 
                 File.WriteAllText(pathToFile, jsonToSave);
             }
@@ -289,6 +315,70 @@ namespace SessionMapSwitcherCore.Classes
             {
                 Logger.Error(e, "failed to save map meta data");
                 return;
+            }
+        }
+
+        internal static void SaveTextureMetaData(TextureMetaData metaData)
+        {
+            if (metaData == null)
+            {
+                return;
+            }
+
+            try
+            {
+                CreateMetaDataFolder();
+
+                InstalledTexturesMetaData currentlyInstalled = LoadTextureMetaData();
+                currentlyInstalled.Replace(metaData);
+
+                SaveTextureMetaData(currentlyInstalled);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "failed to save texture meta data");
+                return;
+            }
+        }
+
+        internal static void SaveTextureMetaData(InstalledTexturesMetaData metaData)
+        {
+            if (metaData == null)
+            {
+                return;
+            }
+
+            try
+            {
+                CreateMetaDataFolder();
+
+                string jsonToSave = JsonConvert.SerializeObject(metaData, Formatting.Indented);
+
+                File.WriteAllText(PathToInstalledTextureFile, jsonToSave);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "failed to save texture meta data");
+                return;
+            }
+        }
+
+        public static InstalledTexturesMetaData LoadTextureMetaData()
+        {
+            try
+            {
+                if (File.Exists(PathToInstalledTextureFile) == false)
+                {
+                    return new InstalledTexturesMetaData();
+                }
+
+                string fileContents = File.ReadAllText(PathToInstalledTextureFile);
+                return JsonConvert.DeserializeObject<InstalledTexturesMetaData>(fileContents);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "failed to load map meta data");
+                return null;
             }
         }
 
@@ -302,6 +392,102 @@ namespace SessionMapSwitcherCore.Classes
             }
 
             return false;
+        }
+
+        public static List<MapMetaData> GetAllMetaDataForMaps()
+        {
+            List<MapMetaData> maps = new List<MapMetaData>();
+            CreateMetaDataFolder();
+
+            foreach (string file in Directory.GetFiles(FullPathToMetaFolder, "*_meta.json"))
+            {
+                MapMetaData foundMetaData = LoadMapMetaData(file);
+
+                if (foundMetaData != null)
+                {
+                    maps.Add(foundMetaData);
+                }
+            }
+
+            return maps;
+        }
+
+        public static BoolWithMessage DeleteMapFiles(MapMetaData metaData)
+        {
+
+            if (metaData == null)
+            {
+                return BoolWithMessage.False($"meta data is null");
+            }
+
+            if (metaData.FilePaths?.Count == 0)
+            {
+                return BoolWithMessage.False($"List of files to delete is unknown for {metaData.MapName}. You must manually delete the map files from the following folder: {metaData.MapFileDirectory}");
+            }
+
+            try
+            {
+                BoolWithMessage result = FileUtils.DeleteFiles(metaData.FilePaths);
+
+                if (result.Result == false)
+                {
+                    return result;
+                }
+
+                // lastly delete meta data file
+                string pathToMetaData = Path.Combine(MetaDataManager.FullPathToMetaFolder, metaData.GetJsonFileName());
+                if (File.Exists(pathToMetaData))
+                {
+                    File.Delete(pathToMetaData);
+                }
+
+                return BoolWithMessage.True($"{metaData.MapName} has been deleted!");
+            }
+            catch (Exception e)
+            {
+                return BoolWithMessage.False($"Failed to delete files: {e.Message}");
+            }
+
+        }
+
+        public static BoolWithMessage DeleteTextureFiles(TextureMetaData metaData)
+        {
+            if (metaData == null)
+            {
+                return BoolWithMessage.False($"meta data is null");
+            }
+
+            if (metaData.FilePaths?.Count == 0)
+            {
+                return BoolWithMessage.False($"List of files to delete is unknown for {metaData.Name}.");
+            }
+
+            try
+            {
+                BoolWithMessage result = FileUtils.DeleteFiles(metaData.FilePaths);
+
+                if (result.Result == false)
+                {
+                    return result;
+                }
+
+                // lastly delete entry from list of installed textures
+                InstalledTexturesMetaData currentlyInstalledTextures = MetaDataManager.LoadTextureMetaData();
+                currentlyInstalledTextures.Remove(metaData);
+                MetaDataManager.SaveTextureMetaData(currentlyInstalledTextures);
+
+                return BoolWithMessage.True($"{metaData.Name} has been deleted!");
+            }
+            catch (Exception e)
+            {
+                return BoolWithMessage.False($"Failed to delete files: {e.Message}");
+            }
+        }
+
+        internal static TextureMetaData GetTextureMetaDataByName(string assetName)
+        {
+            InstalledTexturesMetaData installedTextures = LoadTextureMetaData();
+            return installedTextures.InstalledTextures.Where(t => t.AssetName == assetName).FirstOrDefault();
         }
     }
 }

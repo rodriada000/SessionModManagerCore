@@ -1,4 +1,5 @@
-﻿using SessionMapSwitcherCore.Classes;
+﻿using SessionAssetStore;
+using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
 using SessionModManagerCore.Classes;
 using System;
@@ -116,6 +117,8 @@ namespace SessionMapSwitcherCore.ViewModels
                 return PathInput;
             }
         }
+
+        public Asset AssetToImport { get; set; }
 
         public ComputerImportViewModel()
         {
@@ -245,6 +248,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 // create meta data for new map and save to disk
                 MapMetaData metaData = MetaDataManager.CreateMapMetaData(sourceFolderToCopy, true);
+
+                if (AssetToImport != null)
+                {
+                    metaData.AssetName = AssetToImport.AssetName;
+                }
 
                 if (IsZipFileImport == false && metaData != null)
                 {
