@@ -6,6 +6,7 @@ using SessionMapSwitcherCore.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -23,9 +24,12 @@ namespace SessionModManagerCore.ViewModels
         private string _pathToFile;
         private string _pathToThumbnail;
         private string _selectedCategory;
+        private string _selectedBucketName;
         private string _statusMessage;
         private bool _isUploadingAsset;
-        private List<string> _avaialbleCategories;
+        private List<string> _availableCategories;
+        private List<string> _availableBuckets;
+
 
         private StorageManager _assetManager;
 
@@ -47,8 +51,12 @@ namespace SessionModManagerCore.ViewModels
             get { return _author; }
             set
             {
-                _author = value;
-                NotifyPropertyChanged();
+                if (_author != value)
+                {
+                    _author = value;
+                    NotifyPropertyChanged();
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.UploaderAuthor, _author); // store author in app settings so it is remembered for future uploads
+                }
             }
         }
         public string Description
@@ -88,12 +96,27 @@ namespace SessionModManagerCore.ViewModels
                 NotifyPropertyChanged();
             }
         }
+
+        public string SelectedBucketName
+        {
+            get { return _selectedBucketName; }
+            set
+            {
+                if (_selectedBucketName != value)
+                {
+                    _selectedBucketName = value;
+                    NotifyPropertyChanged();
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreSelectedBucket, _selectedBucketName);
+                }
+            }
+        }
         public string StatusMessage
         {
             get { return _statusMessage; }
             set
             {
                 _statusMessage = value;
+                Logger.Info($"StatusMessage = {_statusMessage}");
                 NotifyPropertyChanged();
             }
         }
@@ -115,10 +138,32 @@ namespace SessionModManagerCore.ViewModels
 
         public List<string> AvailableCategories
         {
-            get { return _avaialbleCategories; }
+            get
+            {
+                if (_availableCategories == null)
+                    _availableCategories = new List<string>();
+
+                return _availableCategories;
+            }
             set
             {
-                _avaialbleCategories = value;
+                _availableCategories = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public List<string> AvailableBuckets
+        {
+            get
+            {
+                if (_availableBuckets == null)
+                    _availableBuckets = new List<string>();
+
+                return _availableBuckets;
+            }
+            set
+            {
+                _availableBuckets = value;
                 NotifyPropertyChanged();
             }
         }
@@ -138,10 +183,11 @@ namespace SessionModManagerCore.ViewModels
         {
             IsUploadingAsset = false;
             HasAuthenticated = false;
-            SelectedCategory = "Maps";
+            SelectedCategory = "";
             StatusMessage = DefaultStatusMesssage;
             PathToCredentialsJson = AppSettingsUtil.GetAppSetting(SettingKey.PathToCredentialsJson);
             Author = AppSettingsUtil.GetAppSetting(SettingKey.UploaderAuthor);
+            SelectedBucketName = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreSelectedBucket);
             InitAvailableCategories();
         }
 
@@ -199,6 +245,23 @@ namespace SessionModManagerCore.ViewModels
         public void UploadAsset()
         {
             // Validate fields before uploading
+            if (String.IsNullOrEmpty(Name))
+            {
+                StatusMessage = "Please provide a Name for the asset.";
+                return;
+            }
+
+            if (String.IsNullOrEmpty(Author))
+            {
+                StatusMessage = "Please provide an Author for the asset.";
+                return;
+            }
+
+            if (String.IsNullOrEmpty(SelectedCategory))
+            {
+                StatusMessage = "Please select an Asset Category first.";
+                return;
+            }
 
             if (File.Exists(PathToFile) == false)
             {
@@ -212,27 +275,14 @@ namespace SessionModManagerCore.ViewModels
                 return;
             }
 
-            if (String.IsNullOrEmpty(SelectedCategory))
+            if (String.IsNullOrEmpty(SelectedBucketName))
             {
-                StatusMessage = "Please select an Asset Category first.";
+                StatusMessage = "Please select a Bucket first.";
                 return;
             }
 
-            if (String.IsNullOrEmpty(Name))
-            {
-                StatusMessage = "Please provide a Name for the asset.";
-                return;
-            }
-
-            if (String.IsNullOrEmpty(Author))
-            {
-                StatusMessage = "Please provide an Author for the asset.";
-                return;
-            }
 
             IsUploadingAsset = true;
-
-            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.UploaderAuthor, Author); // store author in app settings so it is remembered for future uploads
 
             Task uploadTask = Task.Factory.StartNew(() =>
             {
@@ -243,7 +293,7 @@ namespace SessionModManagerCore.ViewModels
                 }
 
                 string fileName = Path.GetFileName(PathToFile);
-                string thumbnailName = Path.GetFileName(PathToThumbnail);
+                string thumbnailName = $"{Path.GetFileNameWithoutExtension(PathToFile)}{Path.GetExtension(PathToThumbnail)}"; // make sure thumbnail on the storage server has same name as json and file
                 AssetCategory category = GetAssetCategoryBasedOnSelectedCategory();
 
                 Asset assetToUpload = new Asset(Name, Description, Author, fileName, thumbnailName, category.Value);
@@ -252,9 +302,11 @@ namespace SessionModManagerCore.ViewModels
                 string pathToTempJson = Path.Combine(AssetStoreViewModel.AbsolutePathToTempDownloads, $"{Path.GetFileNameWithoutExtension(PathToFile)}.json");
                 string jsonToSave = JsonConvert.SerializeObject(assetToUpload, Formatting.Indented);
 
+
+                Directory.CreateDirectory(AssetStoreViewModel.AbsolutePathToTempDownloads);
                 File.WriteAllText(pathToTempJson, jsonToSave);
 
-                AssetManager.UploadAsset(pathToTempJson, PathToThumbnail, PathToFile, new IProgress<IUploadProgress>[] {
+                AssetManager.UploadAsset(pathToTempJson, PathToThumbnail, PathToFile, SelectedBucketName, new IProgress<IUploadProgress>[] {
                 new Progress<IUploadProgress>(p => StatusMessage = $"Uploading manifest: {p.Status} {p.BytesSent} Bytes ..."),
                 new Progress<IUploadProgress>(p => StatusMessage = $"Uploading thumbnail: {p.Status} {p.BytesSent / 1000:0.00} KB ..."),
                 new Progress<IUploadProgress>(p => StatusMessage = $"Uploading file: {p.Status} {p.BytesSent / 1000000:0.00} MB ...")
@@ -269,7 +321,7 @@ namespace SessionModManagerCore.ViewModels
 
                 if (uploadResult.IsFaulted)
                 {
-                    StatusMessage = $"An error occurred while uploading the files: {uploadResult.Exception.InnerException?.Message}";
+                    StatusMessage = $"An error occurred while uploading the files: {uploadResult.Exception.GetBaseException()?.Message}";
                     Logger.Error(uploadResult.Exception, "failed to upload asset");
                     return;
                 }
@@ -277,7 +329,7 @@ namespace SessionModManagerCore.ViewModels
                 StatusMessage = $"The asset {Name} has been uploaded successfully! You can close this window or leave it open to upload another asset.";
             });
 
-            
+
         }
 
         public void BrowseForFile()
@@ -313,6 +365,17 @@ namespace SessionModManagerCore.ViewModels
             {
                 StatusMessage = $"Failed to authenticate to asset store: {e.Message}";
                 Logger.Error(e, "Failed to authenticate to asset store");
+            }
+        }
+
+        /// <summary>
+        /// sets <see cref="SelectedBucketName"/> to <see cref="Author"/> if the author is also a valid bucket name
+        /// </summary>
+        public void SetBucketBasedOnAuthor()
+        {
+            if (String.IsNullOrEmpty(SelectedBucketName) && AvailableBuckets.Any(b => b == Author))
+            {
+                SelectedBucketName = Author;
             }
         }
     }

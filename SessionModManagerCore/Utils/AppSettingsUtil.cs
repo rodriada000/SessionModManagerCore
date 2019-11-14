@@ -21,7 +21,8 @@ namespace SessionMapSwitcherCore.Utils
         AssetStoreHatsChecked,
         AssetStorePantsChecked,
         AssetStoreShirtsChecked,
-        AssetStoreShoesChecked
+        AssetStoreShoesChecked,
+        AssetStoreSelectedBucket
     }
 
     public class AppSettingsUtil

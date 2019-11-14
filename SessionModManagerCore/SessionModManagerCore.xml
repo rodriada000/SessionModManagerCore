@@ -251,6 +251,39 @@
             <param name="forceRefresh"> force download the manifests again</param>
             <param name="getSelectedOnly"> only download manifests for the selected asset categories </param>
         </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.GetAssetsByCategory(SessionAssetStore.AssetCategory)">
+            <summary>
+            Returns list of AssetViewModels by category that exist in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>
+            </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.GetSelectedCategories">
+            <summary>
+            Returns list of <see cref="T:SessionAssetStore.AssetCategory"/> that are set to true to display
+            by checking <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DisplayDecks"/>, <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DisplayGriptapes"/>, etc.
+            </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.LoadAssetsFromManifest(SessionAssetStore.AssetCategory)">
+            <summary>
+            Loads assets from the manifest files for a specific category into <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>.
+            Assets will be reloaded if there are new manifest files or changes to the manifest files.
+            </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.HasNewAssetManifests(SessionAssetStore.AssetCategory)">
+            <summary>
+            Returns true if there exists more manifest files for a category versus the count 
+            of assets in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>
+            </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.HasAssetManifestsChanged(SessionAssetStore.AssetCategory)">
+            <summary>
+            Checks if the in-memory asset object has different values than the manifest file
+            </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.IsAssetsLoaded(SessionAssetStore.AssetCategory)">
+            <summary>
+            Returns true if there are ANY assets in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/> based on the given category
+            </summary>
+        </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DeleteSelectedAssetFromAssetStore">
             <summary>
             deletes the asset from the asset store if user has rights to asset
@@ -392,6 +425,11 @@
         <member name="M:SessionModManagerCore.Classes.VersionChecker.DeleteOldVersionFiles">
             <summary>
             Delete files used in versions older than 2.2.0.0
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.UploadAssetViewModel.SetBucketBasedOnAuthor">
+            <summary>
+            sets <see cref="P:SessionModManagerCore.ViewModels.UploadAssetViewModel.SelectedBucketName"/> to <see cref="P:SessionModManagerCore.ViewModels.UploadAssetViewModel.Author"/> if the author is also a valid bucket name
             </summary>
         </member>
         <member name="P:DownloadableMap.ZipFileName">
