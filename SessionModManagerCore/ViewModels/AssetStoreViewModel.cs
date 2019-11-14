@@ -57,7 +57,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
         #region Properties
 
-        public string AbsolutePathToStoreData
+        public static string AbsolutePathToStoreData
         {
             get
             {
@@ -65,7 +65,7 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public string AbsolutePathToThumbnails
+        public static string AbsolutePathToThumbnails
         {
             get
             {
@@ -73,7 +73,7 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public string AbsolutePathToTempDownloads
+        public static string AbsolutePathToTempDownloads
         {
             get
             {
@@ -164,6 +164,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Wheels);
             }
         }
+
         public bool DisplayHats
         {
             get { return _displayHats; }
@@ -702,8 +703,14 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             try
             {
-                AssetManager.Authenticate();
+                Task t = AssetManager.Authenticate();
+                t.Wait();
                 HasAuthenticated = true;
+            }
+            catch (AggregateException e)
+            {
+                UserMessage = $"Failed to authenticate to asset store: {e.InnerException?.Message}";
+                Logger.Error(e, "Failed to authenticate to asset store");
             }
             catch (Exception e)
             {
@@ -723,10 +730,6 @@ namespace SessionMapSwitcherCore.ViewModels
                 if (File.Exists(pathToThumbnail) == false)
                 {
                     AssetManager.DownloadAssetThumbnail(SelectedAsset.Asset, pathToThumbnail, new Progress<IDownloadProgress>(p => UserMessage = $"fetching preview image: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."), true);
-                }
-                else
-                {
-                    UserMessage = "";
                 }
 
                 PreviewImageSource = new Uri(pathToThumbnail).AbsolutePath;
@@ -825,7 +828,10 @@ namespace SessionMapSwitcherCore.ViewModels
                         File.Delete(pathToDownload);
                     }
 
+                    RefreshPreviewForSelected();
+
                     IsInstallingAsset = false;
+
                 });
             });
         }
@@ -919,5 +925,49 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        /// <summary>
+        /// deletes the asset from the asset store if user has rights to asset
+        /// </summary>
+        public void DeleteSelectedAssetFromAssetStore()
+        {
+            AssetViewModel assetToDelete = SelectedAsset;
+
+            if (assetToDelete == null)
+            {
+                UserMessage = "Cannot delete, selected asset is null.";
+                return;
+            }
+
+            string manifestFileName = assetToDelete.Asset.AssetName.Replace(".zip", ".json");
+            manifestFileName = manifestFileName.Replace(".rar", ".json");
+
+            try
+            {
+                // use UploadAssetViewModel because the StorageManager will authenticate using uploader credentials instead of standard read-only credentials
+                UploadAssetViewModel uploadViewModel = new UploadAssetViewModel();
+                uploadViewModel.TryAuthenticate();
+
+                if (uploadViewModel.HasAuthenticated)
+                {
+                    uploadViewModel.AssetManager.DeleteAsset(manifestFileName, assetToDelete.Asset);
+                }
+                else
+                {
+                    UserMessage = "Failed to authenticate credentials. Click 'Upload Asset' to set uploader credentials before deleting.";
+                }
+            }
+            catch (AggregateException e)
+            {
+                UserMessage = $"An error occurred deleting the asset from the store: {e.InnerException?.Message}";
+                Logger.Error(e, "Failed to delete asset from storage");
+                return;
+            }
+            catch (Exception e)
+            {
+                UserMessage = $"An error occurred deleting the asset from the store: {e.Message}";
+                Logger.Error(e, "Failed to delete asset from storage");
+                return;
+            }
+        }
     }
 }

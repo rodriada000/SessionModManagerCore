@@ -307,7 +307,7 @@ namespace SessionMapSwitcherCore.Classes
                 string pathToFile = Path.Combine(FullPathToMetaFolder, fileName);
 
 
-                string jsonToSave = JsonConvert.SerializeObject(metaData);
+                string jsonToSave = JsonConvert.SerializeObject(metaData, Formatting.Indented);
 
                 File.WriteAllText(pathToFile, jsonToSave);
             }
@@ -352,7 +352,7 @@ namespace SessionMapSwitcherCore.Classes
             {
                 CreateMetaDataFolder();
 
-                string jsonToSave = JsonConvert.SerializeObject(metaData);
+                string jsonToSave = JsonConvert.SerializeObject(metaData, Formatting.Indented);
 
                 File.WriteAllText(PathToInstalledTextureFile, jsonToSave);
             }

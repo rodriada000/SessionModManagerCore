@@ -246,6 +246,11 @@
             <param name="forceRefresh"> force download the manifests again</param>
             <param name="getSelectedOnly"> only download manifests for the selected asset categories </param>
         </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DeleteSelectedAssetFromAssetStore">
+            <summary>
+            deletes the asset from the asset store if user has rights to asset
+            </summary>
+        </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.ComputerImportViewModel.EnsurePathToMapFilesIsCorrect(System.String)">
             <summary>
             This will check if the folder path to a map has the 'Content' folder and returns path to the maps 'Content folder if so

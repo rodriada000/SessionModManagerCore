@@ -8,7 +8,9 @@ namespace SessionMapSwitcherCore.Utils
         PathToSession,
         ShowInvalidMaps,
         ProjectWatcherPath,
-        CustomWindowSize
+        CustomWindowSize,
+        PathToCredentialsJson,
+        UploaderAuthor
     }
 
     public class AppSettingsUtil
