@@ -251,6 +251,11 @@
             <param name="forceRefresh"> force download the manifests again</param>
             <param name="getSelectedOnly"> only download manifests for the selected asset categories </param>
         </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.RefreshAuthorList">
+            <summary>
+            Updates <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AuthorList"/> with distinct sorted list of authors in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>
+            </summary>
+        </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.GetAssetsByCategory(SessionAssetStore.AssetCategory)">
             <summary>
             Returns list of AssetViewModels by category that exist in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>
@@ -262,7 +267,7 @@
             by checking <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DisplayDecks"/>, <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DisplayGriptapes"/>, etc.
             </summary>
         </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.LoadAssetsFromManifest(SessionAssetStore.AssetCategory)">
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.LoadAssetsFromManifest(SessionAssetStore.AssetCategory,System.Boolean)">
             <summary>
             Loads assets from the manifest files for a specific category into <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>.
             Assets will be reloaded if there are new manifest files or changes to the manifest files.
@@ -282,6 +287,23 @@
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.IsAssetsLoaded(SessionAssetStore.AssetCategory)">
             <summary>
             Returns true if there are ANY assets in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/> based on the given category
+            </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DownloadSelectedAssetAsync">
+            <summary>
+            Main method for downloading and installing the selected asset asynchronously.
+            </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.InstallDownloadedAsset(SessionModManagerCore.ViewModels.AssetViewModel,System.String)">
+            <summary>
+            Logic for determining how to install downloaded asset. (maps and textures are installed differently)
+            </summary>
+            <param name="assetToInstall"> asset being installed </param>
+            <param name="pathToDownload"> absolute path to the downloaded asset file </param>
+        </member>
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.RemoveSelectedAsset">
+            <summary>
+            Deletes the selected asset files from Session folders
             </summary>
         </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DeleteSelectedAssetFromAssetStore">
@@ -332,7 +354,7 @@
             Return true if unzipped temp folder has subfolders other than the games stock folders e.g. 'Customization' folder
             </summary>
         </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.TextureReplacerViewModel.CopyNewTextureFilesToGame(System.IO.FileInfo,System.String,System.String)">
+        <member name="M:SessionMapSwitcherCore.ViewModels.TextureReplacerViewModel.CopyNewTextureFilesToGame(System.IO.FileInfo,System.String)">
             <summary>
             Loop over all files in the folder that contains the <paramref name="newTexture"/> .uasset file and copy all other files related to texture (.uexp and .ubulk files) to the <paramref name="targetFolder"/>
             </summary>

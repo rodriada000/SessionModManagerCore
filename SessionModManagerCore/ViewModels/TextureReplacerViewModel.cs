@@ -122,10 +122,10 @@ namespace SessionMapSwitcherCore.ViewModels
 
             try
             {
-                DeleteCurrentTextureFiles(originalTextureName, targetFolder);
+                DeleteCurrentTextureFiles(textureFileInfo.NameWithoutExtension(), targetFolder);
 
                 // find and copy files in source dir that match the .uasset name
-                List<string> filesCopied = CopyNewTextureFilesToGame(textureFileInfo, targetFolder, originalTextureName);
+                List<string> filesCopied = CopyNewTextureFilesToGame(textureFileInfo, targetFolder);
                 metaData.FilePaths.AddRange(filesCopied);
 
                 MetaDataManager.SaveTextureMetaData(metaData);
@@ -210,10 +210,9 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 try
                 {
-
-                    DeleteCurrentTextureFiles(originalTextureName, targetFolder);
+                    DeleteCurrentTextureFiles(textureFileInfo.NameWithoutExtension(), targetFolder);
                     // find and copy files in source dir that match the .uasset name
-                    List<string> filesCopied = CopyNewTextureFilesToGame(textureFileInfo, targetFolder, originalTextureName);
+                    List<string> filesCopied = CopyNewTextureFilesToGame(textureFileInfo, targetFolder);
                     newTextureMetaData.FilePaths.AddRange(filesCopied);
                 }
                 catch (Exception e)
@@ -397,7 +396,7 @@ namespace SessionMapSwitcherCore.ViewModels
         /// <summary>
         /// Loop over all files in the folder that contains the <paramref name="newTexture"/> .uasset file and copy all other files related to texture (.uexp and .ubulk files) to the <paramref name="targetFolder"/>
         /// </summary>
-        private static List<string> CopyNewTextureFilesToGame(FileInfo newTexture, string targetFolder, string textureName)
+        private static List<string> CopyNewTextureFilesToGame(FileInfo newTexture, string targetFolder)
         {
             List<string> filesCopied = new List<string>();
             string textureSourceDir = Path.GetDirectoryName(newTexture.FullName);
@@ -415,7 +414,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (info.NameWithoutExtension() == textureFileName)
                 {
-                    string targetPath = Path.Combine(targetFolder, $"{textureName}{info.Extension}");
+                    string targetPath = Path.Combine(targetFolder, $"{textureFileName}{info.Extension}");
 
                     Logger.Info($"... copying {file} -> {targetPath}");
                     File.Copy(file, targetPath, overwrite: true);
@@ -440,7 +439,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
             foreach (string existingFile in Directory.GetFiles(targetFolder))
             {
-                if (existingFile.Contains(textureFileName))
+
+                if (Path.GetFileNameWithoutExtension(existingFile) == textureFileName)
                 {
                     Logger.Info($"... deleting current texture {existingFile}");
                     File.Delete(existingFile);

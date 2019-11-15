@@ -25,6 +25,9 @@ namespace SessionMapSwitcherCore.ViewModels
 
         public const string thumbnailFolderName = "thumbnails";
 
+        public const string defaultInstallStatusValue = "Installed / Not Installed";
+        public const string defaultAuthorValue = "Show All";
+
         private StorageManager _assetManager;
         private string _userMessage;
         private string _installButtonText;
@@ -32,6 +35,8 @@ namespace SessionMapSwitcherCore.ViewModels
         private Stream _imageSource;
         private string _selectedDescription;
         private string _selectedAuthor;
+        private string _authorToFilterBy;
+        private string _selectedInstallStatus;
         private bool _fetchAllPreviewImages;
         private bool _deleteDownloadAfterInstall;
         private bool _isInstallButtonEnabled;
@@ -40,6 +45,9 @@ namespace SessionMapSwitcherCore.ViewModels
         private bool _isInstallingAsset;
         private List<AssetViewModel> _filteredAssetList;
         private List<AssetViewModel> _allAssets;
+        private List<string> _authorList;
+        private List<string> _installStatusList;
+
 
         private object filteredListLock = new object();
         private object allListLock = new object();
@@ -396,6 +404,45 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        public string AuthorToFilterBy
+        {
+            get
+            {
+                if (String.IsNullOrEmpty(_authorToFilterBy))
+                    _authorToFilterBy = "All";
+                return _authorToFilterBy;
+            }
+            set
+            {
+                if (_authorToFilterBy != value)
+                {
+                    _authorToFilterBy = value;
+                    NotifyPropertyChanged();
+                    RefreshFilteredAssetList();
+                }
+            }
+        }
+
+        public string SelectedInstallStatus
+        {
+            get
+            {
+                if (String.IsNullOrEmpty(_selectedInstallStatus))
+                    _selectedInstallStatus = "All";
+                return _selectedInstallStatus;
+            }
+            set
+            {
+                if (_selectedInstallStatus != value)
+                {
+                    _selectedInstallStatus = value;
+                    NotifyPropertyChanged();
+                    RefreshFilteredAssetList();
+                }
+            }
+        }
+
+
         public bool IsLoadingManifests
         {
             get { return _isLoadingManifests; }
@@ -460,7 +507,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
                 NotifyPropertyChanged();
             }
-        }
+        }        
 
         public AssetViewModel SelectedAsset
         {
@@ -472,6 +519,39 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
             }
         }
+
+        public List<string> AuthorList
+        {
+            get
+            {
+                if (_authorList == null)
+                    _authorList = new List<string>();
+                
+                return _authorList;
+            }
+            set
+            {
+                _authorList = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public List<string> InstallStatusList
+        {
+            get
+            {
+                if (_installStatusList == null)
+                    _installStatusList = new List<string>();
+
+                return _installStatusList;
+            }
+            set
+            {
+                _installStatusList = value;
+                NotifyPropertyChanged();
+            }
+        }
+
 
         #endregion
 
@@ -494,6 +574,12 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 DeleteDownloadAfterInstall = AppSettingsUtil.GetAppSetting(SettingKey.DeleteDownloadAfterAssetInstall).Equals("true", StringComparison.OrdinalIgnoreCase);
             }
+
+            InstallStatusList = new List<string>() { defaultInstallStatusValue, "Installed", "Not Installed" };
+            SelectedInstallStatus = defaultInstallStatusValue;
+
+            AuthorList = new List<string>() { defaultAuthorValue };
+            AuthorToFilterBy = defaultAuthorValue;
         }
 
         private void LazilyGetSelectedManifestsAndRefreshFilteredAssetList()
@@ -607,7 +693,7 @@ namespace SessionMapSwitcherCore.ViewModels
                     DownloadAllPreviewImagesAsync();
                 }
 
-                RefreshFilteredAssetList();
+                RefreshFilteredAssetList(checkForFileChanges: true);
 
                 UserMessage = "Manifests downloaded ...";
             });
@@ -626,22 +712,74 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public void RefreshFilteredAssetList()
+        public void RefreshFilteredAssetList(bool checkForFileChanges = false)
         {
             List<AssetCategory> categories = GetSelectedCategories();
             List<AssetViewModel> newList = new List<AssetViewModel>();
 
             foreach (AssetCategory cat in categories)
             {
-                LoadAssetsFromManifest(cat);
+                LoadAssetsFromManifest(cat, checkForFileChanges);
                 newList.AddRange(GetAssetsByCategory(cat));
             }
+
+            
+            RefreshAuthorList();
+
+            if (AuthorToFilterBy != defaultAuthorValue)
+            {
+                newList = newList.Where(a => a.Author == AuthorToFilterBy).ToList();
+            }
+
+
+            if (SelectedInstallStatus != defaultInstallStatusValue)
+            {
+                // read currently installed textures/map from files into memory so checking each asset is quicker
+                InstalledTexturesMetaData installedTextures = MetaDataManager.LoadTextureMetaData();
+                List<MapMetaData> installedMaps = MetaDataManager.GetAllMetaDataForMaps();
+
+                switch (SelectedInstallStatus)
+                {
+                    case "Installed":
+                        newList = newList.Where(a => IsAssetInstalled(a, installedMaps, installedTextures)).ToList();
+                        break;
+
+                    case "Not Installed":
+                        newList = newList.Where(a => IsAssetInstalled(a, installedMaps, installedTextures) == false).ToList();
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
 
             FilteredAssetList = newList;
 
             if (FilteredAssetList.Count == 0 && GetSelectedCategories().Count() == 0)
             {
                 UserMessage = "Check categories to view the list of downloadable assets ...";
+            }
+        }
+
+        /// <summary>
+        /// Updates <see cref="AuthorList"/> with distinct sorted list of authors in <see cref="AllAssets"/>
+        /// </summary>
+        private void RefreshAuthorList()
+        {
+            List<string> newAuthorList = AllAssets.Select(a => a.Author)
+                                                  .Distinct()
+                                                  .OrderBy(a => a)
+                                                  .ToList();
+
+            newAuthorList.Insert(0, "Show All");
+
+            AuthorList = newAuthorList;
+
+            //clear selection if selected author not in list
+            if (AuthorList.Any(a => a == AuthorToFilterBy) == false)
+            {
+                AuthorToFilterBy = "Show All";
             }
         }
 
@@ -661,15 +799,24 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private bool IsSelectedAssetInstalled()
         {
-            if (SelectedAsset.AssetCategory == AssetCategory.Maps.Value)
-            {
-                List<MapMetaData> installedMaps = MetaDataManager.GetAllMetaDataForMaps();
+            // pass in null to read from json files to check if asset is installed
+            return IsAssetInstalled(SelectedAsset, null, null);
+        }
 
-                return installedMaps.Any(m => m.AssetName == SelectedAsset.Asset.AssetName);
+        private bool IsAssetInstalled(AssetViewModel asset, List<MapMetaData> mapMetaData, InstalledTexturesMetaData installedTextures)
+        {
+            if (asset.AssetCategory == AssetCategory.Maps.Value)
+            {
+                if (mapMetaData == null)
+                {
+                    mapMetaData = MetaDataManager.GetAllMetaDataForMaps();
+                }
+
+                return mapMetaData.Any(m => m.AssetName == asset.Asset.AssetName);
             }
             else
             {
-                return MetaDataManager.GetTextureMetaDataByName(SelectedAsset.Asset.AssetName) != null;
+                return MetaDataManager.GetTextureMetaDataByName(asset.Asset.AssetName, installedTextures) != null;
             }
         }
 
@@ -740,9 +887,16 @@ namespace SessionMapSwitcherCore.ViewModels
         /// Loads assets from the manifest files for a specific category into <see cref="AllAssets"/>.
         /// Assets will be reloaded if there are new manifest files or changes to the manifest files.
         /// </summary>
-        private void LoadAssetsFromManifest(AssetCategory category)
+        private void LoadAssetsFromManifest(AssetCategory category, bool checkForFileChanges)
         {
-            if (IsAssetsLoaded(category) == false || HasNewAssetManifests(category) || HasAssetManifestsChanged(category))
+            bool hasFileChanges = false;
+
+            if (checkForFileChanges)
+            {
+                hasFileChanges = HasNewAssetManifests(category) || HasAssetManifestsChanged(category);
+            }
+
+            if (IsAssetsLoaded(category) == false || hasFileChanges)
             {
                 List<Asset> assets = new List<Asset>();
 
@@ -907,6 +1061,18 @@ namespace SessionMapSwitcherCore.ViewModels
                     AssetManager.DownloadAssetThumbnail(SelectedAsset.Asset, pathToThumbnail, new Progress<IDownloadProgress>(p => UserMessage = $"fetching preview image: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."), true);
                 }
 
+                if (PreviewImageSource != null)
+                {
+                    PreviewImageSource.Close();
+                    PreviewImageSource = null;
+                }
+
+                using (FileStream stream = File.Open(pathToThumbnail, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    PreviewImageSource = new MemoryStream();
+                    stream.CopyTo(PreviewImageSource);
+                }
+
                 PreviewImageSource = new MemoryStream(File.ReadAllBytes(pathToThumbnail));
             });
 
@@ -979,6 +1145,9 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        /// <summary>
+        /// Main method for downloading and installing the selected asset asynchronously.
+        /// </summary>
         public void DownloadSelectedAssetAsync()
         {
             CreateRequiredFolders();
@@ -1026,7 +1195,14 @@ namespace SessionMapSwitcherCore.ViewModels
                         File.Delete(pathToDownload);
                     }
 
+
                     RefreshPreviewForSelected();
+
+                    // refresh list if filtering by installed or uninstalled
+                    if (SelectedInstallStatus != defaultInstallStatusValue)
+                    {
+                        RefreshFilteredAssetList();
+                    }
 
                     if (assetToDownload.AssetCategory == AssetCategory.Maps.Value)
                     {
@@ -1039,6 +1215,11 @@ namespace SessionMapSwitcherCore.ViewModels
             });
         }
 
+        /// <summary>
+        /// Logic for determining how to install downloaded asset. (maps and textures are installed differently)
+        /// </summary>
+        /// <param name="assetToInstall"> asset being installed </param>
+        /// <param name="pathToDownload"> absolute path to the downloaded asset file </param>
         private void InstallDownloadedAsset(AssetViewModel assetToInstall, string pathToDownload)
         {
             if (assetToInstall.AssetCategory == AssetCategory.Maps.Value)
@@ -1089,7 +1270,10 @@ namespace SessionMapSwitcherCore.ViewModels
             Directory.CreateDirectory(AbsolutePathToTempDownloads);
         }
 
-        public void RemoveSelectedAssetAsync()
+        /// <summary>
+        /// Deletes the selected asset files from Session folders
+        /// </summary>
+        public void RemoveSelectedAsset()
         {
             AssetViewModel assetToRemove = SelectedAsset;
             BoolWithMessage deleteResult = BoolWithMessage.False("");
@@ -1125,6 +1309,12 @@ namespace SessionMapSwitcherCore.ViewModels
             if (deleteResult.Result)
             {
                 RefreshPreviewForSelected();
+
+                // refresh list if filtering by installed or uninstalled
+                if (SelectedInstallStatus != defaultInstallStatusValue)
+                {
+                    RefreshFilteredAssetList();
+                }
             }
         }
 
