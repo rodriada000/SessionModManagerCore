@@ -486,7 +486,16 @@ namespace SessionMapSwitcherCore.Classes
 
         internal static TextureMetaData GetTextureMetaDataByName(string assetName)
         {
-            InstalledTexturesMetaData installedTextures = LoadTextureMetaData();
+            return GetTextureMetaDataByName(assetName, null);
+        }
+
+        internal static TextureMetaData GetTextureMetaDataByName(string assetName, InstalledTexturesMetaData installedTextures)
+        {
+            if (installedTextures == null)
+            {
+                installedTextures = LoadTextureMetaData();
+            }
+
             return installedTextures.InstalledTextures.Where(t => t.AssetName == assetName).FirstOrDefault();
         }
     }
