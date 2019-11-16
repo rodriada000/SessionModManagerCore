@@ -296,7 +296,7 @@ namespace SessionModManagerCore.ViewModels
                 string thumbnailName = $"{Path.GetFileNameWithoutExtension(PathToFile)}{Path.GetExtension(PathToThumbnail)}"; // make sure thumbnail on the storage server has same name as json and file
                 AssetCategory category = GetAssetCategoryBasedOnSelectedCategory();
 
-                Asset assetToUpload = new Asset(Name, Description, Author, fileName, thumbnailName, category.Value);
+                Asset assetToUpload = new Asset(Name, Description, Author, fileName, thumbnailName, category.Value, DateTime.UtcNow.ToString());
 
                 // save asset .json to disk to upload
                 string pathToTempJson = Path.Combine(AssetStoreViewModel.AbsolutePathToTempDownloads, $"{Path.GetFileNameWithoutExtension(PathToFile)}.json");
