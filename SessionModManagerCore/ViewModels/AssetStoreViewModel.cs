@@ -35,7 +35,7 @@ namespace SessionMapSwitcherCore.ViewModels
         private Stream _imageSource;
         private string _selectedDescription;
         private string _selectedAuthor;
-        private string _authorToFilterBy;
+        private AuthorDropdownViewModel _authorToFilterBy;
         private string _selectedInstallStatus;
         private bool _fetchAllPreviewImages;
         private bool _deleteDownloadAfterInstall;
@@ -45,7 +45,7 @@ namespace SessionMapSwitcherCore.ViewModels
         private bool _isInstallingAsset;
         private List<AssetViewModel> _filteredAssetList;
         private List<AssetViewModel> _allAssets;
-        private List<string> _authorList;
+        private List<AuthorDropdownViewModel> _authorList;
         private List<string> _installStatusList;
 
 
@@ -404,12 +404,13 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public string AuthorToFilterBy
+        public AuthorDropdownViewModel AuthorToFilterBy
         {
             get
             {
-                if (String.IsNullOrEmpty(_authorToFilterBy))
-                    _authorToFilterBy = "All";
+                if (_authorToFilterBy == null)
+                    _authorToFilterBy = new AuthorDropdownViewModel(defaultAuthorValue, 0);
+
                 return _authorToFilterBy;
             }
             set
@@ -520,12 +521,12 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public List<string> AuthorList
+        public List<AuthorDropdownViewModel> AuthorList
         {
             get
             {
                 if (_authorList == null)
-                    _authorList = new List<string>();
+                    _authorList = new List<AuthorDropdownViewModel>();
                 
                 return _authorList;
             }
@@ -578,8 +579,8 @@ namespace SessionMapSwitcherCore.ViewModels
             InstallStatusList = new List<string>() { defaultInstallStatusValue, "Installed", "Not Installed" };
             SelectedInstallStatus = defaultInstallStatusValue;
 
-            AuthorList = new List<string>() { defaultAuthorValue };
-            AuthorToFilterBy = defaultAuthorValue;
+            AuthorList = new List<AuthorDropdownViewModel>() { new AuthorDropdownViewModel(defaultAuthorValue, 0) };
+            AuthorToFilterBy = AuthorList[0];
         }
 
         private void LazilyGetSelectedManifestsAndRefreshFilteredAssetList()
@@ -636,8 +637,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private bool ManifestFilesExists(AssetCategory category)
         {
-            string pathToManifestTempFolder = Path.Combine(AppContext.BaseDirectory, StorageManager.MANIFESTS_TEMP);
-            string pathToManifestFiles = Path.Combine(pathToManifestTempFolder, category.Value);
+            string pathToManifestFiles = Path.Combine(AbsolutePathToTempManifests, category.Value);
 
             return Directory.Exists(pathToManifestFiles) && Directory.GetFiles(pathToManifestFiles).Length > 0;
         }
@@ -726,9 +726,9 @@ namespace SessionMapSwitcherCore.ViewModels
             
             RefreshAuthorList();
 
-            if (AuthorToFilterBy != defaultAuthorValue)
+            if (AuthorToFilterBy.Author != defaultAuthorValue)
             {
-                newList = newList.Where(a => a.Author == AuthorToFilterBy).ToList();
+                newList = newList.Where(a => a.Author == AuthorToFilterBy.Author).ToList();
             }
 
 
@@ -767,19 +767,24 @@ namespace SessionMapSwitcherCore.ViewModels
         /// </summary>
         private void RefreshAuthorList()
         {
-            List<string> newAuthorList = AllAssets.Select(a => a.Author)
-                                                  .Distinct()
-                                                  .OrderBy(a => a)
-                                                  .ToList();
+            List<AuthorDropdownViewModel> newAuthorList = new List<AuthorDropdownViewModel>();
+            
+            // use GroupBy to get count of assets per author
+            foreach (IGrouping<string, AssetViewModel> author in AllAssets.GroupBy(a => a.Author))
+            {
+                newAuthorList.Add(new AuthorDropdownViewModel(author.Key, author.Count()));
+            }
 
-            newAuthorList.Insert(0, "Show All");
+            newAuthorList = newAuthorList.OrderBy(a => a.Author).ToList();
+
+            newAuthorList.Insert(0, new AuthorDropdownViewModel(defaultAuthorValue, 0));
 
             AuthorList = newAuthorList;
 
             //clear selection if selected author not in list
-            if (AuthorList.Any(a => a == AuthorToFilterBy) == false)
+            if (AuthorList.Any(a => a.Author == AuthorToFilterBy.Author) == false)
             {
-                AuthorToFilterBy = "Show All";
+                AuthorToFilterBy = AuthorList[0];
             }
         }
 
