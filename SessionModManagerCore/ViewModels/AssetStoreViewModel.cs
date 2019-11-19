@@ -451,7 +451,13 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _isLoadingManifests = value;
                 NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(IsNotLoadingManifests));
             }
+        }
+
+        public bool IsNotLoadingManifests
+        {
+            get { return !_isLoadingManifests; }
         }
 
         public bool IsManifestsDownloaded { get; set; }
@@ -508,7 +514,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
                 NotifyPropertyChanged();
             }
-        }        
+        }
 
         public AssetViewModel SelectedAsset
         {
@@ -527,7 +533,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 if (_authorList == null)
                     _authorList = new List<AuthorDropdownViewModel>();
-                
+
                 return _authorList;
             }
             set
@@ -593,13 +599,16 @@ namespace SessionMapSwitcherCore.ViewModels
                 return;
             }
 
-            foreach (AssetCategory cat in selectedCategories)
+            Task t = Task.Factory.StartNew(() =>
             {
-                LazilyGetManifestsAndRefreshFilteredAssetList(cat);
-            }
+                foreach (AssetCategory cat in selectedCategories)
+                {
+                    LazilyGetManifestsAndRefreshFilteredAssetList(cat, waitForCompletion: true); // set waitForCompletion to true to wait to download manifests for category before continuing loop
+                }
+            });
         }
 
-        private void LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory category)
+        private void LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory category, bool waitForCompletion = false)
         {
             if (ManifestFilesExists(category))
             {
@@ -615,11 +624,8 @@ namespace SessionMapSwitcherCore.ViewModels
                     TryAuthenticate();
                 }
 
-                lock (manifestFileLock)
-                {
-                    Task fileWriteTask = AssetManager.GetAssetManifestsAsync(category, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {category.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."));
-                    fileWriteTask.Wait();
-                }
+                var fileWriteTask = AssetManager.GetAssetManifestsAsync(category, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {category.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB...")).ConfigureAwait(false);
+                fileWriteTask.GetAwaiter().GetResult();
             });
 
             t.ContinueWith((result) =>
@@ -634,6 +640,11 @@ namespace SessionMapSwitcherCore.ViewModels
                 UserMessage = $"{category.Value} manifests downloaded ...";
                 RefreshFilteredAssetList();
             });
+
+            if (waitForCompletion)
+            {
+                t.Wait();
+            }
         }
 
         private bool ManifestFilesExists(AssetCategory category)
@@ -671,11 +682,8 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
                 else
                 {
-                    lock (manifestFileLock)
-                    {
-                        Task fileTask = AssetManager.GetAllAssetManifestsAsync();
-                        fileTask.Wait();
-                    }
+                    var fileTask = AssetManager.GetAllAssetManifestsAsync().ConfigureAwait(false);
+                    fileTask.GetAwaiter().GetResult();
                 }
             });
 
@@ -707,11 +715,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
             foreach (AssetCategory cat in selectedCategories)
             {
-                lock (manifestFileLock)
-                {
-                    var fileTask = AssetManager.GetAssetManifestsAsync(cat, new EventHandler<WriteObjectProgressArgs>((o,p) => UserMessage = $"Downloading {cat.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."));
-                    fileTask.Wait();
-                }
+                var fileTask = AssetManager.GetAssetManifestsAsync(cat, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {cat.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB...")).ConfigureAwait(false);
+                fileTask.GetAwaiter().GetResult();
             }
         }
 
@@ -726,7 +731,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 newList.AddRange(GetAssetsByCategory(cat));
             }
 
-            
+
             RefreshAuthorList();
 
             if (AuthorToFilterBy.Author != defaultAuthorValue)
@@ -771,7 +776,7 @@ namespace SessionMapSwitcherCore.ViewModels
         private void RefreshAuthorList()
         {
             List<AuthorDropdownViewModel> newAuthorList = new List<AuthorDropdownViewModel>();
-            
+
             // use GroupBy to get count of assets per author
             foreach (IGrouping<string, AssetViewModel> author in AllAssets.GroupBy(a => a.Author))
             {
@@ -1065,7 +1070,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (File.Exists(pathToThumbnail) == false)
                 {
-                    System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(SelectedAsset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o,p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
+                    System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(SelectedAsset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
                     downloadTask.GetAwaiter().GetResult();
                 }
 
@@ -1113,7 +1118,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                     if (File.Exists(pathToThumbnail) == false)
                     {
-                        System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(asset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o,p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
+                        System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(asset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
                         downloadTask.GetAwaiter().GetResult();
                     }
                 }
@@ -1200,6 +1205,7 @@ namespace SessionMapSwitcherCore.ViewModels
                         File.Delete(pathToDownload);
                     }
 
+                    IsInstallingAsset = false;
 
                     RefreshPreviewForSelected();
 
@@ -1213,8 +1219,6 @@ namespace SessionMapSwitcherCore.ViewModels
                     {
                         HasDownloadedMap = true;
                     }
-
-                    IsInstallingAsset = false;
 
                 });
             });
