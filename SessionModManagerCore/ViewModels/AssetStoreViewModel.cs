@@ -694,6 +694,10 @@ namespace SessionMapSwitcherCore.ViewModels
                     UserMessage = "An error occurred fetching manifests ...";
                     Logger.Error(taskResult.Exception, "failed to get all manifests");
                 }
+                else
+                {
+                    UserMessage = "Manifests downloaded ...";
+                }
 
                 IsManifestsDownloaded = true;
                 IsLoadingManifests = false;
@@ -704,8 +708,6 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
 
                 RefreshFilteredAssetList(checkForFileChanges: true);
-
-                UserMessage = "Manifests downloaded ...";
             });
         }
 

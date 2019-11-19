@@ -453,6 +453,11 @@
             Delete files used in versions older than 2.2.0.0
             </summary>
         </member>
+        <member name="M:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InitInstalledTextures">
+            <summary>
+            Reads installed_textures.json meta data and initializes <see cref="P:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InstalledTextures"/> with results
+            </summary>
+        </member>
         <member name="M:SessionModManagerCore.ViewModels.UploadAssetViewModel.SetBucketBasedOnAuthor">
             <summary>
             sets <see cref="P:SessionModManagerCore.ViewModels.UploadAssetViewModel.SelectedBucketName"/> to <see cref="P:SessionModManagerCore.ViewModels.UploadAssetViewModel.Author"/> if the author is also a valid bucket name
