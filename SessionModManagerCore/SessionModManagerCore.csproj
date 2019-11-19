@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="modmanager.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="avantgarde" Version="1.0.4" />
     <PackageReference Include="ini-parser" Version="2.5.2" />
     <PackageReference Include="NLog" Version="4.6.8" />
@@ -28,9 +32,6 @@
     </None>
     <None Update="modmanager.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="modmanager.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

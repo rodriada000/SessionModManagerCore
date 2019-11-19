@@ -43,6 +43,7 @@ namespace SessionMapSwitcherCore.ViewModels
         private bool _isRemoveButtonEnabled;
         private bool _isLoadingManifests;
         private bool _isInstallingAsset;
+        private bool _isLoadingImage;
         private List<AssetViewModel> _filteredAssetList;
         private List<AssetViewModel> _allAssets;
         private List<AuthorDropdownViewModel> _authorList;
@@ -373,6 +374,19 @@ namespace SessionMapSwitcherCore.ViewModels
         }
 
 
+        public bool IsLoadingImage
+        {
+            get
+            {
+                return _isLoadingImage;
+            }
+            set
+            {
+                _isLoadingImage = value;
+                NotifyPropertyChanged();
+            }
+        }
+
 
         public Stream PreviewImageSource
         {
@@ -592,23 +606,28 @@ namespace SessionMapSwitcherCore.ViewModels
         private void LazilyGetSelectedManifestsAndRefreshFilteredAssetList()
         {
             var selectedCategories = GetSelectedCategories();
+            List<AssetCategory> categoriesToDownload = selectedCategories.Where(c => ManifestFilesExists(c) == false).ToList();
 
-            if (selectedCategories.Count == 0)
+            if (selectedCategories.Count == 0 || categoriesToDownload.Count == 0)
             {
                 RefreshFilteredAssetList();
                 return;
             }
 
-            Task t = Task.Factory.StartNew(() =>
+            if (HasAuthenticated == false)
             {
-                foreach (AssetCategory cat in selectedCategories)
-                {
-                    LazilyGetManifestsAndRefreshFilteredAssetList(cat, waitForCompletion: true); // set waitForCompletion to true to wait to download manifests for category before continuing loop
-                }
-            });
+                TryAuthenticate();
+            }
+
+            IsLoadingManifests = true;
+            UserMessage = "Fetching latest asset manifests ...";
+
+            var fileWriteTask = AssetManager.GetAssetManifestsAsync(categoriesToDownload, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
+                                            .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
+                                            .ConfigureAwait(false);
         }
 
-        private void LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory category, bool waitForCompletion = false)
+        private void LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory category)
         {
             if (ManifestFilesExists(category))
             {
@@ -617,34 +636,17 @@ namespace SessionMapSwitcherCore.ViewModels
                 return;
             }
 
-            Task t = Task.Factory.StartNew(() =>
+            if (HasAuthenticated == false)
             {
-                if (HasAuthenticated == false)
-                {
-                    TryAuthenticate();
-                }
-
-                var fileWriteTask = AssetManager.GetAssetManifestsAsync(category, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {category.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB...")).ConfigureAwait(false);
-                fileWriteTask.GetAwaiter().GetResult();
-            });
-
-            t.ContinueWith((result) =>
-            {
-                if (result.IsFaulted)
-                {
-                    Logger.Error(result.Exception);
-                    UserMessage = $"Failed to get manifests for {category.Value}";
-                    return;
-                }
-
-                UserMessage = $"{category.Value} manifests downloaded ...";
-                RefreshFilteredAssetList();
-            });
-
-            if (waitForCompletion)
-            {
-                t.Wait();
+                TryAuthenticate();
             }
+
+            IsLoadingManifests = true;
+            UserMessage = "Fetching latest asset manifests ...";
+
+            var fileWriteTask = AssetManager.GetAssetManifestsAsync(category, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
+                                            .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
+                                            .ConfigureAwait(false);
         }
 
         private bool ManifestFilesExists(AssetCategory category)
@@ -666,60 +668,49 @@ namespace SessionMapSwitcherCore.ViewModels
                 return; // the manifests will not be re-downloaded because it has been downloaded once and not forced
             }
 
+            if (HasAuthenticated == false)
+            {
+                TryAuthenticate();
+            }
+
             IsLoadingManifests = true;
             UserMessage = "Fetching latest asset manifests ...";
+            List<AssetCategory> categoriesToGet = new List<AssetCategory>();
 
-            Task t = Task.Factory.StartNew(() =>
+            if (getSelectedOnly)
             {
-                if (HasAuthenticated == false)
-                {
-                    TryAuthenticate();
-                }
-
-                if (getSelectedOnly)
-                {
-                    GetManifestsForSelectedCategories();
-                }
-                else
-                {
-                    var fileTask = AssetManager.GetAllAssetManifestsAsync().ConfigureAwait(false);
-                    fileTask.GetAwaiter().GetResult();
-                }
-            });
-
-            t.ContinueWith((taskResult) =>
+                categoriesToGet = GetSelectedCategories();
+            }
+            else
             {
-                if (taskResult.IsFaulted)
-                {
-                    UserMessage = "An error occurred fetching manifests ...";
-                    Logger.Error(taskResult.Exception, "failed to get all manifests");
-                }
-                else
-                {
-                    UserMessage = "Manifests downloaded ...";
-                }
+                categoriesToGet = AssetManager.GetAllCategories();
+            }
 
+            var fileTask = AssetManager.GetAssetManifestsAsync(categoriesToGet, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
+                                       .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
+                                       .ConfigureAwait(false);
+        }
+
+        private void ManifestDownloadCompleted(Task taskResult)
+        {
+            if (taskResult.IsFaulted)
+            {
+                UserMessage = "An error occurred fetching manifests ...";
+                Logger.Error(taskResult.Exception, "failed to get all manifests");
+            }
+            else
+            {
                 IsManifestsDownloaded = true;
-                IsLoadingManifests = false;
+                UserMessage = "Manifests downloaded ...";
+                RefreshFilteredAssetList(checkForFileChanges: true);
 
                 if (FetchAllPreviewImages)
                 {
                     DownloadAllPreviewImagesAsync();
                 }
-
-                RefreshFilteredAssetList(checkForFileChanges: true);
-            });
-        }
-
-        public void GetManifestsForSelectedCategories()
-        {
-            List<AssetCategory> selectedCategories = GetSelectedCategories();
-
-            foreach (AssetCategory cat in selectedCategories)
-            {
-                var fileTask = AssetManager.GetAssetManifestsAsync(cat, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {cat.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB...")).ConfigureAwait(false);
-                fileTask.GetAwaiter().GetResult();
             }
+
+            IsLoadingManifests = false;
         }
 
         public void RefreshFilteredAssetList(bool checkForFileChanges = false)
@@ -1064,6 +1055,9 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private void GetSelectedPreviewImageAsync()
         {
+            IsLoadingImage = true;
+            UserMessage = "Fetching preview image ...";
+
             Task t = Task.Factory.StartNew(() =>
             {
                 CreateRequiredFolders();
@@ -1072,8 +1066,12 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (File.Exists(pathToThumbnail) == false)
                 {
-                    System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(SelectedAsset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
+                    System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(SelectedAsset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
                     downloadTask.GetAwaiter().GetResult();
+                }
+                else
+                {
+                    UserMessage = "";
                 }
 
                 if (PreviewImageSource != null)
@@ -1099,6 +1097,8 @@ namespace SessionMapSwitcherCore.ViewModels
                     PreviewImageSource = null;
                     Logger.Error(taskResult.Exception);
                 }
+
+                IsLoadingImage = false;
             });
 
         }
