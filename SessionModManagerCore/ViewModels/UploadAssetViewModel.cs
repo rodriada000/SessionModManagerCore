@@ -1,5 +1,4 @@
-﻿using Google.Apis.Upload;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using SessionAssetStore;
 using SessionMapSwitcherCore.Utils;
 using SessionMapSwitcherCore.ViewModels;
@@ -7,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace SessionModManagerCore.ViewModels
@@ -35,7 +33,7 @@ namespace SessionModManagerCore.ViewModels
 
         public bool HasAuthenticated { get; set; }
 
-        public string PathToCredentialsJson { get; set; }
+        public string PathToCredentialsFile { get; set; }
 
         public string Name
         {
@@ -185,7 +183,7 @@ namespace SessionModManagerCore.ViewModels
             HasAuthenticated = false;
             SelectedCategory = "";
             StatusMessage = DefaultStatusMesssage;
-            PathToCredentialsJson = AppSettingsUtil.GetAppSetting(SettingKey.PathToCredentialsJson);
+            PathToCredentialsFile = AppSettingsUtil.GetAppSetting(SettingKey.PathToCredentialsFile);
             Author = AppSettingsUtil.GetAppSetting(SettingKey.UploaderAuthor);
             SelectedBucketName = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreSelectedBucket);
             InitAvailableCategories();
@@ -211,8 +209,8 @@ namespace SessionModManagerCore.ViewModels
 
         public void SetPathToCredentialsJson(string fileName)
         {
-            PathToCredentialsJson = fileName;
-            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.PathToCredentialsJson, PathToCredentialsJson);
+            PathToCredentialsFile = fileName;
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.PathToCredentialsFile, PathToCredentialsFile);
         }
 
         public AssetCategory GetAssetCategoryBasedOnSelectedCategory()
@@ -306,11 +304,8 @@ namespace SessionModManagerCore.ViewModels
                 Directory.CreateDirectory(AssetStoreViewModel.AbsolutePathToTempDownloads);
                 File.WriteAllText(pathToTempJson, jsonToSave);
 
-                AssetManager.UploadAsset(pathToTempJson, PathToThumbnail, PathToFile, SelectedBucketName, new IProgress<IUploadProgress>[] {
-                new Progress<IUploadProgress>(p => StatusMessage = $"Uploading manifest: {p.Status} {p.BytesSent} Bytes ..."),
-                new Progress<IUploadProgress>(p => StatusMessage = $"Uploading thumbnail: {p.Status} {p.BytesSent / 1000:0.00} KB ..."),
-                new Progress<IUploadProgress>(p => StatusMessage = $"Uploading file: {p.Status} {p.BytesSent / 1000000:0.00} MB ...")
-                });
+                var task = AssetManager.UploadAssetAsync(pathToTempJson, PathToThumbnail, PathToFile, SelectedBucketName, new EventHandler<Amazon.S3.Transfer.UploadProgressArgs>((o,p) => StatusMessage = $"Uploading files ... {p.TransferredBytes / 1000000:0.00} / {p.TotalBytes / 1000000:0.00} MB  | {p.PercentDone}%")).ConfigureAwait(false);
+                task.GetAwaiter().GetResult();
 
                 File.Delete(pathToTempJson); // delete temp manifest after completion
             });
@@ -344,16 +339,15 @@ namespace SessionModManagerCore.ViewModels
 
         public void TryAuthenticate()
         {
-            if (File.Exists(PathToCredentialsJson) == false)
+            if (File.Exists(PathToCredentialsFile) == false)
             {
-                StatusMessage = $"Failed to authenticate to asset store: {PathToCredentialsJson} does not exist.";
+                StatusMessage = $"Failed to authenticate to asset store: {PathToCredentialsFile} does not exist.";
                 return;
             }
 
             try
             {
-                Task t = AssetManager.Authenticate(PathToCredentialsJson);
-                t.Wait();
+                AssetManager.Authenticate(PathToCredentialsFile);
                 HasAuthenticated = true;
             }
             catch (AggregateException e)

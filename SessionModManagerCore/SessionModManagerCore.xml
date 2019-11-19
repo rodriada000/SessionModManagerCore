@@ -57,7 +57,11 @@
             ... run UnrealPak.exe and EzPz
             </summary>
         </member>
-        <!-- Badly formed XML comment ignored for member "M:SessionMapSwitcherCore.Classes.EzPzPatcher.ExtractGameFilesFromPak" -->
+        <member name="M:SessionMapSwitcherCore.Classes.EzPzPatcher.ExtractGameFilesFromPak">
+            <summary>
+            Uses UnrealPak.exe to extract the files: PBP_ObjectPlacementInventory.uexp and DefaultGame.ini
+            </summary>
+        </member>
         <member name="M:SessionMapSwitcherCore.Classes.EzPzPatcher.DeleteDownloadedFilesInPakFolder">
             <summary>
             Deletes all downloaded files in Paks folder except for 'SessionGame-WindowsNoEditor' files
@@ -106,7 +110,7 @@
         <member name="M:SessionMapSwitcherCore.Classes.GameSettingsManager.SetObjectCountInFile(System.String)">
             <summary>
             Updates the PBP_ObjectPlacementInventory.uexp file with the new object count value (every placeable object is updated with new count).
-            This works by converting <see cref="!:ObjectCountText"/> to bytes and writing the bytes to specific addresses in the file.
+            This works by converting <paramref name="objectCountText"/> to bytes and writing the bytes to specific addresses in the file.
             </summary>
         </member>
         <member name="M:SessionMapSwitcherCore.Classes.GameSettingsManager.RenameMoviesFolderToSkipMovies(System.Boolean)">

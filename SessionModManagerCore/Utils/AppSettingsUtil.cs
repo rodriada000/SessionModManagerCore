@@ -9,7 +9,7 @@ namespace SessionMapSwitcherCore.Utils
         ShowInvalidMaps,
         ProjectWatcherPath,
         CustomWindowSize,
-        PathToCredentialsJson,
+        PathToCredentialsFile,
         UploaderAuthor,
         FetchAllPreviewImages,
         DeleteDownloadAfterAssetInstall,

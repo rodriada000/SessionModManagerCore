@@ -225,7 +225,7 @@ namespace SessionMapSwitcherCore.Classes
 
         /// <summary>
         /// Updates the PBP_ObjectPlacementInventory.uexp file with the new object count value (every placeable object is updated with new count).
-        /// This works by converting <see cref="ObjectCountText"/> to bytes and writing the bytes to specific addresses in the file.
+        /// This works by converting <paramref name="objectCountText"/> to bytes and writing the bytes to specific addresses in the file.
         /// </summary>
         internal static BoolWithMessage SetObjectCountInFile(string objectCountText)
         {

@@ -1,4 +1,4 @@
-﻿using Google.Apis.Download;
+﻿using Amazon.S3.Model;
 using Newtonsoft.Json;
 using SessionAssetStore;
 using SessionMapSwitcherCore.Classes;
@@ -617,7 +617,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 lock (manifestFileLock)
                 {
-                    AssetManager.GetAssetManifests(category, new Progress<IDownloadProgress>(p => UserMessage = $"Downloading {category.Value} manifests: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."));
+                    Task fileWriteTask = AssetManager.GetAssetManifestsAsync(category, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {category.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."));
+                    fileWriteTask.Wait();
                 }
             });
 
@@ -672,7 +673,8 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     lock (manifestFileLock)
                     {
-                        AssetManager.GetAllAssetManifests();
+                        Task fileTask = AssetManager.GetAllAssetManifestsAsync();
+                        fileTask.Wait();
                     }
                 }
             });
@@ -707,7 +709,8 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 lock (manifestFileLock)
                 {
-                    AssetManager.GetAssetManifests(cat, new Progress<IDownloadProgress>(p => UserMessage = $"Downloading {cat.Value} manifests: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."));
+                    var fileTask = AssetManager.GetAssetManifestsAsync(cat, new EventHandler<WriteObjectProgressArgs>((o,p) => UserMessage = $"Downloading {cat.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."));
+                    fileTask.Wait();
                 }
             }
         }
@@ -1037,8 +1040,7 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             try
             {
-                Task t = AssetManager.Authenticate();
-                t.Wait();
+                AssetManager.Authenticate();
                 HasAuthenticated = true;
             }
             catch (AggregateException e)
@@ -1063,7 +1065,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (File.Exists(pathToThumbnail) == false)
                 {
-                    AssetManager.DownloadAssetThumbnail(SelectedAsset.Asset, pathToThumbnail, new Progress<IDownloadProgress>(p => UserMessage = $"fetching preview image: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."), true);
+                    System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(SelectedAsset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o,p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
+                    downloadTask.GetAwaiter().GetResult();
                 }
 
                 if (PreviewImageSource != null)
@@ -1110,7 +1113,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
                     if (File.Exists(pathToThumbnail) == false)
                     {
-                        AssetManager.DownloadAssetThumbnail(asset.Asset, pathToThumbnail, new Progress<IDownloadProgress>(p => UserMessage = $"fetching preview image: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."), true);
+                        System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(asset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o,p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
+                        downloadTask.GetAwaiter().GetResult();
                     }
                 }
             });
@@ -1159,14 +1163,10 @@ namespace SessionMapSwitcherCore.ViewModels
 
             IsInstallingAsset = true;
             AssetViewModel assetToDownload = SelectedAsset; // get the selected asset currently in-case user selection changes while download occurs
-            string pathToDownload = "";
+            string pathToDownload = Path.Combine(AbsolutePathToTempDownloads, assetToDownload.Asset.AssetName);
 
-            Task downloadTask = Task.Factory.StartNew(() =>
-            {
-                pathToDownload = Path.Combine(AbsolutePathToTempDownloads, assetToDownload.Asset.AssetName);
 
-                AssetManager.DownloadAsset(assetToDownload.Asset, pathToDownload, new Progress<IDownloadProgress>(p => UserMessage = $"Downloading asset: {p.Status} {p.BytesDownloaded / 1000000:0.00} MB..."), true);
-            });
+            Task downloadTask = AssetManager.DownloadAssetAsync(assetToDownload.Asset, pathToDownload, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {assetToDownload.Name}: {p.TransferredBytes / 1000000:0.00} / {p.TotalBytes / 1000000:0.00} MB | {p.PercentDone}%..."), true);
 
             downloadTask.ContinueWith((result) =>
             {
@@ -1425,9 +1425,15 @@ namespace SessionMapSwitcherCore.ViewModels
 
         public List<string> GetAvailableBuckets()
         {
+            if (HasAuthenticated == false)
+            {
+                return new List<string>();
+            }
+
             try
             {
-                return AssetManager.ListBuckets();
+                var t = AssetManager.ListBucketsAsync().ConfigureAwait(false);
+                return t.GetAwaiter().GetResult();
             }
             catch (Exception e)
             {

@@ -319,7 +319,7 @@ namespace SessionMapSwitcherCore.Classes
         }
 
         /// <summary>
-        /// Uses UnrealPak.exe to extract the files: PBP_ObjectPlacementInventory.uexp & DefaultGame.ini
+        /// Uses UnrealPak.exe to extract the files: PBP_ObjectPlacementInventory.uexp and DefaultGame.ini
         /// </summary>
         private void ExtractGameFilesFromPak()
         {
