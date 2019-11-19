@@ -89,6 +89,11 @@ namespace SessionMapSwitcherCore.Classes
                 return BoolWithMessage.False("Cannot Load: 'Path to Session' is invalid.");
             }
 
+            if (map == null)
+            {
+                return BoolWithMessage.False("Cannot Load: map is null");
+            }
+
             if (SessionPath.IsSessionRunning() == false || FirstLoadedMap == null)
             {
                 FirstLoadedMap = map;

@@ -1,4 +1,4 @@
-﻿using Google.Apis.Download;
+﻿using Amazon.S3.Model;
 using Newtonsoft.Json;
 using SessionAssetStore;
 using SessionMapSwitcherCore.Classes;
@@ -35,7 +35,7 @@ namespace SessionMapSwitcherCore.ViewModels
         private Stream _imageSource;
         private string _selectedDescription;
         private string _selectedAuthor;
-        private string _authorToFilterBy;
+        private AuthorDropdownViewModel _authorToFilterBy;
         private string _selectedInstallStatus;
         private bool _fetchAllPreviewImages;
         private bool _deleteDownloadAfterInstall;
@@ -45,7 +45,7 @@ namespace SessionMapSwitcherCore.ViewModels
         private bool _isInstallingAsset;
         private List<AssetViewModel> _filteredAssetList;
         private List<AssetViewModel> _allAssets;
-        private List<string> _authorList;
+        private List<AuthorDropdownViewModel> _authorList;
         private List<string> _installStatusList;
 
 
@@ -404,12 +404,13 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public string AuthorToFilterBy
+        public AuthorDropdownViewModel AuthorToFilterBy
         {
             get
             {
-                if (String.IsNullOrEmpty(_authorToFilterBy))
-                    _authorToFilterBy = "All";
+                if (_authorToFilterBy == null)
+                    _authorToFilterBy = new AuthorDropdownViewModel(defaultAuthorValue, 0);
+
                 return _authorToFilterBy;
             }
             set
@@ -450,7 +451,13 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _isLoadingManifests = value;
                 NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(IsNotLoadingManifests));
             }
+        }
+
+        public bool IsNotLoadingManifests
+        {
+            get { return !_isLoadingManifests; }
         }
 
         public bool IsManifestsDownloaded { get; set; }
@@ -507,7 +514,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
                 NotifyPropertyChanged();
             }
-        }        
+        }
 
         public AssetViewModel SelectedAsset
         {
@@ -520,13 +527,13 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public List<string> AuthorList
+        public List<AuthorDropdownViewModel> AuthorList
         {
             get
             {
                 if (_authorList == null)
-                    _authorList = new List<string>();
-                
+                    _authorList = new List<AuthorDropdownViewModel>();
+
                 return _authorList;
             }
             set
@@ -578,8 +585,8 @@ namespace SessionMapSwitcherCore.ViewModels
             InstallStatusList = new List<string>() { defaultInstallStatusValue, "Installed", "Not Installed" };
             SelectedInstallStatus = defaultInstallStatusValue;
 
-            AuthorList = new List<string>() { defaultAuthorValue };
-            AuthorToFilterBy = defaultAuthorValue;
+            AuthorList = new List<AuthorDropdownViewModel>() { new AuthorDropdownViewModel(defaultAuthorValue, 0) };
+            AuthorToFilterBy = AuthorList[0];
         }
 
         private void LazilyGetSelectedManifestsAndRefreshFilteredAssetList()
@@ -592,13 +599,16 @@ namespace SessionMapSwitcherCore.ViewModels
                 return;
             }
 
-            foreach (AssetCategory cat in selectedCategories)
+            Task t = Task.Factory.StartNew(() =>
             {
-                LazilyGetManifestsAndRefreshFilteredAssetList(cat);
-            }
+                foreach (AssetCategory cat in selectedCategories)
+                {
+                    LazilyGetManifestsAndRefreshFilteredAssetList(cat, waitForCompletion: true); // set waitForCompletion to true to wait to download manifests for category before continuing loop
+                }
+            });
         }
 
-        private void LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory category)
+        private void LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory category, bool waitForCompletion = false)
         {
             if (ManifestFilesExists(category))
             {
@@ -614,10 +624,8 @@ namespace SessionMapSwitcherCore.ViewModels
                     TryAuthenticate();
                 }
 
-                lock (manifestFileLock)
-                {
-                    AssetManager.GetAssetManifests(category, new Progress<IDownloadProgress>(p => UserMessage = $"Downloading {category.Value} manifests: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."));
-                }
+                var fileWriteTask = AssetManager.GetAssetManifestsAsync(category, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {category.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB...")).ConfigureAwait(false);
+                fileWriteTask.GetAwaiter().GetResult();
             });
 
             t.ContinueWith((result) =>
@@ -632,12 +640,16 @@ namespace SessionMapSwitcherCore.ViewModels
                 UserMessage = $"{category.Value} manifests downloaded ...";
                 RefreshFilteredAssetList();
             });
+
+            if (waitForCompletion)
+            {
+                t.Wait();
+            }
         }
 
         private bool ManifestFilesExists(AssetCategory category)
         {
-            string pathToManifestTempFolder = Path.Combine(AppContext.BaseDirectory, StorageManager.MANIFESTS_TEMP);
-            string pathToManifestFiles = Path.Combine(pathToManifestTempFolder, category.Value);
+            string pathToManifestFiles = Path.Combine(AbsolutePathToTempManifests, category.Value);
 
             return Directory.Exists(pathToManifestFiles) && Directory.GetFiles(pathToManifestFiles).Length > 0;
         }
@@ -670,10 +682,8 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
                 else
                 {
-                    lock (manifestFileLock)
-                    {
-                        AssetManager.GetAllAssetManifests();
-                    }
+                    var fileTask = AssetManager.GetAllAssetManifestsAsync().ConfigureAwait(false);
+                    fileTask.GetAwaiter().GetResult();
                 }
             });
 
@@ -683,6 +693,10 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     UserMessage = "An error occurred fetching manifests ...";
                     Logger.Error(taskResult.Exception, "failed to get all manifests");
+                }
+                else
+                {
+                    UserMessage = "Manifests downloaded ...";
                 }
 
                 IsManifestsDownloaded = true;
@@ -694,8 +708,6 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
 
                 RefreshFilteredAssetList(checkForFileChanges: true);
-
-                UserMessage = "Manifests downloaded ...";
             });
         }
 
@@ -705,10 +717,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
             foreach (AssetCategory cat in selectedCategories)
             {
-                lock (manifestFileLock)
-                {
-                    AssetManager.GetAssetManifests(cat, new Progress<IDownloadProgress>(p => UserMessage = $"Downloading {cat.Value} manifests: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."));
-                }
+                var fileTask = AssetManager.GetAssetManifestsAsync(cat, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {cat.Value} manifests: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB...")).ConfigureAwait(false);
+                fileTask.GetAwaiter().GetResult();
             }
         }
 
@@ -723,12 +733,12 @@ namespace SessionMapSwitcherCore.ViewModels
                 newList.AddRange(GetAssetsByCategory(cat));
             }
 
-            
+
             RefreshAuthorList();
 
-            if (AuthorToFilterBy != defaultAuthorValue)
+            if (AuthorToFilterBy.Author != defaultAuthorValue)
             {
-                newList = newList.Where(a => a.Author == AuthorToFilterBy).ToList();
+                newList = newList.Where(a => a.Author == AuthorToFilterBy.Author).ToList();
             }
 
 
@@ -767,19 +777,24 @@ namespace SessionMapSwitcherCore.ViewModels
         /// </summary>
         private void RefreshAuthorList()
         {
-            List<string> newAuthorList = AllAssets.Select(a => a.Author)
-                                                  .Distinct()
-                                                  .OrderBy(a => a)
-                                                  .ToList();
+            List<AuthorDropdownViewModel> newAuthorList = new List<AuthorDropdownViewModel>();
 
-            newAuthorList.Insert(0, "Show All");
+            // use GroupBy to get count of assets per author
+            foreach (IGrouping<string, AssetViewModel> author in AllAssets.GroupBy(a => a.Author))
+            {
+                newAuthorList.Add(new AuthorDropdownViewModel(author.Key, author.Count()));
+            }
+
+            newAuthorList = newAuthorList.OrderBy(a => a.Author).ToList();
+
+            newAuthorList.Insert(0, new AuthorDropdownViewModel(defaultAuthorValue, 0));
 
             AuthorList = newAuthorList;
 
             //clear selection if selected author not in list
-            if (AuthorList.Any(a => a == AuthorToFilterBy) == false)
+            if (AuthorList.Any(a => a.Author == AuthorToFilterBy.Author) == false)
             {
-                AuthorToFilterBy = "Show All";
+                AuthorToFilterBy = AuthorList[0];
             }
         }
 
@@ -1032,8 +1047,7 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             try
             {
-                Task t = AssetManager.Authenticate();
-                t.Wait();
+                AssetManager.Authenticate();
                 HasAuthenticated = true;
             }
             catch (AggregateException e)
@@ -1058,7 +1072,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (File.Exists(pathToThumbnail) == false)
                 {
-                    AssetManager.DownloadAssetThumbnail(SelectedAsset.Asset, pathToThumbnail, new Progress<IDownloadProgress>(p => UserMessage = $"fetching preview image: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."), true);
+                    System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(SelectedAsset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
+                    downloadTask.GetAwaiter().GetResult();
                 }
 
                 if (PreviewImageSource != null)
@@ -1105,7 +1120,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
                     if (File.Exists(pathToThumbnail) == false)
                     {
-                        AssetManager.DownloadAssetThumbnail(asset.Asset, pathToThumbnail, new Progress<IDownloadProgress>(p => UserMessage = $"fetching preview image: {p.Status} {p.BytesDownloaded / 1000:0.00} KB..."), true);
+                        System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(asset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
+                        downloadTask.GetAwaiter().GetResult();
                     }
                 }
             });
@@ -1154,14 +1170,10 @@ namespace SessionMapSwitcherCore.ViewModels
 
             IsInstallingAsset = true;
             AssetViewModel assetToDownload = SelectedAsset; // get the selected asset currently in-case user selection changes while download occurs
-            string pathToDownload = "";
+            string pathToDownload = Path.Combine(AbsolutePathToTempDownloads, assetToDownload.Asset.AssetName);
 
-            Task downloadTask = Task.Factory.StartNew(() =>
-            {
-                pathToDownload = Path.Combine(AbsolutePathToTempDownloads, assetToDownload.Asset.AssetName);
 
-                AssetManager.DownloadAsset(assetToDownload.Asset, pathToDownload, new Progress<IDownloadProgress>(p => UserMessage = $"Downloading asset: {p.Status} {p.BytesDownloaded / 1000000:0.00} MB..."), true);
-            });
+            Task downloadTask = AssetManager.DownloadAssetAsync(assetToDownload.Asset, pathToDownload, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {assetToDownload.Name}: {p.TransferredBytes / 1000000:0.00} / {p.TotalBytes / 1000000:0.00} MB | {p.PercentDone}%..."), true);
 
             downloadTask.ContinueWith((result) =>
             {
@@ -1195,6 +1207,7 @@ namespace SessionMapSwitcherCore.ViewModels
                         File.Delete(pathToDownload);
                     }
 
+                    IsInstallingAsset = false;
 
                     RefreshPreviewForSelected();
 
@@ -1208,8 +1221,6 @@ namespace SessionMapSwitcherCore.ViewModels
                     {
                         HasDownloadedMap = true;
                     }
-
-                    IsInstallingAsset = false;
 
                 });
             });
@@ -1420,9 +1431,15 @@ namespace SessionMapSwitcherCore.ViewModels
 
         public List<string> GetAvailableBuckets()
         {
+            if (HasAuthenticated == false)
+            {
+                return new List<string>();
+            }
+
             try
             {
-                return AssetManager.ListBuckets();
+                var t = AssetManager.ListBucketsAsync().ConfigureAwait(false);
+                return t.GetAwaiter().GetResult();
             }
             catch (Exception e)
             {

@@ -57,7 +57,11 @@
             ... run UnrealPak.exe and EzPz
             </summary>
         </member>
-        <!-- Badly formed XML comment ignored for member "M:SessionMapSwitcherCore.Classes.EzPzPatcher.ExtractGameFilesFromPak" -->
+        <member name="M:SessionMapSwitcherCore.Classes.EzPzPatcher.ExtractGameFilesFromPak">
+            <summary>
+            Uses UnrealPak.exe to extract the files: PBP_ObjectPlacementInventory.uexp and DefaultGame.ini
+            </summary>
+        </member>
         <member name="M:SessionMapSwitcherCore.Classes.EzPzPatcher.DeleteDownloadedFilesInPakFolder">
             <summary>
             Deletes all downloaded files in Paks folder except for 'SessionGame-WindowsNoEditor' files
@@ -106,7 +110,7 @@
         <member name="M:SessionMapSwitcherCore.Classes.GameSettingsManager.SetObjectCountInFile(System.String)">
             <summary>
             Updates the PBP_ObjectPlacementInventory.uexp file with the new object count value (every placeable object is updated with new count).
-            This works by converting <see cref="!:ObjectCountText"/> to bytes and writing the bytes to specific addresses in the file.
+            This works by converting <paramref name="objectCountText"/> to bytes and writing the bytes to specific addresses in the file.
             </summary>
         </member>
         <member name="M:SessionMapSwitcherCore.Classes.GameSettingsManager.RenameMoviesFolderToSkipMovies(System.Boolean)">
@@ -329,6 +333,12 @@
             Determine if all controls (buttons, textboxes) should be enabled or disabled in main window.
             </summary>
         </member>
+        <member name="P:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.SecondMapToLoad">
+            <summary>
+            Map to load after starting the game in <see cref="M:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.StartGameAndLoadSecondMap"/>
+            If null then the currently loaded map will be used.
+            </summary>
+        </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.SetSessionPath(System.String)">
             <summary>
             Sets <see cref="P:SessionMapSwitcherCore.Classes.SessionPath.ToSession"/> and saves the value to appSettings in the applications .config file
@@ -447,6 +457,11 @@
         <member name="M:SessionModManagerCore.Classes.VersionChecker.DeleteOldVersionFiles">
             <summary>
             Delete files used in versions older than 2.2.0.0
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InitInstalledTextures">
+            <summary>
+            Reads installed_textures.json meta data and initializes <see cref="P:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InstalledTextures"/> with results
             </summary>
         </member>
         <member name="M:SessionModManagerCore.ViewModels.UploadAssetViewModel.SetBucketBasedOnAuthor">

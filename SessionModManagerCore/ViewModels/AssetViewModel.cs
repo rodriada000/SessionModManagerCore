@@ -10,10 +10,13 @@ namespace SessionModManagerCore.ViewModels
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
+        internal static string dateTimeFormat = "ddd, dd MMM yy HH:mm";
+
         private string _name;
         private string _author;
         private string _description;
         private string _assetCategory;
+        private string _updatedDate;
         private bool _isSelected;
 
         internal Asset Asset { get; set; }
@@ -68,6 +71,16 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public string UpdatedDate
+        {
+            get { return _updatedDate; }
+            set
+            {
+                _updatedDate = value;
+                NotifyPropertyChanged();
+            }
+        }
+
         public AssetViewModel(Asset asset)
         {
             this.Asset = asset;
@@ -75,12 +88,13 @@ namespace SessionModManagerCore.ViewModels
             Description = asset.Description;
             Author = asset.Author;
             AssetCategory = asset.Category;
+            UpdatedDate = asset.UpdatedDate == DateTime.MinValue ? "" : asset.UpdatedDate.ToLocalTime().ToString(AssetViewModel.dateTimeFormat);
             IsSelected = false;
         }
 
         public AssetViewModel(string name, string author, string description)
         {
-            this.Asset = new Asset(name, description, author, name, "", "");
+            this.Asset = new Asset(name, description, author, name, "", "", null);
             this.Name = name;
             this.Author = author;
             this.Description = description;
