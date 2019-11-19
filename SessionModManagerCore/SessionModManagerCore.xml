@@ -333,6 +333,12 @@
             Determine if all controls (buttons, textboxes) should be enabled or disabled in main window.
             </summary>
         </member>
+        <member name="P:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.SecondMapToLoad">
+            <summary>
+            Map to load after starting the game in <see cref="M:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.StartGameAndLoadSecondMap"/>
+            If null then the currently loaded map will be used.
+            </summary>
+        </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.SetSessionPath(System.String)">
             <summary>
             Sets <see cref="P:SessionMapSwitcherCore.Classes.SessionPath.ToSession"/> and saves the value to appSettings in the applications .config file
