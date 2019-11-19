@@ -6,8 +6,12 @@
     <RootNamespace>SessionModManagerCore</RootNamespace>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <DocumentationFile>$(ProjectDir)SessionModManagerCore.xml</DocumentationFile>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="modmanager.json" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="avantgarde" Version="1.0.4" />
@@ -28,9 +32,6 @@
     </None>
     <None Update="modmanager.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="modmanager.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 
