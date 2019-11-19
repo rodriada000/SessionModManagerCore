@@ -109,6 +109,50 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        public void StartGameAndLoadSecondMap()
+        {
+            // validate and set game settings
+            bool didSet = UpdateGameSettings();
+
+            if (didSet == false)
+            {
+                // do not start game with invalid settings
+                UserMessage = $"NOTE: Cannot apply custom game settings - {UserMessage}";
+            }
+
+            Process.Start(SessionPath.ToSessionExe);
+
+            Task loadTask = Task.Factory.StartNew(() =>
+            {
+                MapListItem mapToLoadNext = SecondMapToLoad;
+
+                if (mapToLoadNext == null)
+                {
+                    mapToLoadNext = AvailableMaps.Where(m => m.MapName == CurrentlyLoadedMapName).FirstOrDefault();
+                }
+
+                int timeToWaitInMilliseconds = 10000;
+
+                if (MapSwitcher is UnpackedMapSwitcher)
+                {
+                    // wait longer for unpacked games to load since they load slower
+                    timeToWaitInMilliseconds = 15000;
+                }
+
+                System.Threading.Thread.Sleep(timeToWaitInMilliseconds); // wait few seconds before loading the next map to let the game finish loading
+                LoadSelectedMap(mapToLoadNext);
+            });
+
+            loadTask.ContinueWith((result) =>
+            {
+                if (result.IsFaulted)
+                {
+                    Logger.Warn(result.Exception.GetBaseException(), "failed to load second map");
+                    return;
+                }
+            });
+        }
+
         public string HintMessage
         {
             get { return _hintMessage; }
@@ -295,6 +339,12 @@ namespace SessionMapSwitcherCore.ViewModels
                 return "Use this after updating Session to a new version or to patch the game again.";
             }
         }
+
+        /// <summary>
+        /// Map to load after starting the game in <see cref="StartGameAndLoadSecondMap"/>
+        /// If null then the currently loaded map will be used.
+        /// </summary>
+        public MapListItem SecondMapToLoad { get; set; }
 
         #endregion
 
@@ -734,6 +784,32 @@ namespace SessionMapSwitcherCore.ViewModels
             HintMessage = $"Hint: {_hintMessages[randIndex]}";
         }
 
+        public void DeleteSelectedMap(MapListItem mapToDelete)
+        {
+            MapMetaData metaData = MetaDataManager.LoadMapMetaData(mapToDelete);
+
+            BoolWithMessage deleteResult = MetaDataManager.DeleteMapFiles(metaData);
+
+            if (deleteResult.Result)
+            {
+                UserMessage = $"{deleteResult.Message} ... Reloading maps ...";
+                ReloadAvailableMapsInBackground(showLoadingMessage: false);
+            }
+        }
+
+        public void SetOrClearSecondMapToLoad(MapListItem selectedItem)
+        {
+            if (SecondMapToLoad == null || SecondMapToLoad?.FullPath != selectedItem.FullPath)
+            {
+                SecondMapToLoad = selectedItem;
+                UserMessage = $"{selectedItem.DisplayName} will be the next map to load when you leave the apartment after starting the game!";
+            }
+            else
+            {
+                SecondMapToLoad = null;
+                UserMessage = $"Cleared! The next map to load when you leave the apartment will be the same map you load before starting the game.";
+            }
+        }
 
         #region Methods related to EzPz Patching
 
@@ -793,19 +869,6 @@ namespace SessionMapSwitcherCore.ViewModels
 
             _patcher = null;
             InputControlsEnabled = true;
-        }
-
-        public void DeleteSelectedMap(MapListItem mapToDelete)
-        {
-            MapMetaData metaData = MetaDataManager.LoadMapMetaData(mapToDelete);
-
-            BoolWithMessage deleteResult = MetaDataManager.DeleteMapFiles(metaData);
-
-            if (deleteResult.Result)
-            {
-                UserMessage = $"{deleteResult.Message} ... Reloading maps ...";
-                ReloadAvailableMapsInBackground(showLoadingMessage: false);
-            }
         }
 
         #endregion
