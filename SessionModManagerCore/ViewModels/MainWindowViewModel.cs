@@ -131,12 +131,12 @@ namespace SessionMapSwitcherCore.ViewModels
                     mapToLoadNext = AvailableMaps.Where(m => m.MapName == CurrentlyLoadedMapName).FirstOrDefault();
                 }
 
-                int timeToWaitInMilliseconds = 10000;
+                int timeToWaitInMilliseconds = 15000;
 
                 if (MapSwitcher is UnpackedMapSwitcher)
                 {
                     // wait longer for unpacked games to load since they load slower
-                    timeToWaitInMilliseconds = 15000;
+                    timeToWaitInMilliseconds = 20000;
                 }
 
                 System.Threading.Thread.Sleep(timeToWaitInMilliseconds); // wait few seconds before loading the next map to let the game finish loading
