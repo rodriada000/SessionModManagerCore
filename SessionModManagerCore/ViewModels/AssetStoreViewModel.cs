@@ -536,6 +536,11 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 lock (filteredListLock)
                 {
+                    if (FilteredAssetList.Where(a => a.IsSelected).Count() > 1)
+                    {
+                        FilteredAssetList.ForEach(a => a.IsSelected = false);
+                    }
+
                     return FilteredAssetList.Where(a => a.IsSelected).FirstOrDefault();
                 }
             }
@@ -791,8 +796,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
         public void RefreshPreviewForSelected()
         {
-            SelectedAuthor = SelectedAsset.Author;
-            SelectedDescription = SelectedAsset.Description;
+            SelectedAuthor = SelectedAsset?.Author;
+            SelectedDescription = SelectedAsset?.Description;
 
             bool isInstalled = IsSelectedAssetInstalled();
 
@@ -805,6 +810,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private bool IsSelectedAssetInstalled()
         {
+            if (SelectedAsset == null)
+            {
+                return false;
+            }
+
             // pass in null to read from json files to check if asset is installed
             return IsAssetInstalled(SelectedAsset, null, null);
         }
@@ -1055,6 +1065,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private void GetSelectedPreviewImageAsync()
         {
+            if (SelectedAsset == null)
+            {
+                return;
+            }
+
             IsLoadingImage = true;
             UserMessage = "Fetching preview image ...";
 
