@@ -30,6 +30,9 @@ namespace SessionMapSwitcherCore.ViewModels
         private string _objectCountText;
         private bool _skipMovieIsChecked;
         private EzPzPatcher _patcher;
+        private MapListItem _secondMapToLoad;
+        private bool _loadSecondMapIsChecked;
+
         public OnlineImportViewModel ImportViewModel { get; set; }
         private IMapSwitcher MapSwitcher { get; set; }
 
@@ -109,6 +112,35 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        public string SecondMapCheckboxText
+        {
+            get
+            {
+                if (SecondMapToLoad == null && LoadSecondMapIsChecked == false)
+                {
+                    return $"Load Second Map After Start (Not Set)";
+                }
+                else if (SecondMapToLoad == null && LoadSecondMapIsChecked)
+                {
+                    // the currently loaded map will be used if second map to load is null but the option is checked
+                    return $"Load Second Map After Start ({CurrentlyLoadedMapName})";
+                }
+
+                return $"Load Second Map After Start ({SecondMapToLoad.DisplayName})";
+            }
+        }
+
+        public bool LoadSecondMapIsChecked
+        {
+            get { return _loadSecondMapIsChecked; }
+            set
+            {
+                _loadSecondMapIsChecked = value;
+                NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(SecondMapCheckboxText));
+            }
+        }
+
         public void StartGameAndLoadSecondMap()
         {
             // validate and set game settings
@@ -122,6 +154,12 @@ namespace SessionMapSwitcherCore.ViewModels
 
             Process.Start(SessionPath.ToSessionExe);
 
+            if (LoadSecondMapIsChecked == false)
+            {
+                return; // do not continue as the second map does not need to be loaded
+            }
+
+
             Task loadTask = Task.Factory.StartNew(() =>
             {
                 MapListItem mapToLoadNext = SecondMapToLoad;
@@ -131,12 +169,12 @@ namespace SessionMapSwitcherCore.ViewModels
                     mapToLoadNext = AvailableMaps.Where(m => m.MapName == CurrentlyLoadedMapName).FirstOrDefault();
                 }
 
-                int timeToWaitInMilliseconds = 15000;
+                int timeToWaitInMilliseconds = 20000;
 
                 if (MapSwitcher is UnpackedMapSwitcher)
                 {
                     // wait longer for unpacked games to load since they load slower
-                    timeToWaitInMilliseconds = 20000;
+                    timeToWaitInMilliseconds = 25000;
                 }
 
                 System.Threading.Thread.Sleep(timeToWaitInMilliseconds); // wait few seconds before loading the next map to let the game finish loading
@@ -173,6 +211,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 _currentlyLoadedMapName = value;
                 NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(SecondMapCheckboxText));
             }
         }
 
@@ -344,7 +383,15 @@ namespace SessionMapSwitcherCore.ViewModels
         /// Map to load after starting the game in <see cref="StartGameAndLoadSecondMap"/>
         /// If null then the currently loaded map will be used.
         /// </summary>
-        public MapListItem SecondMapToLoad { get; set; }
+        public MapListItem SecondMapToLoad
+        {
+            get => _secondMapToLoad;
+            set
+            {
+                _secondMapToLoad = value;
+                NotifyPropertyChanged(nameof(SecondMapCheckboxText));
+            }
+        }
 
         #endregion
 
