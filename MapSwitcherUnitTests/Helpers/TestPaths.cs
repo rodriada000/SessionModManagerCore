@@ -24,5 +24,13 @@ namespace MapSwitcherUnitTests.Helpers
                 return Path.Combine(AppContext.BaseDirectory, "TestFiles");
             }
         }
+
+        public static string ToMockTextureFilesFolder
+        {
+            get
+            {
+                return Path.Combine(ToTestFilesFolder, "Mock_Texture_Files");
+            }
+        }
     }
 }

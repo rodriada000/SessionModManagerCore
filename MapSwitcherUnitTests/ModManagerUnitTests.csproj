@@ -48,6 +48,7 @@
     <Compile Include="MapListItemUnitTest.cs" />
     <Compile Include="EzPzMapSwitcherUnitTest.cs" />
     <Compile Include="MetaDataManagerUnitTest.cs" />
+    <Compile Include="TextureReplacerUnitTest.cs" />
     <Compile Include="UnpackUtilsUnitTest.cs" />
     <Compile Include="FileUtilsUnitTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -107,6 +108,9 @@
     </None>
     <None Include="TestFiles\Mock_Map_Files\testmap_invalid.umap">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="TestFiles\Mock_Texture_Files\AMXX_GEN_LB_StraightCut_Pants_A.uasset">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="TestFiles\SessionFolders\SessionGame\Config\UserEngine.ini">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
