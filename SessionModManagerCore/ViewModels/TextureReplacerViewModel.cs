@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace SessionMapSwitcherCore.ViewModels
 {
@@ -186,27 +187,44 @@ namespace SessionMapSwitcherCore.ViewModels
                 textureFileInfo = new FileInfo(foundTextureName);
                 string textureFileName = textureFileInfo.NameWithoutExtension();
 
+                //
+                // find which folder to copy to based on file
+                //
 
-                // find which folder to copy to based on file name
-                string originalTextureName = GetTextureNameFromFile(textureFileInfo);
+                // first try to get the path from the file contents and validate it is a valid texture path
+                string absolutePathToTexture = GetFolderPathToTextureFromFile(textureFileInfo);
 
-                string targetFolder = TexturePaths.Where(t => t.TextureName == originalTextureName).Select(t => t.RelativePath).FirstOrDefault();
+                bool isValidTexture = TexturePaths.Any(t => Path.Combine(SessionPath.ToContent, t.RelativePath) == absolutePathToTexture);
 
-                if (String.IsNullOrEmpty(targetFolder))
+                string targetFolder = "";
+
+                if (isValidTexture)
                 {
-                    // could not find folder path based on name in cooked asset file so look up based on file name
+                    targetFolder = absolutePathToTexture;
+                }
+                else
+                {
+                    // second try to get path to texture based on file name
                     targetFolder = TexturePaths.Where(t => t.TextureName == textureFileName).Select(t => t.RelativePath).FirstOrDefault();
+
+                    if (String.IsNullOrEmpty(targetFolder) == false)
+                    {
+                        targetFolder = Path.Combine(SessionPath.ToContent, targetFolder);
+                    }
                 }
 
+
                 if (String.IsNullOrEmpty(targetFolder))
                 {
-                    // texture/material is custom so copy to game directory with same folder structure as zip
+                    // a path to a game texture could not be found ...
+                    // ... so assume the texture/material is custom; Copy to game directory with same folder structure as zip
                     int index = textureFileInfo.DirectoryName.IndexOf(_tempZipFolder) + 1;
                     targetFolder = textureFileInfo.DirectoryName.Substring(index + _tempZipFolder.Length);
+
+                    targetFolder = Path.Combine(SessionPath.ToContent, targetFolder);
                 }
 
 
-                targetFolder = Path.Combine(SessionPath.ToContent, targetFolder);
 
                 try
                 {
@@ -282,7 +300,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
 
                     Logger.Info($"... copying folder {folder} -> {Path.Combine(SessionPath.ToContent, folderInfo.Name)}");
-                    
+
                     List<string> copied = FileUtils.CopyDirectoryRecursively(folder, Path.Combine(SessionPath.ToContent, folderInfo.Name), filesToExclude: fileNames, foldersToExclude: null, doContainsSearch: true);
                     filesCopied.AddRange(copied);
                 }
@@ -317,7 +335,7 @@ namespace SessionMapSwitcherCore.ViewModels
             return false;
         }
 
-        private string GetTextureNameFromFile(FileInfo textureFile)
+        public static string GetTextureNameFromFile(FileInfo textureFile)
         {
             try
             {
@@ -337,7 +355,7 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        private string GetFolderPathToTextureFromFile(FileInfo textureFile)
+        public static string GetFolderPathToTextureFromFile(FileInfo textureFile)
         {
             string foundPath = "";
 
@@ -345,12 +363,16 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 string pathInFile = GetPathFromTextureFile(textureFile);
 
+                // find index of last folder seperator '/' character to trim off the texture file name
                 int index = pathInFile.LastIndexOf(Path.DirectorySeparatorChar);
                 if (index < 0)
                 {
                     return "";
                 }
                 pathInFile = pathInFile.Substring(0, index);
+
+                // remove "\Game" before appending to absolute path to Content
+                pathInFile = pathInFile.Replace($"{Path.DirectorySeparatorChar}Game", "");
 
 
                 foundPath = $"{SessionPath.ToContent}{pathInFile}";
@@ -362,27 +384,23 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        private string GetPathFromTextureFile(FileInfo textureFile)
+        public static string GetPathFromTextureFile(FileInfo textureFile)
         {
             try
             {
                 string fileContents = File.ReadAllText(textureFile.FullName);
+                string textureNameToFind = textureFile.NameWithoutExtension();
 
-                int index = fileContents.IndexOf("/Game");
+                Regex regex = new Regex($"\\/Game\\/Customization\\/[a-zA-Z\\/]+\\/{textureNameToFind}", RegexOptions.Multiline);
 
-                if (index < 0)
+                Match found = regex.Match(fileContents);
+
+                if (found.Success == false)
                 {
                     return "";
                 }
-                fileContents = fileContents.Substring("/Game".Length + index);
 
-
-                index = fileContents.IndexOf('\0');
-                if (index < 0)
-                {
-                    return "";
-                }
-                string relativeFolderPath = fileContents.Substring(0, index);
+                string relativeFolderPath = found.Value;
 
 
                 return relativeFolderPath.Replace('/', Path.DirectorySeparatorChar);
