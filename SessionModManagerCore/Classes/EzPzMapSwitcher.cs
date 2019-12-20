@@ -182,6 +182,11 @@ namespace SessionMapSwitcherCore.Classes
                 return "";
             }
 
+            if (!File.Exists(SessionPath.ToUserEngineIniFile))
+            {
+                return "";
+            }
+
             try
             {
                 var parser = new FileIniDataParser();
@@ -201,6 +206,11 @@ namespace SessionMapSwitcherCore.Classes
         public bool SetGameDefaultMapSetting(string defaultMapValue)
         {
             if (SessionPath.IsSessionPathValid() == false)
+            {
+                return false;
+            }
+
+            if (!File.Exists(SessionPath.ToUserEngineIniFile))
             {
                 return false;
             }

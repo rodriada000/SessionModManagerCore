@@ -85,8 +85,8 @@ namespace SessionMapSwitcherCore.Classes
                 // Download required files
                 //
 
-                // download the EzPz .zip if the .exe does not exist already and we are NOT skipping the patching step
-                if (IsEzPzExeDownloaded() == false && SkipEzPzPatchStep == false)
+                // download the EzPz .zip if we are NOT skipping the patching step
+                if (SkipEzPzPatchStep == false)
                 {
                     didEzPzDownload = DownloadEzPzModZip();
                     Logger.Info($"didEzPzDownload: {didEzPzDownload}");
@@ -97,12 +97,12 @@ namespace SessionMapSwitcherCore.Classes
                     didEzPzDownload = true;
                 }
 
-                // download the unrealpak files if the user does not have them locally and the .zip is not downloaded
+                // download the unrealpak files if the user does not have them locally
                 didUnrealPakDownload = true;
 
                 if (SkipUnrealPakStep == false)
                 {
-                    if (IsUnpackZipDownloaded() == false && IsUnrealPakInstalledLocally() == false)
+                    if (IsUnrealPakInstalledLocally() == false)
                     {
                         didUnrealPakDownload = DownloadUnrealPackZip();
                     }
@@ -160,11 +160,6 @@ namespace SessionMapSwitcherCore.Classes
 
                         if (isUnrealPakExtracted.Result == false)
                         {
-                            if (IsUnpackZipDownloaded())
-                            {
-                                File.Delete(PathToDownloadedZip);
-                            }
-
                             ProgressChanged($"Failed to unzip file: {isUnrealPakExtracted.Message}. Cannot continue.");
                             PatchCompleted(false);
                             return;
@@ -175,16 +170,17 @@ namespace SessionMapSwitcherCore.Classes
 
                 if (SkipEzPzPatchStep == false)
                 {
-                    Logger.Info($"IsEzPzExeDownloaded() = {IsEzPzExeDownloaded()}");
+                    string pathToZip = Path.Combine(SessionPath.ToPaks, DownloadedPatchFileName);
+                    Logger.Info($"Extracting Ezpz.zip; File exist? {File.Exists(pathToZip)}");
 
-                    if (IsEzPzExeDownloaded() == false)
+                    if (File.Exists(pathToZip))
                     {
                         ProgressChanged("Extracting EzPz .zip files ...");
                         BoolWithMessage isEzPzExtracted = BoolWithMessage.False("");
 
                         try
                         {
-                            isEzPzExtracted = FileUtils.ExtractZipFile(Path.Combine(SessionPath.ToPaks, DownloadedPatchFileName), SessionPath.ToPaks);
+                            isEzPzExtracted = FileUtils.ExtractZipFile(pathToZip, SessionPath.ToPaks);
                         }
                         catch (Exception e)
                         {
@@ -201,10 +197,16 @@ namespace SessionMapSwitcherCore.Classes
                             return;
                         }
                     }
+                    else
+                    {
+                        ProgressChanged($".zip file does not exist - {pathToZip}");
+                        PatchCompleted(false);
+                        return;
+                    }
                 }
 
                 //
-                // Run EzPz Mod .exe and UnrealPak .exe to extract some file
+                // Run EzPz Mod .exe and/or UnrealPak .exe to extract object dropper file
                 //
 
                 bool runSuccess = true;
