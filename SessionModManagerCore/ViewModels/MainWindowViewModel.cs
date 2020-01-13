@@ -33,7 +33,6 @@ namespace SessionMapSwitcherCore.ViewModels
         private MapListItem _secondMapToLoad;
         private bool _loadSecondMapIsChecked;
 
-        public OnlineImportViewModel ImportViewModel { get; set; }
         private IMapSwitcher MapSwitcher { get; set; }
 
         private readonly string[] _hintMessages = new string[] { "Right-click list of maps and click 'Open Content Folder ...' to get to the Content folder easily",
