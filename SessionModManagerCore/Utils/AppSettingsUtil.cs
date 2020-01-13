@@ -22,6 +22,8 @@ namespace SessionMapSwitcherCore.Utils
         AssetStorePantsChecked,
         AssetStoreShirtsChecked,
         AssetStoreShoesChecked,
+        AssetStoreMeshesChecked,
+        AssetStoreCharactersChecked,
         AssetStoreSelectedBucket
     }
 

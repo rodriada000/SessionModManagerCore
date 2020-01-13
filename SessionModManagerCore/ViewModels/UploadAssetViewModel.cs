@@ -201,7 +201,9 @@ namespace SessionModManagerCore.ViewModels
                 "Hats",
                 "Pants",
                 "Shirts",
-                "Shoes"
+                "Shoes",
+                "Meshes",
+                "Characters"
             };
 
             AvailableCategories = categories;
@@ -235,6 +237,10 @@ namespace SessionModManagerCore.ViewModels
                     return AssetCategory.Shirts;
                 case "Shoes":
                     return AssetCategory.Shoes;
+                case "Meshes":
+                    return AssetCategory.Meshes;
+                case "Characters":
+                    return AssetCategory.Characters;
                 default:
                     return null;
             }
@@ -290,14 +296,14 @@ namespace SessionModManagerCore.ViewModels
                     Description = Name;
                 }
 
-                string fileName = Path.GetFileName(PathToFile);
-                string thumbnailName = $"{Path.GetFileNameWithoutExtension(PathToFile)}{Path.GetExtension(PathToThumbnail)}"; // make sure thumbnail on the storage server has same name as json and file
+                string fileName = Author + "_" + Path.GetFileName(PathToFile);
+                string thumbnailName = $"{Author}_{Path.GetFileNameWithoutExtension(PathToFile)}{Path.GetExtension(PathToThumbnail)}"; // make sure thumbnail on the storage server has same name as json and file
                 AssetCategory category = GetAssetCategoryBasedOnSelectedCategory();
 
                 Asset assetToUpload = new Asset(Name, Description, Author, fileName, thumbnailName, category.Value, DateTime.UtcNow.ToString());
 
                 // save asset .json to disk to upload
-                string pathToTempJson = Path.Combine(AssetStoreViewModel.AbsolutePathToTempDownloads, $"{Path.GetFileNameWithoutExtension(PathToFile)}.json");
+                string pathToTempJson = Path.Combine(AssetStoreViewModel.AbsolutePathToTempDownloads, $"{Author}_{Path.GetFileNameWithoutExtension(PathToFile)}.json");
                 string jsonToSave = JsonConvert.SerializeObject(assetToUpload, Formatting.Indented);
 
 
