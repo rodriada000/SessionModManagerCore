@@ -48,6 +48,14 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
+        public static string ToBinaries
+        {
+            get
+            {
+                return Path.Combine(ToSessionGame, "Binaries", "Win64");
+            }
+        }
+
         public static string ToConfig
         {
             get
@@ -136,7 +144,7 @@ namespace SessionMapSwitcherCore.Classes
         {
             get
             {
-                return Path.Combine(ToSession, "SessionGame.exe");
+                return Path.Combine(ToBinaries, "SessionGame-Win64-Shipping.exe");
             }
         }
 

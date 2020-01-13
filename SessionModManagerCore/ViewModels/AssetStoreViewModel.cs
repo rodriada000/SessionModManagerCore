@@ -64,6 +64,8 @@ namespace SessionMapSwitcherCore.ViewModels
         private bool _displayShirts;
         private bool _displayPants;
         private bool _displayShoes;
+        private bool _displayMeshes;
+        private bool _displayCharacters;
 
         #endregion
 
@@ -250,6 +252,36 @@ namespace SessionMapSwitcherCore.ViewModels
                     NotifyPropertyChanged();
                     LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Shoes);
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreShoesChecked, DisplayShoes.ToString());
+                }
+            }
+        }
+
+        public bool DisplayMeshes
+        {
+            get { return _displayMeshes; }
+            set
+            {
+                if (_displayMeshes != value)
+                {
+                    _displayMeshes = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Meshes);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreMeshesChecked, DisplayMeshes.ToString());
+                }
+            }
+        }
+
+        public bool DisplayCharacters
+        {
+            get { return _displayCharacters; }
+            set
+            {
+                if (_displayCharacters != value)
+                {
+                    _displayCharacters = value;
+                    NotifyPropertyChanged();
+                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Characters);
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreCharactersChecked, DisplayCharacters.ToString());
                 }
             }
         }
@@ -895,6 +927,14 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 selectedCategories.Add(AssetCategory.Wheels);
             }
+            if (DisplayMeshes)
+            {
+                selectedCategories.Add(AssetCategory.Meshes);
+            }
+            if (DisplayCharacters)
+            {
+                selectedCategories.Add(AssetCategory.Characters);
+            }
 
             return selectedCategories;
         }
@@ -1163,6 +1203,8 @@ namespace SessionMapSwitcherCore.ViewModels
             categoryToText.Add(AssetCategory.Shoes.Value, "Shoes");
             categoryToText.Add(AssetCategory.Trucks.Value, "Trucks");
             categoryToText.Add(AssetCategory.Wheels.Value, "Wheels");
+            categoryToText.Add(AssetCategory.Meshes.Value, "Meshes");
+            categoryToText.Add(AssetCategory.Characters.Value, "Characters");
 
             if (categoryToText.ContainsKey(assetCatName))
             {
@@ -1176,6 +1218,11 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        void OpenLinkInBrowser(string link)
+        {
+            System.Diagnostics.Process.Start(link);
+        }
+
         /// <summary>
         /// Main method for downloading and installing the selected asset asynchronously.
         /// </summary>
@@ -1185,6 +1232,14 @@ namespace SessionMapSwitcherCore.ViewModels
 
             IsInstallingAsset = true;
             AssetViewModel assetToDownload = SelectedAsset; // get the selected asset currently in-case user selection changes while download occurs
+
+            if(assetToDownload.Asset.AssetName.StartsWith("external:"))
+            {
+                string link = assetToDownload.Asset.AssetName.Split(new string[] { "external:" }, StringSplitOptions.None)[1];
+                OpenLinkInBrowser(link);
+                return;
+            }
+
             string pathToDownload = Path.Combine(AbsolutePathToTempDownloads, assetToDownload.Asset.AssetName);
 
 
@@ -1410,6 +1465,8 @@ namespace SessionMapSwitcherCore.ViewModels
             AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreShoesChecked, DisplayShoes.ToString());
             AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreTrucksChecked, DisplayTrucks.ToString());
             AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreWheelsChecked, DisplayWheels.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreMeshesChecked, DisplayMeshes.ToString());
+            AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreCharactersChecked, DisplayCharacters.ToString());
         }
 
         private void SetSelectedCategoriesFromAppSettings()
@@ -1423,8 +1480,10 @@ namespace SessionMapSwitcherCore.ViewModels
             _displayShoes = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreShoesChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
             _displayTrucks = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreTrucksChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
             _displayWheels = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreWheelsChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayMeshes = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreMeshesChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
+            _displayCharacters = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreCharactersChecked).Equals("true", StringComparison.OrdinalIgnoreCase);
 
-            _displayAll = DisplayDecks && DisplayGriptapes && DisplayHats && DisplayMaps && DisplayPants && DisplayShirts && DisplayShoes && DisplayTrucks && DisplayWheels;
+            _displayAll = DisplayDecks && DisplayGriptapes && DisplayHats && DisplayMaps && DisplayPants && DisplayShirts && DisplayShoes && DisplayTrucks && DisplayWheels && DisplayMeshes && DisplayCharacters;
 
             RaisePropertyChangedEventsForCategories();
             LazilyGetSelectedManifestsAndRefreshFilteredAssetList();
@@ -1442,6 +1501,8 @@ namespace SessionMapSwitcherCore.ViewModels
             NotifyPropertyChanged(nameof(DisplayShirts));
             NotifyPropertyChanged(nameof(DisplayPants));
             NotifyPropertyChanged(nameof(DisplayShoes));
+            NotifyPropertyChanged(nameof(DisplayMeshes));
+            NotifyPropertyChanged(nameof(DisplayCharacters));
         }
 
         public List<string> GetAvailableBuckets()
