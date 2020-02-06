@@ -12,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ViewModels\UploadAssetViewModel.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="modmanager.csv" />
     <None Remove="modmanager.json" />
   </ItemGroup>
@@ -23,10 +27,6 @@
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="SharpCompress" Version="0.24.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.6.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\SessionAssetStore\SessionAssetStore\SessionAssetStore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

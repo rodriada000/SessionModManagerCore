@@ -1,12 +1,10 @@
-﻿using Amazon.S3.Model;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
 using SessionModManagerCore.Classes;
 using SessionModManagerCore.ViewModels;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -1287,13 +1285,14 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 string catFile = AbsolutePathToCatalogSettingsJson;
 
-                Directory.CreateDirectory(AbsolutePathToStoreData);
+                Directory.CreateDirectory(AbsolutePathToTempDownloads);
 
                 CatalogSettings currentSettings = new CatalogSettings();
 
                 if (File.Exists(catFile))
                 {
                     currentSettings = JsonConvert.DeserializeObject<CatalogSettings>(File.ReadAllText(catFile));
+                    currentSettings.CatalogUrls.RemoveAll(s => string.IsNullOrWhiteSpace(s));
                 }
 
                 if (currentSettings.CatalogUrls.Count == 0)
