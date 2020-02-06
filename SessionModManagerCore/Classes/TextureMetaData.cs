@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using SessionAssetStore;
 
 namespace SessionModManagerCore.Classes
 {
@@ -38,7 +37,7 @@ namespace SessionModManagerCore.Classes
                 return;
             }
 
-            AssetName = assetToInstall.AssetName;
+            AssetName = assetToInstall.ID;
             Name = assetToInstall.Name;
         }
     }

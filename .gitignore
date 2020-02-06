@@ -353,3 +353,4 @@ MigrationBackup/
 .ionide/
 SessionModManagerCore/modmanager.json
 SessionModManagerCore/modmanager.csv
+SessionModManagerCore/SessionModManagerCore.xml

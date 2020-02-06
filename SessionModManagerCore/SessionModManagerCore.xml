@@ -4,6 +4,170 @@
         <name>SessionModManagerCore</name>
     </assembly>
     <members>
+        <member name="T:SessionModManagerCore.Classes.Asset">
+            <summary>
+            Class containing an Asset object
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.Asset.ID">
+            <summary>
+            A unique string to identify assets
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.Asset.Name">
+            <summary>
+            The display name of the asset
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.Asset.Description">
+            <summary>
+            A short description of the asset
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.Asset.Author">
+            <summary>
+            The author of the asset
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.Asset.DownloadLink">
+            <summary>
+            The url to download in format smm://GDrive//googledriveID
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.Asset.PreviewImage">
+            <summary>
+            The url to preview image
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.Asset.Category">
+            <summary>
+            The category of the asset as a string
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.Asset.UpdatedDate">
+            <summary>
+            The date (UTC) the asset was last uploaded/edited.
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.Asset.#ctor(System.String,System.String,System.String,System.String,System.String,System.String,System.String,System.String,System.Double)">
+            <summary>
+            Default constructor
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.Asset.ToString">
+            <summary>
+            Dumps a json string of the asset
+            </summary>
+            <returns>JSON string</returns>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.Asset.HasChanges(SessionModManagerCore.Classes.Asset)">
+            <summary>
+            Compares properties to another asset to see if 
+            name, description, category, author, or link is different.
+            </summary>
+            <param name="other"></param>
+            <returns> true if properties are different; false if they are equal. </returns>
+        </member>
+        <member name="T:SessionModManagerCore.Classes.AssetCategory">
+            <summary>
+            Class to replace an enum to get string values.
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.AssetCategory.FromString(System.String)">
+            <summary>
+            Converts a string to an AssetCategory
+            </summary>
+            <param name="category">Name of the category</param>
+            <returns>AssetCategory object</returns>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.MapMetaData.OriginalImportPath">
+            <summary>
+            path to folder that was imported into Content.
+            Used for Re-import feature
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.MapMetaData.MapFileDirectory">
+            <summary>
+            Path to directory where .umap file exists
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.MapMetaData.FilePaths">
+            <summary>
+            List of absolute paths to files that were imported for the map
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.MapMetaData.GetJsonFileName">
+            <summary>
+            Returns the name of the json file that this meta data is saved as
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.TextureMetaData.FilePaths">
+            <summary>
+            List of absolute paths to files that were copied for the texture
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.TextureMetaData.AssetName">
+            <summary>
+            Name of the asset file that this texture file came from
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.TextureMetaData.Name">
+            <summary>
+            Display name of the asset from the asset store
+            </summary>
+        </member>
+        <member name="T:SessionModManagerCore.Classes.VersionChecker">
+            <summary>
+            Used to check if a new version of Session Mod Manager is available to download
+            and handles the app updating process.
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.Classes.VersionChecker.UpdaterInstance">
+            <summary>
+            Static instance of <see cref="F:SessionModManagerCore.Classes.VersionChecker._updater"/>.
+            Gets initialized if null.
+            </summary>
+        </member>
+        <member name="F:SessionModManagerCore.Classes.VersionChecker.IsNewVersionAvailable">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.VersionChecker.IsUpdateAvailable">
+            <summary>
+            If <see cref="F:SessionModManagerCore.Classes.VersionChecker.IsNewVersionAvailable"/> is null then makes request to ag_files.json url to check if there is an update available and sets <see cref="F:SessionModManagerCore.Classes.VersionChecker.IsNewVersionAvailable"/>.
+            Returns <see cref="F:SessionModManagerCore.Classes.VersionChecker.IsNewVersionAvailable"/>.
+            </summary>
+            <returns> Returns true if an update is available. </returns>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.VersionChecker.UpdateApplication">
+            <summary>
+            Runs avantgarde updater which will exit the application to run a seperate console app that downloads
+            and copies the latest files.
+            </summary>
+        </member>
+        <member name="F:SessionModManagerCore.Classes.VersionChecker._filesToDelete">
+            <summary>
+            List of files that are used in version older than 2.2.0.0
+            These will be deleted if they exist in the app directory
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.VersionChecker.DeleteOldVersionFiles">
+            <summary>
+            Delete files used in versions older than 2.2.0.0
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InitInstalledTextures">
+            <summary>
+            Reads installed_textures.json meta data and initializes <see cref="P:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InstalledTextures"/> with results
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.UploadAssetViewModel.SetBucketBasedOnAuthor">
+            <summary>
+            sets <see cref="P:SessionModManagerCore.ViewModels.UploadAssetViewModel.SelectedBucketName"/> to <see cref="P:SessionModManagerCore.ViewModels.UploadAssetViewModel.Author"/> if the author is also a valid bucket name
+            </summary>
+        </member>
         <member name="T:SessionMapSwitcherCore.Classes.BoolWithMessage">
             <summary>
             Used to return true or false and a string like an exception message.
@@ -260,35 +424,24 @@
             Updates <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AuthorList"/> with distinct sorted list of authors in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>
             </summary>
         </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.GetAssetsByCategory(SessionAssetStore.AssetCategory)">
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.GetAssetsByCategory(SessionModManagerCore.Classes.AssetCategory)">
             <summary>
             Returns list of AssetViewModels by category that exist in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>
             </summary>
         </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.GetSelectedCategories">
             <summary>
-            Returns list of <see cref="T:SessionAssetStore.AssetCategory"/> that are set to true to display
+            Returns list of <see cref="T:SessionModManagerCore.Classes.AssetCategory"/> that are set to true to display
             by checking <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DisplayDecks"/>, <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DisplayGriptapes"/>, etc.
             </summary>
         </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.LoadAssetsFromManifest(SessionAssetStore.AssetCategory,System.Boolean)">
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.LoadAssetsFromManifest(SessionModManagerCore.Classes.AssetCategory,System.Boolean)">
             <summary>
             Loads assets from the manifest files for a specific category into <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>.
             Assets will be reloaded if there are new manifest files or changes to the manifest files.
             </summary>
         </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.HasNewAssetManifests(SessionAssetStore.AssetCategory)">
-            <summary>
-            Returns true if there exists more manifest files for a category versus the count 
-            of assets in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.HasAssetManifestsChanged(SessionAssetStore.AssetCategory)">
-            <summary>
-            Checks if the in-memory asset object has different values than the manifest file
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.IsAssetsLoaded(SessionAssetStore.AssetCategory)">
+        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.IsAssetsLoaded(SessionModManagerCore.Classes.AssetCategory)">
             <summary>
             Returns true if there are ANY assets in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/> based on the given category
             </summary>
@@ -308,11 +461,6 @@
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.RemoveSelectedAsset">
             <summary>
             Deletes the selected asset files from Session folders
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DeleteSelectedAssetFromAssetStore">
-            <summary>
-            deletes the asset from the asset store if user has rights to asset
             </summary>
         </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.ComputerImportViewModel.EnsurePathToMapFilesIsCorrect(System.String)">
@@ -379,94 +527,6 @@
         <member name="F:SessionMapSwitcherCore.ViewModels.UpdateViewModel.LatestReleaseUrl">
             <summary>
             url to the latest github release of the application
-            </summary>
-        </member>
-        <member name="P:SessionModManagerCore.Classes.MapMetaData.OriginalImportPath">
-            <summary>
-            path to folder that was imported into Content.
-            Used for Re-import feature
-            </summary>
-        </member>
-        <member name="P:SessionModManagerCore.Classes.MapMetaData.MapFileDirectory">
-            <summary>
-            Path to directory where .umap file exists
-            </summary>
-        </member>
-        <member name="P:SessionModManagerCore.Classes.MapMetaData.FilePaths">
-            <summary>
-            List of absolute paths to files that were imported for the map
-            </summary>
-        </member>
-        <member name="M:SessionModManagerCore.Classes.MapMetaData.GetJsonFileName">
-            <summary>
-            Returns the name of the json file that this meta data is saved as
-            </summary>
-            <returns></returns>
-        </member>
-        <member name="P:SessionModManagerCore.Classes.TextureMetaData.FilePaths">
-            <summary>
-            List of absolute paths to files that were copied for the texture
-            </summary>
-        </member>
-        <member name="P:SessionModManagerCore.Classes.TextureMetaData.AssetName">
-            <summary>
-            Name of the asset file that this texture file came from
-            </summary>
-        </member>
-        <member name="P:SessionModManagerCore.Classes.TextureMetaData.Name">
-            <summary>
-            Display name of the asset from the asset store
-            </summary>
-        </member>
-        <member name="T:SessionModManagerCore.Classes.VersionChecker">
-            <summary>
-            Used to check if a new version of Session Mod Manager is available to download
-            and handles the app updating process.
-            </summary>
-        </member>
-        <member name="P:SessionModManagerCore.Classes.VersionChecker.UpdaterInstance">
-            <summary>
-            Static instance of <see cref="F:SessionModManagerCore.Classes.VersionChecker._updater"/>.
-            Gets initialized if null.
-            </summary>
-        </member>
-        <member name="F:SessionModManagerCore.Classes.VersionChecker.IsNewVersionAvailable">
-            <summary>
-            
-            </summary>
-        </member>
-        <member name="M:SessionModManagerCore.Classes.VersionChecker.IsUpdateAvailable">
-            <summary>
-            If <see cref="F:SessionModManagerCore.Classes.VersionChecker.IsNewVersionAvailable"/> is null then makes request to ag_files.json url to check if there is an update available and sets <see cref="F:SessionModManagerCore.Classes.VersionChecker.IsNewVersionAvailable"/>.
-            Returns <see cref="F:SessionModManagerCore.Classes.VersionChecker.IsNewVersionAvailable"/>.
-            </summary>
-            <returns> Returns true if an update is available. </returns>
-        </member>
-        <member name="M:SessionModManagerCore.Classes.VersionChecker.UpdateApplication">
-            <summary>
-            Runs avantgarde updater which will exit the application to run a seperate console app that downloads
-            and copies the latest files.
-            </summary>
-        </member>
-        <member name="F:SessionModManagerCore.Classes.VersionChecker._filesToDelete">
-            <summary>
-            List of files that are used in version older than 2.2.0.0
-            These will be deleted if they exist in the app directory
-            </summary>
-        </member>
-        <member name="M:SessionModManagerCore.Classes.VersionChecker.DeleteOldVersionFiles">
-            <summary>
-            Delete files used in versions older than 2.2.0.0
-            </summary>
-        </member>
-        <member name="M:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InitInstalledTextures">
-            <summary>
-            Reads installed_textures.json meta data and initializes <see cref="P:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InstalledTextures"/> with results
-            </summary>
-        </member>
-        <member name="M:SessionModManagerCore.ViewModels.UploadAssetViewModel.SetBucketBasedOnAuthor">
-            <summary>
-            sets <see cref="P:SessionModManagerCore.ViewModels.UploadAssetViewModel.SelectedBucketName"/> to <see cref="P:SessionModManagerCore.ViewModels.UploadAssetViewModel.Author"/> if the author is also a valid bucket name
             </summary>
         </member>
         <member name="P:DownloadableMap.ZipFileName">

@@ -1,5 +1,5 @@
-﻿using SessionAssetStore;
-using SessionMapSwitcherCore.ViewModels;
+﻿using SessionMapSwitcherCore.ViewModels;
+using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -90,15 +90,6 @@ namespace SessionModManagerCore.ViewModels
             AssetCategory = asset.Category;
             UpdatedDate = asset.UpdatedDate == DateTime.MinValue ? "" : asset.UpdatedDate.ToLocalTime().ToString(AssetViewModel.dateTimeFormat);
             IsSelected = false;
-        }
-
-        public AssetViewModel(string name, string author, string description)
-        {
-            this.Asset = new Asset(name, description, author, name, "", "", null);
-            this.Name = name;
-            this.Author = author;
-            this.Description = description;
-            this.IsSelected = false;
         }
     }
 }

@@ -1,12 +1,12 @@
 ﻿using Amazon.S3.Model;
 using Newtonsoft.Json;
-using SessionAssetStore;
 using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
 using SessionModManagerCore.Classes;
 using SessionModManagerCore.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -28,7 +28,6 @@ namespace SessionMapSwitcherCore.ViewModels
         public const string defaultInstallStatusValue = "Installed / Not Installed";
         public const string defaultAuthorValue = "Show All";
 
-        private StorageManager _assetManager;
         private string _userMessage;
         private string _installButtonText;
         private string _removeButtonText;
@@ -48,11 +47,13 @@ namespace SessionMapSwitcherCore.ViewModels
         private List<AssetViewModel> _allAssets;
         private List<AuthorDropdownViewModel> _authorList;
         private List<string> _installStatusList;
+        private List<DownloadItemViewModel> _currentDownloads;
 
 
         private object filteredListLock = new object();
         private object allListLock = new object();
         private object manifestFileLock = new object();
+        private object downloadListLock = new object();
 
         private bool _displayAll;
         private bool _displayMaps;
@@ -92,14 +93,6 @@ namespace SessionMapSwitcherCore.ViewModels
             get
             {
                 return Path.Combine(AbsolutePathToStoreData, downloadsFolderName);
-            }
-        }
-
-        public static string AbsolutePathToTempManifests
-        {
-            get
-            {
-                return Path.Combine(AppContext.BaseDirectory, StorageManager.MANIFESTS_TEMP);
             }
         }
 
@@ -316,9 +309,6 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             get
             {
-                if (IsInstallingAsset)
-                    return false;
-
                 return _isInstallButtonEnabled;
             }
             set
@@ -347,9 +337,6 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             get
             {
-                if (IsInstallingAsset)
-                    return false;
-
                 return _isRemoveButtonEnabled;
             }
             set
@@ -516,16 +503,6 @@ namespace SessionMapSwitcherCore.ViewModels
         /// </summary>
         public bool HasDownloadedMap { get; set; }
 
-        public StorageManager AssetManager
-        {
-            get
-            {
-                if (_assetManager == null)
-                    _assetManager = new StorageManager();
-
-                return _assetManager;
-            }
-        }
 
         public List<AssetViewModel> AllAssets
         {
@@ -610,6 +587,25 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        public List<DownloadItemViewModel> CurrentDownloads
+        {
+            get
+            {
+                if (_currentDownloads == null)
+                    _currentDownloads = new List<DownloadItemViewModel>();
+                return _currentDownloads;
+            }
+            set
+            {
+                lock (downloadListLock)
+                {
+                    _currentDownloads = value;
+                }
+
+                NotifyPropertyChanged();
+            }
+        }
+
 
         #endregion
 
@@ -638,6 +634,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
             AuthorList = new List<AuthorDropdownViewModel>() { new AuthorDropdownViewModel(defaultAuthorValue, 0) };
             AuthorToFilterBy = AuthorList[0];
+
+            string fileContents = File.ReadAllText(@"C:\Users\Adam\Desktop\testCatalog.json");
+            AssetCatalog catalogFromFile = JsonConvert.DeserializeObject<AssetCatalog>(fileContents);
+
+            AllAssets = catalogFromFile.Assets.Select(a => new AssetViewModel(a)).ToList();
         }
 
         private void LazilyGetSelectedManifestsAndRefreshFilteredAssetList()
@@ -659,9 +660,9 @@ namespace SessionMapSwitcherCore.ViewModels
             IsLoadingManifests = true;
             UserMessage = "Fetching latest asset manifests ...";
 
-            var fileWriteTask = AssetManager.GetAssetManifestsAsync(categoriesToDownload, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
-                                            .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
-                                            .ConfigureAwait(false);
+            //var fileWriteTask = AssetManager.GetAssetManifestsAsync(categoriesToDownload, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
+            //                                .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
+            //                                .ConfigureAwait(false);
         }
 
         private void LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory category)
@@ -681,16 +682,17 @@ namespace SessionMapSwitcherCore.ViewModels
             IsLoadingManifests = true;
             UserMessage = "Fetching latest asset manifests ...";
 
-            var fileWriteTask = AssetManager.GetAssetManifestsAsync(category, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
-                                            .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
-                                            .ConfigureAwait(false);
+            //var fileWriteTask = AssetManager.GetAssetManifestsAsync(category, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
+            //                                .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
+            //                                .ConfigureAwait(false);
         }
 
         private bool ManifestFilesExists(AssetCategory category)
         {
-            string pathToManifestFiles = Path.Combine(AbsolutePathToTempManifests, category.Value);
+            return true;
+            //string pathToManifestFiles = Path.Combine(AbsolutePathToTempManifests, category.Value);
 
-            return Directory.Exists(pathToManifestFiles) && Directory.GetFiles(pathToManifestFiles).Length > 0;
+            //return Directory.Exists(pathToManifestFiles) && Directory.GetFiles(pathToManifestFiles).Length > 0;
         }
 
         /// <summary>
@@ -720,12 +722,12 @@ namespace SessionMapSwitcherCore.ViewModels
             }
             else
             {
-                categoriesToGet = AssetManager.GetAllCategories();
+                //categoriesToGet = AssetManager.GetAllCategories();
             }
 
-            var fileTask = AssetManager.GetAssetManifestsAsync(categoriesToGet, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
-                                       .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
-                                       .ConfigureAwait(false);
+            //var fileTask = AssetManager.GetAssetManifestsAsync(categoriesToGet, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
+            //                           .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
+            //                           .ConfigureAwait(false);
         }
 
         private void ManifestDownloadCompleted(Task taskResult)
@@ -860,11 +862,11 @@ namespace SessionMapSwitcherCore.ViewModels
                     mapMetaData = MetaDataManager.GetAllMetaDataForMaps();
                 }
 
-                return mapMetaData.Any(m => m.AssetName == asset.Asset.AssetName);
+                return mapMetaData.Any(m => m.AssetName == asset.Asset.ID);
             }
             else
             {
-                return MetaDataManager.GetTextureMetaDataByName(asset.Asset.AssetName, installedTextures) != null;
+                return MetaDataManager.GetTextureMetaDataByName(asset.Asset.ID, installedTextures) != null;
             }
         }
 
@@ -949,17 +951,17 @@ namespace SessionMapSwitcherCore.ViewModels
 
             if (checkForFileChanges)
             {
-                hasFileChanges = HasNewAssetManifests(category) || HasAssetManifestsChanged(category);
+                hasFileChanges = true;
             }
 
             if (IsAssetsLoaded(category) == false || hasFileChanges)
             {
                 List<Asset> assets = new List<Asset>();
 
-                lock (manifestFileLock)
-                {
-                    assets = AssetManager.GenerateAssets(category);
-                }
+                //lock (manifestFileLock)
+                //{
+                //    assets = AssetManager.GenerateAssets(category);
+                //}
 
                 // remove existing assets to avoid duplicates or stale data
                 lock (allListLock)
@@ -982,94 +984,6 @@ namespace SessionMapSwitcherCore.ViewModels
         }
 
         /// <summary>
-        /// Returns true if there exists more manifest files for a category versus the count 
-        /// of assets in <see cref="AllAssets"/>
-        /// </summary>
-        private bool HasNewAssetManifests(AssetCategory category)
-        {
-            string pathToManifests = Path.Combine(AbsolutePathToTempManifests, category.Value);
-
-            if (Directory.Exists(pathToManifests) == false)
-            {
-                return false;
-            }
-
-            int manifestFileCount = 0;
-
-            lock (manifestFileLock)
-            {
-                manifestFileCount = Directory.GetFiles(pathToManifests).Length;
-            }
-
-            int assetInMemoryCount = GetAssetsByCategory(category).Count();
-
-            return assetInMemoryCount != manifestFileCount;
-        }
-
-        /// <summary>
-        /// Checks if the in-memory asset object has different values than the manifest file
-        /// </summary>
-        private bool HasAssetManifestsChanged(AssetCategory category)
-        {
-            string pathToManifests = Path.Combine(AbsolutePathToTempManifests, category.Value);
-
-            if (Directory.Exists(pathToManifests) == false)
-            {
-                return false;
-            }
-
-            string[] manifestFiles = { };
-
-            try
-            {
-                lock (manifestFileLock)
-                {
-                    manifestFiles = Directory.GetFiles(pathToManifests);
-                }
-
-                List<AssetViewModel> inMemoryAssets = GetAssetsByCategory(category).ToList();
-
-
-                foreach (string file in manifestFiles)
-                {
-                    string fileContents;
-
-                    lock (manifestFileLock)
-                    {
-                        fileContents = File.ReadAllText(file);
-                    }
-
-                    Asset assetFromFile = JsonConvert.DeserializeObject<Asset>(fileContents);
-
-                    Asset assetFromMemory = inMemoryAssets.Where(a => a.Asset.AssetName == assetFromFile.AssetName).Select(a => a.Asset).FirstOrDefault();
-
-                    if (assetFromMemory == null)
-                    {
-                        return true; // the asset does not exist in memory which is a change so return true
-                    }
-
-                    bool hasChanged = (assetFromMemory.Author != assetFromFile.Author ||
-                                       assetFromMemory.Category != assetFromFile.Category ||
-                                       assetFromMemory.Description != assetFromFile.Description ||
-                                       assetFromMemory.Name != assetFromFile.Name ||
-                                       assetFromMemory.Thumbnail != assetFromFile.Thumbnail);
-
-                    if (hasChanged)
-                    {
-                        return true;
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e, "failed to check if assets changed from manifest");
-                return false;
-            }
-
-            return false;
-        }
-
-        /// <summary>
         /// Returns true if there are ANY assets in <see cref="AllAssets"/> based on the given category
         /// </summary>
         private bool IsAssetsLoaded(AssetCategory category)
@@ -1086,21 +1000,21 @@ namespace SessionMapSwitcherCore.ViewModels
 
         public void TryAuthenticate()
         {
-            try
-            {
-                AssetManager.Authenticate();
-                HasAuthenticated = true;
-            }
-            catch (AggregateException e)
-            {
-                UserMessage = $"Failed to authenticate to asset store: {e.InnerException?.Message}";
-                Logger.Error(e, "Failed to authenticate to asset store");
-            }
-            catch (Exception e)
-            {
-                UserMessage = $"Failed to authenticate to asset store: {e.Message}";
-                Logger.Error(e, "Failed to authenticate to asset store");
-            }
+            //try
+            //{
+            //    AssetManager.Authenticate();
+            //    HasAuthenticated = true;
+            //}
+            //catch (AggregateException e)
+            //{
+            //    UserMessage = $"Failed to authenticate to asset store: {e.InnerException?.Message}";
+            //    Logger.Error(e, "Failed to authenticate to asset store");
+            //}
+            //catch (Exception e)
+            //{
+            //    UserMessage = $"Failed to authenticate to asset store: {e.Message}";
+            //    Logger.Error(e, "Failed to authenticate to asset store");
+            //}
         }
 
         private void GetSelectedPreviewImageAsync()
@@ -1113,16 +1027,49 @@ namespace SessionMapSwitcherCore.ViewModels
             IsLoadingImage = true;
             UserMessage = "Fetching preview image ...";
 
+            bool isDownloadingImage = false;
+
             Task t = Task.Factory.StartNew(() =>
             {
                 CreateRequiredFolders();
 
-                string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, SelectedAsset.Asset.Thumbnail);
+                string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, SelectedAsset.Asset.ID);
 
                 if (File.Exists(pathToThumbnail) == false)
                 {
-                    System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(SelectedAsset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
-                    downloadTask.GetAwaiter().GetResult();
+                    Guid downloadGuid = Guid.NewGuid();
+
+                    Action onCancel = () => 
+                    {
+                        RemoveFromDownloads(downloadGuid);
+                    };
+
+                    Action onError = () =>
+                    {
+                        RemoveFromDownloads(downloadGuid);
+                    };
+
+                    Action onComplete = () =>
+                    {
+                        RemoveFromDownloads(downloadGuid);
+                        GetSelectedPreviewImageAsync();
+                    };
+
+                    isDownloadingImage = true;
+                    string formattedUrl = "rsmm://Url/" + SelectedAsset.Asset.PreviewImage.Replace("://", "$");
+                    DownloadItemViewModel imageDownload = new DownloadItemViewModel()
+                    {
+                        UniqueId = downloadGuid,
+                        ItemName = "Downloading preview image",
+                        OnCancel = onCancel,
+                        OnComplete = onComplete,
+                        OnError = onError,
+                        DownloadUrl = formattedUrl,
+                        SaveFilePath = pathToThumbnail
+                    };
+
+                    AddToDownloads(imageDownload);
+                    return;
                 }
                 else
                 {
@@ -1153,7 +1100,7 @@ namespace SessionMapSwitcherCore.ViewModels
                     Logger.Error(taskResult.Exception);
                 }
 
-                IsLoadingImage = false;
+                IsLoadingImage = isDownloadingImage;
             });
 
         }
@@ -1171,12 +1118,32 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 foreach (AssetViewModel asset in AllAssets.ToList())
                 {
-                    string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, asset.Asset.Thumbnail);
+                    string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, asset.Asset.ID);
 
                     if (File.Exists(pathToThumbnail) == false)
                     {
-                        System.Runtime.CompilerServices.ConfiguredTaskAwaitable downloadTask = AssetManager.DownloadAssetThumbnailAsync(asset.Asset, pathToThumbnail, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"fetching preview image: {p.TransferredBytes / 1000:0.00} / {p.TotalBytes / 1000:0.00} KB..."), true).ConfigureAwait(false);
-                        downloadTask.GetAwaiter().GetResult();
+                        Guid downloadId = Guid.NewGuid();
+                        Action onCancel = () => { RemoveFromDownloads(downloadId); };
+                        Action onError = () => { RemoveFromDownloads(downloadId); };
+
+                        Action onComplete = () =>
+                        {
+                            RemoveFromDownloads(downloadId);
+                        };
+
+                        string formattedUrl = "rsmm://Url/" + asset.Asset.PreviewImage.Replace("://", "$");
+                        DownloadItemViewModel downloadItem = new DownloadItemViewModel()
+                        {
+                            UniqueId = downloadId,
+                            ItemName = "Downloading preview image",
+                            DownloadUrl = formattedUrl,
+                            SaveFilePath = pathToThumbnail,
+                            OnCancel = onCancel,
+                            OnComplete = onComplete,
+                            OnError = onError
+                        };
+
+                        AddToDownloads(downloadItem);
                     }
                 }
             });
@@ -1218,11 +1185,6 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        void OpenLinkInBrowser(string link)
-        {
-            System.Diagnostics.Process.Start(link);
-        }
-
         /// <summary>
         /// Main method for downloading and installing the selected asset asynchronously.
         /// </summary>
@@ -1233,27 +1195,12 @@ namespace SessionMapSwitcherCore.ViewModels
             IsInstallingAsset = true;
             AssetViewModel assetToDownload = SelectedAsset; // get the selected asset currently in-case user selection changes while download occurs
 
-            if(assetToDownload.Asset.AssetName.StartsWith("external:"))
+            string pathToDownload = Path.Combine(AbsolutePathToTempDownloads, assetToDownload.Asset.ID);
+            Guid downloadId = Guid.NewGuid();
+
+            Action onComplete = () =>
             {
-                string link = assetToDownload.Asset.AssetName.Split(new string[] { "external:" }, StringSplitOptions.None)[1];
-                OpenLinkInBrowser(link);
-                return;
-            }
-
-            string pathToDownload = Path.Combine(AbsolutePathToTempDownloads, assetToDownload.Asset.AssetName);
-
-
-            Task downloadTask = AssetManager.DownloadAssetAsync(assetToDownload.Asset, pathToDownload, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading {assetToDownload.Name}: {p.TransferredBytes / 1000000:0.00} / {p.TotalBytes / 1000000:0.00} MB | {p.PercentDone}%..."), true);
-
-            downloadTask.ContinueWith((result) =>
-            {
-                if (result.IsFaulted)
-                {
-                    UserMessage = $"Failed to install asset ...";
-                    Logger.Error(result.Exception);
-                    IsInstallingAsset = false;
-                    return;
-                }
+                RemoveFromDownloads(downloadId);
 
                 UserMessage = $"Installing asset: {assetToDownload.Name} ... ";
                 Task installTask = Task.Factory.StartNew(() =>
@@ -1266,7 +1213,7 @@ namespace SessionMapSwitcherCore.ViewModels
                     if (installResult.IsFaulted)
                     {
                         UserMessage = $"Failed to install asset ...";
-                        Logger.Error(result.Exception);
+                        Logger.Error(installResult.Exception);
                         IsInstallingAsset = false;
                         return;
                     }
@@ -1293,7 +1240,33 @@ namespace SessionMapSwitcherCore.ViewModels
                     }
 
                 });
-            });
+
+            };
+
+            Action onError = () =>
+            {
+                RemoveFromDownloads(downloadId);
+                UserMessage = $"Failed to download {assetToDownload.Name}";
+            };
+
+            Action onCancel = () => 
+            {
+                RemoveFromDownloads(downloadId);
+                UserMessage = $"Canceled downloading {assetToDownload.Name}";
+            };
+
+            DownloadItemViewModel downloadItem = new DownloadItemViewModel()
+            {
+                UniqueId = downloadId,
+                ItemName = $"Downloading {assetToDownload.Name}",
+                DownloadUrl = assetToDownload.Asset.DownloadLink,
+                SaveFilePath = pathToDownload,
+                OnCancel = onCancel,
+                OnComplete = onComplete,
+                OnError = onError,
+            };
+
+            AddToDownloads(downloadItem);
         }
 
         /// <summary>
@@ -1361,7 +1334,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
             if (assetToRemove.AssetCategory == AssetCategory.Maps.Value)
             {
-                MapMetaData mapToDelete = MetaDataManager.GetAllMetaDataForMaps()?.Where(m => m.AssetName == assetToRemove.Asset.AssetName).FirstOrDefault();
+                MapMetaData mapToDelete = MetaDataManager.GetAllMetaDataForMaps()?.Where(m => m.AssetName == assetToRemove.Asset.ID).FirstOrDefault();
 
                 if (mapToDelete == null)
                 {
@@ -1373,11 +1346,11 @@ namespace SessionMapSwitcherCore.ViewModels
             }
             else
             {
-                TextureMetaData textureToDelete = MetaDataManager.GetTextureMetaDataByName(assetToRemove.Asset.AssetName);
+                TextureMetaData textureToDelete = MetaDataManager.GetTextureMetaDataByName(assetToRemove.Asset.ID);
 
                 if (textureToDelete == null)
                 {
-                    UserMessage = $"Failed to find meta data to delete texture files for {assetToRemove.Asset.AssetName}...";
+                    UserMessage = $"Failed to find meta data to delete texture files for {assetToRemove.Asset.ID}...";
                     return;
                 }
 
@@ -1396,61 +1369,6 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     RefreshFilteredAssetList();
                 }
-            }
-        }
-
-        /// <summary>
-        /// deletes the asset from the asset store if user has rights to asset
-        /// </summary>
-        public void DeleteSelectedAssetFromAssetStore()
-        {
-            AssetViewModel assetToDelete = SelectedAsset;
-
-            if (assetToDelete == null)
-            {
-                UserMessage = "Cannot delete, selected asset is null.";
-                return;
-            }
-
-            string manifestFileName = assetToDelete.Asset.AssetName.Replace(".zip", ".json");
-            manifestFileName = manifestFileName.Replace(".rar", ".json");
-
-            try
-            {
-                // use UploadAssetViewModel because the StorageManager will authenticate using uploader credentials instead of standard read-only credentials
-                UploadAssetViewModel uploadViewModel = new UploadAssetViewModel();
-                uploadViewModel.TryAuthenticate();
-
-                if (uploadViewModel.HasAuthenticated)
-                {
-                    string selectedBucket = AppSettingsUtil.GetAppSetting(SettingKey.AssetStoreSelectedBucket);
-
-                    if (String.IsNullOrEmpty(selectedBucket))
-                    {
-                        UserMessage = "Failed to delete. Click 'Upload Asset' and set the Bucket before deleting your assets.";
-                        return;
-                    }
-
-                    uploadViewModel.AssetManager.DeleteAsset(selectedBucket, manifestFileName, assetToDelete.Asset);
-                    UserMessage = $"Successfully deleted {assetToDelete.Name} from Asset Store!";
-                    GetManifestsAsync(forceRefresh: true, getSelectedOnly: true);
-                }
-                else
-                {
-                    UserMessage = "Failed to authenticate credentials. Click 'Upload Asset' to set uploader credentials before deleting.";
-                }
-            }
-            catch (AggregateException e)
-            {
-                UserMessage = $"An error occurred deleting the asset from the store: {e.InnerException?.Message}";
-                Logger.Error(e, "Failed to delete asset from storage");
-                return;
-            }
-            catch (Exception e)
-            {
-                UserMessage = $"An error occurred deleting the asset from the store: {e.Message}";
-                Logger.Error(e, "Failed to delete asset from storage");
-                return;
             }
         }
 
@@ -1505,23 +1423,54 @@ namespace SessionMapSwitcherCore.ViewModels
             NotifyPropertyChanged(nameof(DisplayCharacters));
         }
 
-        public List<string> GetAvailableBuckets()
+        private void AddToDownloads(DownloadItemViewModel downloadItem)
         {
-            if (HasAuthenticated == false)
+            if (downloadItem == null)
             {
-                return new List<string>();
+                return;
             }
 
-            try
+            var currentList = CurrentDownloads.ToList();
+
+            // return if already added to download queue
+            if (currentList.Any(d => d.SaveFilePath == downloadItem.SaveFilePath))
             {
-                var t = AssetManager.ListBucketsAsync().ConfigureAwait(false);
-                return t.GetAwaiter().GetResult();
+                return;
             }
-            catch (Exception e)
+
+            currentList.Add(downloadItem);
+
+            CurrentDownloads = currentList;
+
+            if (CurrentDownloads.Count == 1)
             {
-                Logger.Warn(e, "failed to get buckets");
-                return new List<string>();
+                AssetDownloader.Instance.Download(downloadItem);
             }
+        }
+
+        private void RemoveFromDownloads(DownloadItemViewModel download)
+        {
+            if (download == null)
+            {
+                return;
+            }
+
+            var currentList = CurrentDownloads.ToList();
+            currentList.Remove(download);
+
+            CurrentDownloads = currentList;
+
+            if (CurrentDownloads.Count > 0)
+            {
+                // downloads are queued so start next in line
+                AssetDownloader.Instance.Download(CurrentDownloads[0]);
+            }
+        }
+
+        private void RemoveFromDownloads(Guid downloadID)
+        {
+            DownloadItemViewModel toRemove = CurrentDownloads.FirstOrDefault(d => d.UniqueId == downloadID);
+            RemoveFromDownloads(toRemove);
         }
     }
 }

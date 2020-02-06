@@ -1,5 +1,4 @@
-﻿using SessionAssetStore;
-using SessionMapSwitcherCore.Classes;
+﻿using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
 using SessionModManagerCore.Classes;
 using System;
@@ -251,7 +250,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (AssetToImport != null)
                 {
-                    metaData.AssetName = AssetToImport.AssetName;
+                    metaData.AssetName = AssetToImport.ID;
                 }
 
                 if (IsZipFileImport == false && metaData != null)
