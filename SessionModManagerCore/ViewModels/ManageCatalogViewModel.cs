@@ -80,6 +80,11 @@ namespace SessionModManagerCore.ViewModels
                 return; // duplicate url
             }
 
+            if (string.IsNullOrWhiteSpace(newUrl))
+            {
+                return;
+            }
+
             CatalogList.Add(newUrl);
 
             WriteToFile();

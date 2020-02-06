@@ -1302,6 +1302,7 @@ namespace SessionMapSwitcherCore.ViewModels
                         File.Delete(catFile);
                     }
 
+                    _catalogCache = new AssetCatalog();
                     ReloadAllAssets();
                     RefreshFilteredAssetList();
                     return;
