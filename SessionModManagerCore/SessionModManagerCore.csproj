@@ -6,12 +6,17 @@
     <RootNamespace>SessionModManagerCore</RootNamespace>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <DocumentationFile>$(ProjectDir)SessionModManagerCore.xml</DocumentationFile>
-    <Version>1.2.5</Version>
+    <Version>1.3.0</Version>
     <AssemblyVersion>1.2.6.0</AssemblyVersion>
     <FileVersion>1.2.6.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ViewModels\UploadAssetViewModel.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="modmanager.csv" />
     <None Remove="modmanager.json" />
   </ItemGroup>
 
@@ -25,14 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\SessionAssetStore\SessionAssetStore\SessionAssetStore.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Update="ag_settings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="modmanager.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

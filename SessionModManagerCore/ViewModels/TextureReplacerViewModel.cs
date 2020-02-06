@@ -1,5 +1,4 @@
-﻿using SessionAssetStore;
-using SessionMapSwitcherCore.Classes;
+﻿using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
 using SessionModManagerCore.Classes;
 using System;

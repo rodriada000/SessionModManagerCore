@@ -2,6 +2,7 @@
 using SessionAssetStore;
 using SessionMapSwitcherCore.Utils;
 using SessionMapSwitcherCore.ViewModels;
+using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.IO;
