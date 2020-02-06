@@ -25,6 +25,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
         public const string thumbnailFolderName = "thumbnails";
 
+        public const string settingsFileName = "catalogSettings.json";
+
+        public const string catalogFileName = "catalog.json";
+
+
         public const string defaultInstallStatusValue = "Installed / Not Installed";
         public const string defaultAuthorValue = "Show All";
 
@@ -48,11 +53,12 @@ namespace SessionMapSwitcherCore.ViewModels
         private List<AuthorDropdownViewModel> _authorList;
         private List<string> _installStatusList;
         private List<DownloadItemViewModel> _currentDownloads;
+        private AssetCatalog _catalogCache;
 
 
         private object filteredListLock = new object();
         private object allListLock = new object();
-        private object manifestFileLock = new object();
+        private object catalogCacheLock = new object();
         private object downloadListLock = new object();
 
         private bool _displayAll;
@@ -96,6 +102,23 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        public static string AbsolutePathToCatalogSettingsJson
+        {
+            get
+            {
+                return Path.Combine(AbsolutePathToStoreData, settingsFileName);
+            }
+        }
+
+        public static string AbsolutePathToCatalogJson
+        {
+            get
+            {
+                return Path.Combine(AbsolutePathToStoreData, catalogFileName);
+            }
+        }
+
+
         public bool DisplayAll
         {
             get { return _displayAll; }
@@ -113,9 +136,11 @@ namespace SessionMapSwitcherCore.ViewModels
                 _displayShirts = value;
                 _displayPants = value;
                 _displayShoes = value;
+                _displayMeshes = value;
+                _displayCharacters = value;
 
                 RaisePropertyChangedEventsForCategories();
-                LazilyGetSelectedManifestsAndRefreshFilteredAssetList();
+                RefreshFilteredAssetList();
                 UpdateAppSettingsWithSelectedCategories();
             }
         }
@@ -129,7 +154,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayMaps = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Maps);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreMapsChecked, DisplayMaps.ToString());
                 }
             }
@@ -144,7 +169,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayDecks = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Decks);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreDecksChecked, DisplayDecks.ToString());
                 }
             }
@@ -158,11 +183,12 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayGriptapes = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Griptapes);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreGriptapesChecked, DisplayGriptapes.ToString());
                 }
             }
         }
+
         public bool DisplayTrucks
         {
             get { return _displayTrucks; }
@@ -172,7 +198,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayTrucks = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Trucks);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreTrucksChecked, DisplayTrucks.ToString());
                 }
             }
@@ -186,7 +212,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayWheels = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Wheels);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreWheelsChecked, DisplayWheels.ToString());
                 }
             }
@@ -201,7 +227,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayHats = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Hats);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreHatsChecked, DisplayHats.ToString());
                 }
             }
@@ -215,7 +241,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayShirts = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Shirts);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreShirtsChecked, DisplayShirts.ToString());
                 }
             }
@@ -229,7 +255,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayPants = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Pants);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStorePantsChecked, DisplayPants.ToString());
                 }
             }
@@ -243,7 +269,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayShoes = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Shoes);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreShoesChecked, DisplayShoes.ToString());
                 }
             }
@@ -258,7 +284,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayMeshes = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Meshes);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreMeshesChecked, DisplayMeshes.ToString());
                 }
             }
@@ -273,7 +299,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     _displayCharacters = value;
                     NotifyPropertyChanged();
-                    LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory.Characters);
+                    RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreCharactersChecked, DisplayCharacters.ToString());
                 }
             }
@@ -476,33 +502,10 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-
-        public bool IsLoadingManifests
-        {
-            get { return _isLoadingManifests; }
-            set
-            {
-                _isLoadingManifests = value;
-                NotifyPropertyChanged();
-                NotifyPropertyChanged(nameof(IsNotLoadingManifests));
-            }
-        }
-
-        public bool IsNotLoadingManifests
-        {
-            get { return !_isLoadingManifests; }
-        }
-
-        public bool IsManifestsDownloaded { get; set; }
-
-        public bool HasAuthenticated { get; set; }
-
-
         /// <summary>
         /// used to determine if list of available maps should be refreshed when switching back to the main window
         /// </summary>
         public bool HasDownloadedMap { get; set; }
-
 
         public List<AssetViewModel> AllAssets
         {
@@ -612,10 +615,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
         public AssetStoreViewModel()
         {
-            IsManifestsDownloaded = false;
-            IsLoadingManifests = false;
             IsInstallingAsset = false;
-            HasAuthenticated = false;
             DisplayMaps = true;
             SetSelectedCategoriesFromAppSettings();
             FetchAllPreviewImages = AppSettingsUtil.GetAppSetting(SettingKey.FetchAllPreviewImages).Equals("true", StringComparison.OrdinalIgnoreCase);
@@ -635,121 +635,9 @@ namespace SessionMapSwitcherCore.ViewModels
             AuthorList = new List<AuthorDropdownViewModel>() { new AuthorDropdownViewModel(defaultAuthorValue, 0) };
             AuthorToFilterBy = AuthorList[0];
 
-            string fileContents = File.ReadAllText(@"C:\Users\Adam\Desktop\testCatalog.json");
-            AssetCatalog catalogFromFile = JsonConvert.DeserializeObject<AssetCatalog>(fileContents);
-
-            AllAssets = catalogFromFile.Assets.Select(a => new AssetViewModel(a)).ToList();
-        }
-
-        private void LazilyGetSelectedManifestsAndRefreshFilteredAssetList()
-        {
-            var selectedCategories = GetSelectedCategories();
-            List<AssetCategory> categoriesToDownload = selectedCategories.Where(c => ManifestFilesExists(c) == false).ToList();
-
-            if (selectedCategories.Count == 0 || categoriesToDownload.Count == 0)
-            {
-                RefreshFilteredAssetList();
-                return;
-            }
-
-            if (HasAuthenticated == false)
-            {
-                TryAuthenticate();
-            }
-
-            IsLoadingManifests = true;
-            UserMessage = "Fetching latest asset manifests ...";
-
-            //var fileWriteTask = AssetManager.GetAssetManifestsAsync(categoriesToDownload, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
-            //                                .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
-            //                                .ConfigureAwait(false);
-        }
-
-        private void LazilyGetManifestsAndRefreshFilteredAssetList(AssetCategory category)
-        {
-            if (ManifestFilesExists(category))
-            {
-                //manifest files already downloaded so just refresh list
-                RefreshFilteredAssetList();
-                return;
-            }
-
-            if (HasAuthenticated == false)
-            {
-                TryAuthenticate();
-            }
-
-            IsLoadingManifests = true;
-            UserMessage = "Fetching latest asset manifests ...";
-
-            //var fileWriteTask = AssetManager.GetAssetManifestsAsync(category, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
-            //                                .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
-            //                                .ConfigureAwait(false);
-        }
-
-        private bool ManifestFilesExists(AssetCategory category)
-        {
-            return true;
-            //string pathToManifestFiles = Path.Combine(AbsolutePathToTempManifests, category.Value);
-
-            //return Directory.Exists(pathToManifestFiles) && Directory.GetFiles(pathToManifestFiles).Length > 0;
-        }
-
-        /// <summary>
-        /// Downloads manifest files and refreshes <see cref="FilteredAssetList"/> after successful download.
-        /// </summary>
-        /// <param name="forceRefresh"> force download the manifests again</param>
-        /// <param name="getSelectedOnly"> only download manifests for the selected asset categories </param>
-        public void GetManifestsAsync(bool forceRefresh = false, bool getSelectedOnly = false)
-        {
-            if (forceRefresh == false && IsManifestsDownloaded)
-            {
-                return; // the manifests will not be re-downloaded because it has been downloaded once and not forced
-            }
-
-            if (HasAuthenticated == false)
-            {
-                TryAuthenticate();
-            }
-
-            IsLoadingManifests = true;
-            UserMessage = "Fetching latest asset manifests ...";
-            List<AssetCategory> categoriesToGet = new List<AssetCategory>();
-
-            if (getSelectedOnly)
-            {
-                categoriesToGet = GetSelectedCategories();
-            }
-            else
-            {
-                //categoriesToGet = AssetManager.GetAllCategories();
-            }
-
-            //var fileTask = AssetManager.GetAssetManifestsAsync(categoriesToGet, new EventHandler<WriteObjectProgressArgs>((o, p) => UserMessage = $"Downloading manifest {p.Key}: {p.TransferredBytes:0.00} / {p.TotalBytes:0.00} Bytes..."))
-            //                           .ContinueWith((taskResult) => ManifestDownloadCompleted(taskResult))
-            //                           .ConfigureAwait(false);
-        }
-
-        private void ManifestDownloadCompleted(Task taskResult)
-        {
-            if (taskResult.IsFaulted)
-            {
-                UserMessage = "An error occurred fetching manifests ...";
-                Logger.Error(taskResult.Exception, "failed to get all manifests");
-            }
-            else
-            {
-                IsManifestsDownloaded = true;
-                UserMessage = "Manifests downloaded ...";
-                RefreshFilteredAssetList(checkForFileChanges: true);
-
-                if (FetchAllPreviewImages)
-                {
-                    DownloadAllPreviewImagesAsync();
-                }
-            }
-
-            IsLoadingManifests = false;
+            _catalogCache = GetCurrentCatalog();
+            ReloadAllAssets();
+            CheckForCatalogUpdatesAsync();
         }
 
         public void RefreshFilteredAssetList(bool checkForFileChanges = false)
@@ -759,10 +647,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
             foreach (AssetCategory cat in categories)
             {
-                LoadAssetsFromManifest(cat, checkForFileChanges);
                 newList.AddRange(GetAssetsByCategory(cat));
             }
-
 
             RefreshAuthorList();
 
@@ -941,82 +827,6 @@ namespace SessionMapSwitcherCore.ViewModels
             return selectedCategories;
         }
 
-        /// <summary>
-        /// Loads assets from the manifest files for a specific category into <see cref="AllAssets"/>.
-        /// Assets will be reloaded if there are new manifest files or changes to the manifest files.
-        /// </summary>
-        private void LoadAssetsFromManifest(AssetCategory category, bool checkForFileChanges)
-        {
-            bool hasFileChanges = false;
-
-            if (checkForFileChanges)
-            {
-                hasFileChanges = true;
-            }
-
-            if (IsAssetsLoaded(category) == false || hasFileChanges)
-            {
-                List<Asset> assets = new List<Asset>();
-
-                //lock (manifestFileLock)
-                //{
-                //    assets = AssetManager.GenerateAssets(category);
-                //}
-
-                // remove existing assets to avoid duplicates or stale data
-                lock (allListLock)
-                {
-                    AllAssets.RemoveAll((a) => a.AssetCategory == category.Value);
-                }
-
-                // add new assets loaded generated from manifest files
-                foreach (Asset asset in assets)
-                {
-                    if (asset == null)
-                        continue;
-
-                    lock (allListLock)
-                    {
-                        AllAssets.Add(new AssetViewModel(asset));
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Returns true if there are ANY assets in <see cref="AllAssets"/> based on the given category
-        /// </summary>
-        private bool IsAssetsLoaded(AssetCategory category)
-        {
-            bool hasAssets = false;
-
-            lock (allListLock)
-            {
-                hasAssets = AllAssets.Any(a => a.AssetCategory == category.Value);
-            }
-
-            return hasAssets;
-        }
-
-        public void TryAuthenticate()
-        {
-            //try
-            //{
-            //    AssetManager.Authenticate();
-            //    HasAuthenticated = true;
-            //}
-            //catch (AggregateException e)
-            //{
-            //    UserMessage = $"Failed to authenticate to asset store: {e.InnerException?.Message}";
-            //    Logger.Error(e, "Failed to authenticate to asset store");
-            //}
-            //catch (Exception e)
-            //{
-            //    UserMessage = $"Failed to authenticate to asset store: {e.Message}";
-            //    Logger.Error(e, "Failed to authenticate to asset store");
-            //}
-        }
-
         private void GetSelectedPreviewImageAsync()
         {
             if (SelectedAsset == null)
@@ -1039,7 +849,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     Guid downloadGuid = Guid.NewGuid();
 
-                    Action onCancel = () => 
+                    Action onCancel = () =>
                     {
                         RemoveFromDownloads(downloadGuid);
                     };
@@ -1110,11 +920,6 @@ namespace SessionMapSwitcherCore.ViewModels
             Task t = Task.Factory.StartNew(() =>
             {
                 CreateRequiredFolders();
-
-                if (HasAuthenticated == false)
-                {
-                    TryAuthenticate();
-                }
 
                 foreach (AssetViewModel asset in AllAssets.ToList())
                 {
@@ -1192,7 +997,6 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             CreateRequiredFolders();
 
-            IsInstallingAsset = true;
             AssetViewModel assetToDownload = SelectedAsset; // get the selected asset currently in-case user selection changes while download occurs
 
             string pathToDownload = Path.Combine(AbsolutePathToTempDownloads, assetToDownload.Asset.ID);
@@ -1200,6 +1004,8 @@ namespace SessionMapSwitcherCore.ViewModels
 
             Action onComplete = () =>
             {
+                IsInstallingAsset = true;
+
                 RemoveFromDownloads(downloadId);
 
                 UserMessage = $"Installing asset: {assetToDownload.Name} ... ";
@@ -1249,7 +1055,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 UserMessage = $"Failed to download {assetToDownload.Name}";
             };
 
-            Action onCancel = () => 
+            Action onCancel = () =>
             {
                 RemoveFromDownloads(downloadId);
                 UserMessage = $"Canceled downloading {assetToDownload.Name}";
@@ -1404,7 +1210,7 @@ namespace SessionMapSwitcherCore.ViewModels
             _displayAll = DisplayDecks && DisplayGriptapes && DisplayHats && DisplayMaps && DisplayPants && DisplayShirts && DisplayShoes && DisplayTrucks && DisplayWheels && DisplayMeshes && DisplayCharacters;
 
             RaisePropertyChangedEventsForCategories();
-            LazilyGetSelectedManifestsAndRefreshFilteredAssetList();
+            RefreshFilteredAssetList();
         }
 
         private void RaisePropertyChangedEventsForCategories()
@@ -1471,6 +1277,123 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             DownloadItemViewModel toRemove = CurrentDownloads.FirstOrDefault(d => d.UniqueId == downloadID);
             RemoveFromDownloads(toRemove);
+        }
+
+        public Task CheckForCatalogUpdatesAsync()
+        {
+            object countLock = new object();
+
+            Task t = Task.Factory.StartNew(() =>
+            {
+                string catFile = AbsolutePathToCatalogSettingsJson;
+
+                Directory.CreateDirectory(AbsolutePathToStoreData);
+
+                CatalogSettings currentSettings = new CatalogSettings();
+
+                if (File.Exists(catFile))
+                {
+                    currentSettings = JsonConvert.DeserializeObject<CatalogSettings>(File.ReadAllText(catFile));
+                }
+
+                if (currentSettings.CatalogUrls.Count == 0)
+                {
+                    if (File.Exists(catFile))
+                    {
+                        File.Delete(catFile);
+                    }
+
+                    ReloadAllAssets();
+                    RefreshFilteredAssetList();
+                    return;
+                }
+
+                lock(catalogCacheLock)
+                {
+                    _catalogCache = new AssetCatalog();
+                }
+
+                foreach (string subUrl in currentSettings.CatalogUrls.ToArray())
+                {
+                    Logger.Info($"Checking catalog {subUrl}");
+
+                    string uniqueFileName = $"cattemp{Path.GetRandomFileName()}.xml"; // save temp catalog update to unique filename so multiple catalog updates can download async
+                    string path = Path.Combine(AbsolutePathToTempDownloads, uniqueFileName);
+
+                    Guid downloadId = Guid.NewGuid();
+
+                    Action onCancel = () =>
+                    {
+                        RemoveFromDownloads(downloadId);
+                    };
+
+                    Action onError = () =>
+                    {
+                        RemoveFromDownloads(downloadId);
+                    };
+
+                    Action onComplete = () =>
+                    {
+                        RemoveFromDownloads(downloadId);
+
+                        try
+                        {
+                            AssetCatalog c = JsonConvert.DeserializeObject<AssetCatalog>(File.ReadAllText(path));
+
+                            lock (catalogCacheLock) // put a lock on the Catalog so multiple threads can only merge one at a time
+                            {
+                                _catalogCache = AssetCatalog.Merge(_catalogCache, c);
+                                File.WriteAllText(AbsolutePathToCatalogJson, JsonConvert.SerializeObject(_catalogCache));
+                            }
+
+                            ReloadAllAssets();
+                            RefreshFilteredAssetList();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Error(ex);
+                        }
+                        finally
+                        {
+                            // delete temp catalog
+                            if (File.Exists(path))
+                            {
+                                File.Delete(path);
+                            }
+                        }
+                    };
+
+                    DownloadItemViewModel catalogDownload = new DownloadItemViewModel()
+                    {
+                        UniqueId = downloadId,
+                        ItemName = $"Checking catalog {subUrl}",
+                        DownloadUrl = AssetCatalog.FormatUrl(subUrl),
+                        SaveFilePath = path,
+                        OnComplete = onComplete,
+                        OnError = onError,
+                        OnCancel = onCancel
+                    };
+
+                    AddToDownloads(catalogDownload);
+                }
+            });
+
+            return t;
+        }
+
+        private void ReloadAllAssets()
+        {
+            AllAssets = _catalogCache.Assets.Select(a => new AssetViewModel(a)).ToList();
+        }
+
+        internal AssetCatalog GetCurrentCatalog()
+        {
+            if (!File.Exists(AbsolutePathToCatalogJson))
+            {
+                return new AssetCatalog();
+            }
+
+            return JsonConvert.DeserializeObject<AssetCatalog>(File.ReadAllText(AbsolutePathToCatalogJson));
         }
     }
 }

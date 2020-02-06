@@ -19,6 +19,11 @@ namespace SessionModManagerCore.Classes
 
         private Dictionary<string, Asset> _lookup;
 
+        public AssetCatalog()
+        {
+            Assets = new List<Asset>();
+        }
+
         public Asset GetAsset(string assetID)
         {
             if (_lookup == null)
@@ -68,6 +73,11 @@ namespace SessionModManagerCore.Classes
             int dpos = url.IndexOf('$');
             if (dpos >= 0) url = url.Substring(0, dpos) + "://" + url.Substring(dpos + 1);
             return true;
+        }
+
+        internal static string FormatUrl(string subUrl)
+        {
+            return $"rsmm://Url/{subUrl.Replace("://", "$")}";
         }
     }
 }

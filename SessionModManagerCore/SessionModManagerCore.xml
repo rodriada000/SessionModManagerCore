@@ -412,13 +412,6 @@
             used to determine if list of available maps should be refreshed when switching back to the main window
             </summary>
         </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.GetManifestsAsync(System.Boolean,System.Boolean)">
-            <summary>
-            Downloads manifest files and refreshes <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.FilteredAssetList"/> after successful download.
-            </summary>
-            <param name="forceRefresh"> force download the manifests again</param>
-            <param name="getSelectedOnly"> only download manifests for the selected asset categories </param>
-        </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.RefreshAuthorList">
             <summary>
             Updates <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AuthorList"/> with distinct sorted list of authors in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>
@@ -433,17 +426,6 @@
             <summary>
             Returns list of <see cref="T:SessionModManagerCore.Classes.AssetCategory"/> that are set to true to display
             by checking <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DisplayDecks"/>, <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DisplayGriptapes"/>, etc.
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.LoadAssetsFromManifest(SessionModManagerCore.Classes.AssetCategory,System.Boolean)">
-            <summary>
-            Loads assets from the manifest files for a specific category into <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/>.
-            Assets will be reloaded if there are new manifest files or changes to the manifest files.
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.IsAssetsLoaded(SessionModManagerCore.Classes.AssetCategory)">
-            <summary>
-            Returns true if there are ANY assets in <see cref="P:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.AllAssets"/> based on the given category
             </summary>
         </member>
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.DownloadSelectedAssetAsync">

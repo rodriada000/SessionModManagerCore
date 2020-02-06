@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="modmanager.csv" />
     <None Remove="modmanager.json" />
   </ItemGroup>
 
@@ -30,9 +31,6 @@
 
   <ItemGroup>
     <None Update="ag_settings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="modmanager.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
