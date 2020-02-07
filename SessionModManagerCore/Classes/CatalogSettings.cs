@@ -7,11 +7,11 @@ namespace SessionModManagerCore.Classes
 {
     public class CatalogSettings
     {        
-        public List<string> CatalogUrls { get; set; }
+        public List<CatalogSubscription> CatalogUrls { get; set; }
 
         public CatalogSettings()
         {
-            CatalogUrls = new List<string>();
+            CatalogUrls = new List<CatalogSubscription>();
         }
     }
 }

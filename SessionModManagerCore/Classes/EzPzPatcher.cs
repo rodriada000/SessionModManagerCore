@@ -258,7 +258,7 @@ namespace SessionMapSwitcherCore.Classes
 
                 // visit github to get current direct download link
                 ProgressChanged("Downloading crypto.json file - getting download url from git ...");
-                string directLinkToZip = DownloadUtils.GetTxtDocumentFromGitHubRepo(CryptoJsonGitHubUrl);
+                string directLinkToZip = DownloadUtils.GetTextResponseFromUrl(CryptoJsonGitHubUrl);
 
                 directLinkToZip = directLinkToZip.TrimEnd(new char[] { ' ', '\n' });
 
@@ -415,7 +415,7 @@ namespace SessionMapSwitcherCore.Classes
                 ProgressChanged("Downloading Session EzPz Mod .zip file - getting download url from git ...");
                 Logger.Info("Downloading Session EzPz Mod .zip file ...");
 
-                string downloadUrl = DownloadUtils.GetTxtDocumentFromGitHubRepo(EzPzGitHubUrl);
+                string downloadUrl = DownloadUtils.GetTextResponseFromUrl(EzPzGitHubUrl);
 
                 downloadUrl = downloadUrl.TrimEnd(new char[] { ' ', '\n' });
 
@@ -462,7 +462,7 @@ namespace SessionMapSwitcherCore.Classes
 
                 // visit github to get current direct download link
                 ProgressChanged("Downloading UnrealPak .zip file - getting download url from git ...");
-                string directLinkToZip = DownloadUtils.GetTxtDocumentFromGitHubRepo(UnpackGitHubUrl);
+                string directLinkToZip = DownloadUtils.GetTextResponseFromUrl(UnpackGitHubUrl);
 
                 directLinkToZip = directLinkToZip.TrimEnd(new char[] { ' ', '\n' });
 

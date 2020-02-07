@@ -14,12 +14,21 @@ namespace SessionModManagerCore.ViewModels
         Install,
     }
 
+    public enum DownloadType
+    {
+        Asset,
+        Catalog,
+        Image
+    }
+
     public class DownloadItemViewModel : ViewModelBase
     {
         private string _itemName;
         private double _percentComplete;
         private bool _isSelected;
         private string _downloadSpeed;
+
+        public DownloadType DownloadType { get; set; }
 
         public Guid UniqueId { get; set; }
 
@@ -88,6 +97,7 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public bool IsStarted { get; set; }
 
         public DownloadItemViewModel()
         {
@@ -95,6 +105,7 @@ namespace SessionModManagerCore.ViewModels
             UniqueId = Guid.NewGuid();
             PercentComplete = 0;
             IsSelected = false;
+            IsStarted = false;
         }
 
     }

@@ -868,6 +868,7 @@ namespace SessionMapSwitcherCore.ViewModels
                     DownloadItemViewModel imageDownload = new DownloadItemViewModel()
                     {
                         UniqueId = downloadGuid,
+                        DownloadType = DownloadType.Image,
                         ItemName = "Downloading preview image",
                         OnCancel = onCancel,
                         OnComplete = onComplete,
@@ -938,6 +939,7 @@ namespace SessionMapSwitcherCore.ViewModels
                         DownloadItemViewModel downloadItem = new DownloadItemViewModel()
                         {
                             UniqueId = downloadId,
+                            DownloadType = DownloadType.Image,
                             ItemName = "Downloading preview image",
                             DownloadUrl = formattedUrl,
                             SaveFilePath = pathToThumbnail,
@@ -1062,6 +1064,7 @@ namespace SessionMapSwitcherCore.ViewModels
             DownloadItemViewModel downloadItem = new DownloadItemViewModel()
             {
                 UniqueId = downloadId,
+                DownloadType = DownloadType.Asset,
                 ItemName = $"Downloading {assetToDownload.Name}",
                 DownloadUrl = assetToDownload.Asset.DownloadLink,
                 SaveFilePath = pathToDownload,
@@ -1248,7 +1251,19 @@ namespace SessionMapSwitcherCore.ViewModels
 
             if (CurrentDownloads.Count == 1)
             {
+                // first item added to queue so start download
                 AssetDownloader.Instance.Download(downloadItem);
+            }
+            else if (CurrentDownloads.Count > 1 && CurrentDownloads[0].IsStarted && CurrentDownloads[0].DownloadType == DownloadType.Asset)
+            {
+                // multiple items queued with the first item being an asset... 
+                // ... in this case start the next non-asset download
+                int nextItemIndex = CurrentDownloads.FindIndex(d => d.DownloadType != DownloadType.Asset && !d.IsStarted);
+
+                if (nextItemIndex >= 0)
+                {
+                    AssetDownloader.Instance.Download(CurrentDownloads[nextItemIndex]);
+                }
             }
         }
 
@@ -1266,8 +1281,12 @@ namespace SessionMapSwitcherCore.ViewModels
 
             if (CurrentDownloads.Count > 0)
             {
-                // downloads are queued so start next in line
-                AssetDownloader.Instance.Download(CurrentDownloads[0]);
+                int nextItemIndex = CurrentDownloads.FindIndex(d => !d.IsStarted);
+
+                if (nextItemIndex >= 0)
+                {
+                    AssetDownloader.Instance.Download(CurrentDownloads[nextItemIndex]);
+                }
             }
         }
 
@@ -1292,7 +1311,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 if (File.Exists(catFile))
                 {
                     currentSettings = JsonConvert.DeserializeObject<CatalogSettings>(File.ReadAllText(catFile));
-                    currentSettings.CatalogUrls.RemoveAll(s => string.IsNullOrWhiteSpace(s));
+                    currentSettings.CatalogUrls.RemoveAll(s => string.IsNullOrWhiteSpace(s.Url));
                 }
 
                 if (currentSettings.CatalogUrls.Count == 0)
@@ -1313,9 +1332,9 @@ namespace SessionMapSwitcherCore.ViewModels
                     _catalogCache = new AssetCatalog();
                 }
 
-                foreach (string subUrl in currentSettings.CatalogUrls.ToArray())
+                foreach (CatalogSubscription sub in currentSettings.CatalogUrls.ToArray())
                 {
-                    Logger.Info($"Checking catalog {subUrl}");
+                    Logger.Info($"Checking catalog {sub.Url}");
 
                     string uniqueFileName = $"cattemp{Path.GetRandomFileName()}.xml"; // save temp catalog update to unique filename so multiple catalog updates can download async
                     string path = Path.Combine(AbsolutePathToTempDownloads, uniqueFileName);
@@ -1343,7 +1362,7 @@ namespace SessionMapSwitcherCore.ViewModels
                             lock (catalogCacheLock) // put a lock on the Catalog so multiple threads can only merge one at a time
                             {
                                 _catalogCache = AssetCatalog.Merge(_catalogCache, c);
-                                File.WriteAllText(AbsolutePathToCatalogJson, JsonConvert.SerializeObject(_catalogCache));
+                                File.WriteAllText(AbsolutePathToCatalogJson, JsonConvert.SerializeObject(_catalogCache, Formatting.Indented));
                             }
 
                             ReloadAllAssets();
@@ -1366,8 +1385,9 @@ namespace SessionMapSwitcherCore.ViewModels
                     DownloadItemViewModel catalogDownload = new DownloadItemViewModel()
                     {
                         UniqueId = downloadId,
-                        ItemName = $"Checking catalog {subUrl}",
-                        DownloadUrl = AssetCatalog.FormatUrl(subUrl),
+                        DownloadType = DownloadType.Catalog,
+                        ItemName = $"Checking catalog {sub.Url}",
+                        DownloadUrl = AssetCatalog.FormatUrl(sub.Url),
                         SaveFilePath = path,
                         OnComplete = onComplete,
                         OnError = onError,

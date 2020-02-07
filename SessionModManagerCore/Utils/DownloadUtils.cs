@@ -19,13 +19,13 @@ namespace SessionMapSwitcherCore.Utils
         /// Make a request to the given url and return the response as a string.
         /// Used for getting .txt documents from github.
         /// </summary>
-        public static string GetTxtDocumentFromGitHubRepo(string githubUrl)
+        public static string GetTextResponseFromUrl(string requestUrl, int timeoutInSeconds = 10)
         {
             using (HttpClient client = new HttpClient())
             {
-                client.Timeout = new TimeSpan(0, 0, 10);
-                Task<HttpResponseMessage> task = client.GetAsync(githubUrl);
-                task.Wait(10000);
+                client.Timeout = new TimeSpan(0, 0, timeoutInSeconds);
+                Task<HttpResponseMessage> task = client.GetAsync(requestUrl);
+                task.Wait(timeoutInSeconds * 1000);
 
                 HttpResponseMessage response = task.Result;
                 Logger.Info($"response received: {response.StatusCode} - {response.ReasonPhrase}");
