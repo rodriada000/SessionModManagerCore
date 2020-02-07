@@ -41,7 +41,8 @@ namespace SessionModManagerCore.Classes
                 OnCancel = onCancel,
                 OnError = onError,
                 OnComplete = onComplete,
-                DownloadSpeed = "Calculating ..."
+                DownloadSpeed = "Calculating ...",
+                DownloadType = DownloadType.Asset
             };
 
             switch (type)
@@ -75,6 +76,7 @@ namespace SessionModManagerCore.Classes
 
             }
 
+            newDownload.IsStarted = true;
             return newDownload;
         }
 
@@ -118,6 +120,8 @@ namespace SessionModManagerCore.Classes
                     break;
 
             }
+
+            newDownload.IsStarted = true;
         }
 
 
@@ -126,6 +130,10 @@ namespace SessionModManagerCore.Classes
             DownloadItemViewModel item = (DownloadItemViewModel)e.UserState;
             if (e.Cancelled)
             {
+                if (sender is System.Net.WebClient)
+                {
+                    (sender as System.Net.WebClient).Dispose();
+                }
                 item.OnCancel?.Invoke();
             }
             else if (e.Error != null)

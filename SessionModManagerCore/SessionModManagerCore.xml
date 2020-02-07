@@ -80,6 +80,25 @@
             <param name="category">Name of the category</param>
             <returns>AssetCategory object</returns>
         </member>
+        <member name="M:SessionModManagerCore.Classes.AssetCatalog.TryParseDownloadUrl(System.String,SessionModManagerCore.Classes.DownloadLocationType@,System.String@)">
+            <summary>
+            Parses download url information (either http url or google drive) from a rsmm:// download url
+            </summary>
+            <param name="link"></param>
+            <param name="type"></param>
+            <param name="url"></param>
+            <returns></returns>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.AssetCatalog.FormatUrl(System.String)">
+            <summary>
+            Formats a http url into the appropriate rsmm:// url format
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.Classes.CatalogSettings.AddDefaults(SessionModManagerCore.Classes.CatalogSettings)">
+            <summary>
+            Ensures all default catalog urls are in the users catalog settings
+            </summary>
+        </member>
         <member name="P:SessionModManagerCore.Classes.MapMetaData.OriginalImportPath">
             <summary>
             path to folder that was imported into Content.
@@ -340,7 +359,7 @@
             If this file is not deleted then the game loads the default map when you leave the apartment.
             </remarks>
         </member>
-        <member name="M:SessionMapSwitcherCore.Utils.DownloadUtils.GetTxtDocumentFromGitHubRepo(System.String)">
+        <member name="M:SessionMapSwitcherCore.Utils.DownloadUtils.GetTextResponseFromUrl(System.String,System.Int32)">
             <summary>
             Make a request to the given url and return the response as a string.
             Used for getting .txt documents from github.

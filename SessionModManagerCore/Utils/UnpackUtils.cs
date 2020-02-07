@@ -143,7 +143,7 @@ namespace SessionMapSwitcherCore.Utils
 
                 // visit github to get current anon file download link
                 ProgressChanged("Downloading .zip file - getting download url from git ...");
-                string downloadUrl = DownloadUtils.GetTxtDocumentFromGitHubRepo(GitHubUrl);
+                string downloadUrl = DownloadUtils.GetTextResponseFromUrl(GitHubUrl);
 
                 // visit anon file to get direct file download link from html page
                 ProgressChanged("Downloading .zip file -  scraping direct download link download page ...");

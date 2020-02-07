@@ -18,6 +18,7 @@ namespace SessionModManagerCore.ViewModels
         private string _assetCategory;
         private string _updatedDate;
         private bool _isSelected;
+        private string _version;
 
         internal Asset Asset { get; set; }
 
@@ -81,6 +82,16 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public string Version
+        {
+            get { return _version; }
+            set
+            {
+                _version = value;
+                NotifyPropertyChanged();
+            }
+        }
+
         public AssetViewModel(Asset asset)
         {
             this.Asset = asset;
@@ -89,6 +100,8 @@ namespace SessionModManagerCore.ViewModels
             Author = asset.Author;
             AssetCategory = asset.Category;
             UpdatedDate = asset.UpdatedDate == DateTime.MinValue ? "" : asset.UpdatedDate.ToLocalTime().ToString(AssetViewModel.dateTimeFormat);
+
+            Version = asset.Version <= 0 ? "1" : asset.Version.ToString();
             IsSelected = false;
         }
     }

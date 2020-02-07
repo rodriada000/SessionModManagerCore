@@ -15,6 +15,7 @@ namespace SessionModManagerCore.Classes
 
     public class AssetCatalog
     {
+        public string Name { get; set; }
         public List<Asset> Assets { get; set; }
 
         private Dictionary<string, Asset> _lookup;
@@ -46,7 +47,7 @@ namespace SessionModManagerCore.Classes
                 Asset m;
                 if (assets.TryGetValue(otherAsset.ID, out m))
                 {
-                    if (otherAsset.Version > m.Version)
+                    if (otherAsset.Version > m.Version || otherAsset.UpdatedDate > m.UpdatedDate)
                     {
                         assets[otherAsset.ID] = otherAsset;
                     }
@@ -57,9 +58,20 @@ namespace SessionModManagerCore.Classes
                 }
             }
 
-            return new AssetCatalog() { Assets = assets.Values.ToList() };
+            return new AssetCatalog() 
+            { 
+                Name = "Merged Catalog",
+                Assets = assets.Values.ToList() 
+            };
         }
 
+        /// <summary>
+        /// Parses download url information (either http url or google drive) from a rsmm:// download url
+        /// </summary>
+        /// <param name="link"></param>
+        /// <param name="type"></param>
+        /// <param name="url"></param>
+        /// <returns></returns>
         public static bool TryParseDownloadUrl(string link, out DownloadLocationType type, out string url)
         {
             if (link.StartsWith("rsmm://", StringComparison.InvariantCultureIgnoreCase)) link = link.Substring(7);
@@ -75,6 +87,9 @@ namespace SessionModManagerCore.Classes
             return true;
         }
 
+        /// <summary>
+        /// Formats a http url into the appropriate rsmm:// url format
+        /// </summary>
         internal static string FormatUrl(string subUrl)
         {
             return $"rsmm://Url/{subUrl.Replace("://", "$")}";
