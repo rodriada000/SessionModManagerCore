@@ -94,6 +94,11 @@
             Formats a http url into the appropriate rsmm:// url format
             </summary>
         </member>
+        <member name="M:SessionModManagerCore.Classes.CatalogSettings.AddDefaults(SessionModManagerCore.Classes.CatalogSettings)">
+            <summary>
+            Ensures all default catalog urls are in the users catalog settings
+            </summary>
+        </member>
         <member name="P:SessionModManagerCore.Classes.MapMetaData.OriginalImportPath">
             <summary>
             path to folder that was imported into Content.

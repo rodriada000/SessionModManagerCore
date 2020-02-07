@@ -1314,6 +1314,8 @@ namespace SessionMapSwitcherCore.ViewModels
                     currentSettings.CatalogUrls.RemoveAll(s => string.IsNullOrWhiteSpace(s.Url));
                 }
 
+                CatalogSettings.AddDefaults(currentSettings);
+
                 if (currentSettings.CatalogUrls.Count == 0)
                 {
                     if (File.Exists(catFile))
