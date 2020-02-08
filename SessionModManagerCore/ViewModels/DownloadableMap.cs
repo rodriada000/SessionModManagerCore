@@ -1,6 +1,7 @@
 ﻿using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
 using SessionMapSwitcherCore.ViewModels;
+using SessionModManagerCore.ViewModels;
 using System;
 using System.Diagnostics;
 

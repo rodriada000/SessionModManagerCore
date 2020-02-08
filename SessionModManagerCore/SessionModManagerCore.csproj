@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="ViewModels\DownloadableMap.cs" />
     <Compile Remove="ViewModels\UploadAssetViewModel.cs" />
   </ItemGroup>
 

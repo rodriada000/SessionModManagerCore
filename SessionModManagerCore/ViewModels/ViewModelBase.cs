@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace SessionMapSwitcherCore.ViewModels
+namespace SessionModManagerCore.ViewModels
 {
 
     public class ViewModelBase : INotifyPropertyChanged

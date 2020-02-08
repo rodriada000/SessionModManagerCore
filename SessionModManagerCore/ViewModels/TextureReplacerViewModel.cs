@@ -7,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace SessionMapSwitcherCore.ViewModels
+namespace SessionModManagerCore.ViewModels
 {
     public class TextureReplacerViewModel : ViewModelBase
     {
