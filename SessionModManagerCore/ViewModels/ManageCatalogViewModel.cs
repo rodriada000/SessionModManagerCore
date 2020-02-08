@@ -69,9 +69,16 @@ namespace SessionModManagerCore.ViewModels
             if (File.Exists(AssetStoreViewModel.AbsolutePathToCatalogSettingsJson))
             {
                 string fileContents = File.ReadAllText(AssetStoreViewModel.AbsolutePathToCatalogSettingsJson);
-                CatalogSettings currentSettings = JsonConvert.DeserializeObject<CatalogSettings>(fileContents);
 
-                CatalogList = currentSettings.CatalogUrls.Select(c => new CatalogSubscriptionViewModel(c.Url, c.Name)).ToList();
+                try
+                {
+                    CatalogSettings currentSettings = JsonConvert.DeserializeObject<CatalogSettings>(fileContents);
+                    CatalogList = currentSettings.CatalogUrls.Select(c => new CatalogSubscriptionViewModel(c.Url, c.Name)).ToList();
+                }
+                catch (Exception e)
+                {
+                    Logger.Warn(e);
+                }
             }
         }
 
@@ -86,20 +93,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 return;
             }
-
-            string name = "";
-
-            try
-            {
-                string catalogStr = DownloadUtils.GetTextResponseFromUrl(newUrl, 5);
-                AssetCatalog newCatalog = JsonConvert.DeserializeObject<AssetCatalog>(catalogStr);
-                name = newCatalog.Name ?? "";
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-                Logger.Warn($"Failed to get catalog name from url {newUrl}");
-            }
+            string name = CatalogSettings.GetNameFromAssetCatalog(newUrl);
 
             CatalogList.Add(new CatalogSubscriptionViewModel(newUrl, name));
 

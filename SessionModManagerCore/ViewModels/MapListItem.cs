@@ -137,17 +137,11 @@ public class MapListItem : ViewModelBase
         }
     }
 
-    /// <summary>
-    /// Returns a string of the DirectoryPath, MapName, and other custom properties seperated by '|'
-    /// Used to write to meta data file.
-    /// </summary>
-    public string MetaData
-    {
-        get
-        {
-            return $"{DirectoryPath} | {MapName} | {CustomName} | {IsHiddenByUser}";
-        }
-    }
+    public bool IsDefaultMap { get; set; }
+
+    public string GameDefaultMapSetting { get; set; }
+    public string GlobalDefaultGameModeSetting { get; set; }
+
 
     public void Validate()
     {
@@ -183,5 +177,15 @@ public class MapListItem : ViewModelBase
         {
             return false;
         }
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (!(obj is MapListItem))
+        {
+            return false;
+        }
+
+        return (obj as MapListItem).FullPath == this.FullPath && (obj as MapListItem).MapName == this.MapName;
     }
 }

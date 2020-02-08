@@ -572,8 +572,12 @@ namespace SessionMapSwitcherCore.ViewModels
                 return;
             }
 
-            MapSwitcher.GetDefaultSessionMap().FullPath = SessionPath.ToOriginalSessionMapFiles;
-            AvailableMaps.Insert(0, MapSwitcher.GetDefaultSessionMap());
+            var defaultMaps = MapSwitcher.GetDefaultSessionMaps();
+            for (int i = defaultMaps.Count - 1; i >= 0; i--)
+            {
+                AvailableMaps.Insert(0, defaultMaps[i]);
+            }
+
             NotifyPropertyChanged(nameof(AvailableMaps));
             NotifyPropertyChanged(nameof(FilteredAvailableMaps));
         }
@@ -768,9 +772,9 @@ namespace SessionMapSwitcherCore.ViewModels
 
             string iniValue = MapSwitcher.GetGameDefaultMapSetting();
 
-            if (iniValue.Contains("/Game/Tutorial/Intro/MAP_EntryPoint"))
+            if (MapSwitcher.GetDefaultSessionMaps().Any(m => m.GameDefaultMapSetting == iniValue))
             {
-                CurrentlyLoadedMapName = MapSwitcher.GetDefaultSessionMap().MapName;
+                CurrentlyLoadedMapName = MapSwitcher.GetDefaultSessionMaps().FirstOrDefault(m => m.GameDefaultMapSetting == iniValue).MapName;
             }
             else if (String.IsNullOrEmpty(iniValue) == false)
             {

@@ -2,6 +2,7 @@
 using IniParser.Model;
 using SessionMapSwitcherCore.Classes.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace SessionMapSwitcherCore.Classes
@@ -13,21 +14,62 @@ namespace SessionMapSwitcherCore.Classes
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-        public MapListItem DefaultSessionMap { get; }
+        public List<MapListItem> DefaultMaps { get; private set; }
         internal MapListItem FirstLoadedMap { get; set; }
 
         public EzPzMapSwitcher()
         {
-            DefaultSessionMap = new MapListItem()
+            DefaultMaps = new List<MapListItem>()
             {
-                FullPath = SessionPath.ToOriginalSessionMapFiles,
-                MapName = "Session Default Map - Brooklyn Banks"
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/Tutorial/Intro/MAP_EntryPoint",
+                    MapName = "Session Default Map - Brooklyn Banks",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting = "/Game/Art/Env/GYM/crea-turePark/GYM_crea-turePark_Persistent.GYM_crea-turePark_Persistent",
+                    GlobalDefaultGameModeSetting = "/Game/Data/PBP_InGameSessionGameMode.PBP_InGameSessionGameMode_C",
+                    MapName = "Crea-ture Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/TEMP/GYM/FilmerMode_Gym",
+                    MapName = "FilmerMode Gym Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting = "/Game/Art/Env/GYM/DevGyms/GYM_Dev_Grindabru",
+                    MapName = "Grindabru Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/TEMP/chris/GrindCity_Yeah",
+                    MapName = "Grind City Yeah Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/TEMP/mah/TrickMap",
+                    MapName = "Mah TrickMap Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/TEMP/Vince/VinceMap",
+                    MapName = "Vinces Dev Map",
+                    IsDefaultMap = true
+                }
             };
-
         }
-        public MapListItem GetDefaultSessionMap()
+
+        public List<MapListItem> GetDefaultSessionMaps()
         {
-            return DefaultSessionMap;
+            return DefaultMaps;
         }
 
         public MapListItem GetFirstLoadedMap()
@@ -57,7 +99,7 @@ namespace SessionMapSwitcherCore.Classes
                     if (SessionPath.IsSessionRunning())
                     {
                         // While Session is running the map files must be copied as NYC01_Persistent so when the user leaves the apartment the custom map is loaded
-                        fullTargetFilePath = Path.Combine(fullTargetFilePath,  "NYC01_Persistent");
+                        fullTargetFilePath = Path.Combine(fullTargetFilePath, "NYC01_Persistent");
 
                         if (fileName.Contains("_BuiltData"))
                         {
@@ -104,9 +146,9 @@ namespace SessionMapSwitcherCore.Classes
                 Directory.CreateDirectory(SessionPath.ToNYCFolder);
             }
 
-            if (map == DefaultSessionMap)
+            if (map.IsDefaultMap)
             {
-                return LoadOriginalMap();
+                return LoadDefaultMap(map);
             }
 
             try
@@ -137,21 +179,21 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
-        public BoolWithMessage LoadOriginalMap()
+        public BoolWithMessage LoadDefaultMap(MapListItem defaultMap)
         {
             try
             {
                 DeleteMapFilesFromNYCFolder();
 
-                SetGameDefaultMapSetting("/Game/Tutorial/Intro/MAP_EntryPoint");
+                SetGameDefaultMapSetting(defaultMap.GameDefaultMapSetting, defaultMap.GlobalDefaultGameModeSetting);
 
-                return BoolWithMessage.True($"{DefaultSessionMap.MapName} Loaded!");
+                return BoolWithMessage.True($"{defaultMap.MapName} Loaded!");
 
             }
             catch (Exception e)
             {
                 Logger.Error(e);
-                return BoolWithMessage.False($"Failed to load Original Session Game Map : {e.Message}");
+                return BoolWithMessage.False($"Failed to load {defaultMap.MapName} : {e.Message}");
             }
         }
 
@@ -203,7 +245,7 @@ namespace SessionMapSwitcherCore.Classes
         }
 
 
-        public bool SetGameDefaultMapSetting(string defaultMapValue)
+        public bool SetGameDefaultMapSetting(string defaultMapValue, string defaultGameModeValue = "")
         {
             if (SessionPath.IsSessionPathValid() == false)
             {
@@ -223,16 +265,25 @@ namespace SessionMapSwitcherCore.Classes
 
                 iniFile["/Script/EngineSettings.GameMapsSettings"]["GameDefaultMap"] = defaultMapValue;
 
+                if (!string.IsNullOrEmpty(defaultGameModeValue))
+                {
+                    iniFile["/Script/EngineSettings.GameMapsSettings"]["GlobalDefaultGameMode"] = defaultGameModeValue;
+                }
+                else if (iniFile["/Script/EngineSettings.GameMapsSettings"].ContainsKey("GlobalDefaultGameMode"))
+                {
+                    iniFile["/Script/EngineSettings.GameMapsSettings"].RemoveKey("GlobalDefaultGameMode");
+                }
+
                 parser.WriteFile(SessionPath.ToUserEngineIniFile, iniFile);
 
                 Logger.Info($"... GameDefaultMap set to {defaultMapValue}");
                 return true;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Logger.Error(e);
                 return false;
-            }            
+            }
         }
     }
 }

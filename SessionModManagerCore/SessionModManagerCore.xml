@@ -541,12 +541,6 @@
             Path to directory where all files related to this map are located.
             </summary>
         </member>
-        <member name="P:MapListItem.MetaData">
-            <summary>
-            Returns a string of the DirectoryPath, MapName, and other custom properties seperated by '|'
-            Used to write to meta data file.
-            </summary>
-        </member>
         <member name="M:MapListItem.HasGameMode(System.String)">
             <summary>
             Reads the file and looks for the string '/Game/Data/PBP_InGameSessionGameMode'

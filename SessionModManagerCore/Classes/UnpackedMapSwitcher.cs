@@ -2,6 +2,7 @@
 using IniParser.Model;
 using SessionMapSwitcherCore.Classes.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace SessionMapSwitcherCore.Classes
@@ -14,22 +15,63 @@ namespace SessionMapSwitcherCore.Classes
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-        public MapListItem DefaultSessionMap { get; }
+        public List<MapListItem> DefaultMaps { get; }
         internal MapListItem FirstLoadedMap { get; set; }
 
         public UnpackedMapSwitcher()
         {
-            DefaultSessionMap = new MapListItem()
+            DefaultMaps = new List<MapListItem>()
             {
-                FullPath = SessionPath.ToOriginalSessionMapFiles,
-                MapName = "Session Default Map - Brooklyn Banks"
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/Tutorial/Intro/MAP_EntryPoint",
+                    MapName = "Session Default Map - Brooklyn Banks",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting = "/Game/Art/Env/GYM/crea-turePark/GYM_crea-turePark_Persistent.GYM_crea-turePark_Persistent",
+                    GlobalDefaultGameModeSetting = "/Game/Data/PBP_InGameSessionGameMode.PBP_InGameSessionGameMode_C",
+                    MapName = "Crea-ture Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/TEMP/GYM/FilmerMode_Gym",
+                    MapName = "FilmerMode Gym Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting = "/Game/Art/Env/GYM/DevGyms/GYM_Dev_Grindabru",
+                    MapName = "Grindabru Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/TEMP/chris/GrindCity_Yeah",
+                    MapName = "Grind City Yeah Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/TEMP/mah/TrickMap",
+                    MapName = "Mah TrickMap Dev Park",
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="/Game/TEMP/Vince/VinceMap",
+                    MapName = "Vinces Dev Map",
+                    IsDefaultMap = true
+                }
             };
         }
 
 
-        public MapListItem GetDefaultSessionMap()
+        public List<MapListItem> GetDefaultSessionMaps()
         {
-            return DefaultSessionMap;
+            return DefaultMaps;
         }
 
         public MapListItem GetFirstLoadedMap()
@@ -57,7 +99,7 @@ namespace SessionMapSwitcherCore.Classes
                     {
                         // while the game is running, the map being loaded must have the same name as the initial map that was loaded when the game first started.
                         // ... thus we build the destination filename based on what was first loaded.
-                        if (FirstLoadedMap == DefaultSessionMap)
+                        if (FirstLoadedMap.IsDefaultMap)
                         {
                             fullTargetFilePath = Path.Combine(fullTargetFilePath, "NYC01_Persistent"); // this is the name of the default map that is loaded
                         }
@@ -159,9 +201,9 @@ namespace SessionMapSwitcherCore.Classes
                 FirstLoadedMap = map;
             }
 
-            if (map == DefaultSessionMap)
+            if (map.IsDefaultMap)
             {
-                return LoadOriginalMap();
+                return LoadDefaultMap(map);
             }
 
             try
@@ -184,7 +226,7 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
-        public BoolWithMessage LoadOriginalMap()
+        public BoolWithMessage LoadDefaultMap(MapListItem map)
         {
             try
             {
@@ -203,18 +245,18 @@ namespace SessionMapSwitcherCore.Classes
                     File.Copy(fullPath, targetPath, true);
                 }
 
-                SetGameDefaultMapSetting("/Game/Tutorial/Intro/MAP_EntryPoint.MAP_EntryPoint");
+                SetGameDefaultMapSetting(map.GameDefaultMapSetting, map.GlobalDefaultGameModeSetting);
 
-                return BoolWithMessage.True($"{DefaultSessionMap.MapName} Loaded!");
+                return BoolWithMessage.True($"{map.MapName} Loaded!");
             }
             catch (Exception e)
             {
                 Logger.Error(e);
-                return BoolWithMessage.False($"Failed to load Original Session Game Map : {e.Message}");
+                return BoolWithMessage.False($"Failed to load {map.MapName} : {e.Message}");
             }
         }
 
-        public bool SetGameDefaultMapSetting(string defaultMapValue)
+        public bool SetGameDefaultMapSetting(string defaultMapValue, string defaultGameModeValue = "")
         {
             if (SessionPath.IsSessionPathValid() == false)
             {
@@ -225,6 +267,15 @@ namespace SessionMapSwitcherCore.Classes
             parser.Parser.Configuration.AllowDuplicateKeys = true;
             IniData iniFile = parser.ReadFile(SessionPath.ToDefaultEngineIniFile);
             iniFile["/Script/EngineSettings.GameMapsSettings"]["GameDefaultMap"] = defaultMapValue;
+
+            if (!string.IsNullOrEmpty(defaultGameModeValue))
+            {
+                iniFile["/Script/EngineSettings.GameMapsSettings"]["GlobalDefaultGameMode"] = defaultGameModeValue;
+            }
+            else if (iniFile["/Script/EngineSettings.GameMapsSettings"].ContainsKey("GlobalDefaultGameMode"))
+            {
+                iniFile["/Script/EngineSettings.GameMapsSettings"].RemoveKey("GlobalDefaultGameMode");
+            }
 
             try
             {
@@ -268,7 +319,7 @@ namespace SessionMapSwitcherCore.Classes
                 foreach (string fileExt in fileExtensionsToCheck)
                 {
                     string fullPathToFile = Path.Combine(SessionPath.ToNYCFolder, $"{fileNamePrefix}{fileExt}");
-                    string destFilePath = Path.Combine(SessionPath.ToOriginalSessionMapFiles, $"{fileNamePrefix}{fileExt}"); 
+                    string destFilePath = Path.Combine(SessionPath.ToOriginalSessionMapFiles, $"{fileNamePrefix}{fileExt}");
                     File.Copy(fullPathToFile, destFilePath, overwrite: true);
                 }
             }
@@ -279,9 +330,14 @@ namespace SessionMapSwitcherCore.Classes
                 return BoolWithMessage.False(errorMsg);
             }
 
-            DefaultSessionMap.IsEnabled = IsOriginalMapFilesBackedUp();
-            DefaultSessionMap.Tooltip = DefaultSessionMap.IsEnabled ? null : "The original Session game files have not been backed up to the custom Maps folder.";
-            
+            bool originalMapFilesBackedUp = IsOriginalMapFilesBackedUp();
+
+            DefaultMaps.ForEach(m =>
+            {
+                m.IsEnabled = originalMapFilesBackedUp;
+                m.Tooltip = m.IsEnabled ? null : "The original Session game files have not been backed up to the custom Maps folder.";
+            });
+
             return new BoolWithMessage(IsOriginalMapFilesBackedUp());
         }
 
