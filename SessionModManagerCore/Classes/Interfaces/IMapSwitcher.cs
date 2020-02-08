@@ -1,17 +1,19 @@
-﻿namespace SessionMapSwitcherCore.Classes.Interfaces
+﻿using System.Collections.Generic;
+
+namespace SessionMapSwitcherCore.Classes.Interfaces
 {
     /// <summary>
     /// Interface to represent a map switcher for EzPz and Unpacked versions of the game
     /// </summary>
     interface IMapSwitcher
     {
-        MapListItem GetDefaultSessionMap();
+        List<MapListItem> GetDefaultSessionMaps();
 
         MapListItem GetFirstLoadedMap();
 
         BoolWithMessage LoadMap(MapListItem map);
 
-        BoolWithMessage LoadOriginalMap();
+        BoolWithMessage LoadDefaultMap(MapListItem map);
 
         bool CopyMapFilesToNYCFolder(MapListItem map);
 
@@ -19,6 +21,6 @@
 
         string GetGameDefaultMapSetting();
 
-        bool SetGameDefaultMapSetting(string defaultMapValue);
+        bool SetGameDefaultMapSetting(string defaultMapValue, string defaultGameModeValue);
     }
 }
