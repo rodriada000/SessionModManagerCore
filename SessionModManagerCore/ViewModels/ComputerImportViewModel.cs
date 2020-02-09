@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace SessionMapSwitcherCore.ViewModels
+namespace SessionModManagerCore.ViewModels
 {
     public class ComputerImportViewModel : ViewModelBase
     {

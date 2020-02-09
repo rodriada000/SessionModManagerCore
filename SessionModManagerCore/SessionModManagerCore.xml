@@ -177,9 +177,75 @@
             Delete files used in versions older than 2.2.0.0
             </summary>
         </member>
+        <member name="M:SessionModManagerCore.ViewModels.ComputerImportViewModel.EnsurePathToMapFilesIsCorrect(System.String)">
+            <summary>
+            This will check if the folder path to a map has the 'Content' folder and returns path to the maps 'Content folder if so
+            </summary>
+            <returns>
+            "pathToMapFiles/Content" if Content folder exists; otherwise original pathToMapFiles string is returned
+            </returns>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.MainWindowViewModel.Filter(MapListItem)">
+            <summary>
+            Filter to hide maps when invalid and the option is unchecked
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.ViewModels.MainWindowViewModel.InputControlsEnabled">
+            <summary>
+            Determine if all controls (buttons, textboxes) should be enabled or disabled in main window.
+            </summary>
+        </member>
+        <member name="P:SessionModManagerCore.ViewModels.MainWindowViewModel.SecondMapToLoad">
+            <summary>
+            Map to load after starting the game in <see cref="M:SessionModManagerCore.ViewModels.MainWindowViewModel.StartGameAndLoadSecondMap"/>
+            If null then the currently loaded map will be used.
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.MainWindowViewModel.SetSessionPath(System.String)">
+            <summary>
+            Sets <see cref="P:SessionMapSwitcherCore.Classes.SessionPath.ToSession"/> and saves the value to appSettings in the applications .config file
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.MainWindowViewModel.AddDefaultMapToAvailableMaps">
+            <summary>
+            adds the default session map to beginning of list of <see cref="P:SessionModManagerCore.ViewModels.MainWindowViewModel.AvailableMaps"/>
+            </summary>
+        </member>
         <member name="M:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InitInstalledTextures">
             <summary>
             Reads installed_textures.json meta data and initializes <see cref="P:SessionModManagerCore.ViewModels.ManageTexturesViewModel.InstalledTextures"/> with results
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.TextureReplacerViewModel.CopyOtherSubfoldersInTempDir(System.Collections.Generic.List{System.String})">
+            <summary>
+            Copies other folders (not stock game folders) from unzipped temp folder into games Content folder
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.TextureReplacerViewModel.TriggerPropertyChanged">
+            <summary>
+            Enable or disable the 'Replace' button based on the game being patched/unpacked
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.TextureReplacerViewModel.UnzippedTempFolderHasOtherFolders">
+            <summary>
+            Return true if unzipped temp folder has subfolders other than the games stock folders e.g. 'Customization' folder
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.TextureReplacerViewModel.CopyNewTextureFilesToGame(System.IO.FileInfo,System.String)">
+            <summary>
+            Loop over all files in the folder that contains the <paramref name="newTexture"/> .uasset file and copy all other files related to texture (.uexp and .ubulk files) to the <paramref name="targetFolder"/>
+            </summary>
+        </member>
+        <member name="M:SessionModManagerCore.ViewModels.TextureReplacerViewModel.DeleteCurrentTextureFiles(System.String,System.String)">
+            <summary>
+            Delete files in <paramref name="targetFolder"/> that contain the string <paramref name="textureFileName"/>
+            </summary>
+            <param name="textureFileName"> name of texture to delete (without file extension) </param>
+            <param name="targetFolder"> folder to search in </param>
+        </member>
+        <member name="F:SessionModManagerCore.ViewModels.UpdateViewModel.LatestReleaseUrl">
+            <summary>
+            url to the latest github release of the application
             </summary>
         </member>
         <member name="T:SessionMapSwitcherCore.Classes.BoolWithMessage">
@@ -457,78 +523,6 @@
         <member name="M:SessionMapSwitcherCore.ViewModels.AssetStoreViewModel.RemoveSelectedAsset">
             <summary>
             Deletes the selected asset files from Session folders
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.ComputerImportViewModel.EnsurePathToMapFilesIsCorrect(System.String)">
-            <summary>
-            This will check if the folder path to a map has the 'Content' folder and returns path to the maps 'Content folder if so
-            </summary>
-            <returns>
-            "pathToMapFiles/Content" if Content folder exists; otherwise original pathToMapFiles string is returned
-            </returns>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.Filter(MapListItem)">
-            <summary>
-            Filter to hide maps when invalid and the option is unchecked
-            </summary>
-        </member>
-        <member name="P:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.InputControlsEnabled">
-            <summary>
-            Determine if all controls (buttons, textboxes) should be enabled or disabled in main window.
-            </summary>
-        </member>
-        <member name="P:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.SecondMapToLoad">
-            <summary>
-            Map to load after starting the game in <see cref="M:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.StartGameAndLoadSecondMap"/>
-            If null then the currently loaded map will be used.
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.SetSessionPath(System.String)">
-            <summary>
-            Sets <see cref="P:SessionMapSwitcherCore.Classes.SessionPath.ToSession"/> and saves the value to appSettings in the applications .config file
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.AddDefaultMapToAvailableMaps">
-            <summary>
-            adds the default session map to beginning of list of <see cref="P:SessionMapSwitcherCore.ViewModels.MainWindowViewModel.AvailableMaps"/>
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.TextureReplacerViewModel.CopyOtherSubfoldersInTempDir(System.Collections.Generic.List{System.String})">
-            <summary>
-            Copies other folders (not stock game folders) from unzipped temp folder into games Content folder
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.TextureReplacerViewModel.TriggerPropertyChanged">
-            <summary>
-            Enable or disable the 'Replace' button based on the game being patched/unpacked
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.TextureReplacerViewModel.UnzippedTempFolderHasOtherFolders">
-            <summary>
-            Return true if unzipped temp folder has subfolders other than the games stock folders e.g. 'Customization' folder
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.TextureReplacerViewModel.CopyNewTextureFilesToGame(System.IO.FileInfo,System.String)">
-            <summary>
-            Loop over all files in the folder that contains the <paramref name="newTexture"/> .uasset file and copy all other files related to texture (.uexp and .ubulk files) to the <paramref name="targetFolder"/>
-            </summary>
-        </member>
-        <member name="M:SessionMapSwitcherCore.ViewModels.TextureReplacerViewModel.DeleteCurrentTextureFiles(System.String,System.String)">
-            <summary>
-            Delete files in <paramref name="targetFolder"/> that contain the string <paramref name="textureFileName"/>
-            </summary>
-            <param name="textureFileName"> name of texture to delete (without file extension) </param>
-            <param name="targetFolder"> folder to search in </param>
-        </member>
-        <member name="F:SessionMapSwitcherCore.ViewModels.UpdateViewModel.LatestReleaseUrl">
-            <summary>
-            url to the latest github release of the application
-            </summary>
-        </member>
-        <member name="P:DownloadableMap.ZipFileName">
-            <summary>
-            Name of zip file that will be downloaded for this map with the '.zip' extension
-            (same as MapName with spaces replaced with '_')
             </summary>
         </member>
         <member name="P:MapListItem.FullPath">

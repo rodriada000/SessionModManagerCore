@@ -1,4 +1,4 @@
-﻿namespace SessionMapSwitcherCore.ViewModels
+﻿namespace SessionModManagerCore.ViewModels
 {
     public class UpdateViewModel : ViewModelBase
     {

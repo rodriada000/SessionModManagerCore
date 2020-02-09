@@ -6,7 +6,7 @@ using System;
 using SessionMapSwitcher.Classes.Events;
 using SessionMapSwitcherCore.Utils;
 
-namespace SessionMapSwitcherCore.ViewModels
+namespace SessionModManagerCore.ViewModels
 {
     public class ProjectWatcherViewModel : ViewModelBase
     {

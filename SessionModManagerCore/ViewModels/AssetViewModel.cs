@@ -10,7 +10,7 @@ namespace SessionModManagerCore.ViewModels
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-        internal static string dateTimeFormat = "ddd, dd MMM yy HH:mm";
+        internal static string dateTimeFormat = "ddd, dd MMM yy";
 
         private string _name;
         private string _author;

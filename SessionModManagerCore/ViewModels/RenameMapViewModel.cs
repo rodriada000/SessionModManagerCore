@@ -1,7 +1,7 @@
 ﻿using SessionMapSwitcherCore.Classes;
 using System;
 
-namespace SessionMapSwitcherCore.ViewModels
+namespace SessionModManagerCore.ViewModels
 {
     public class RenameMapViewModel : ViewModelBase
     {
