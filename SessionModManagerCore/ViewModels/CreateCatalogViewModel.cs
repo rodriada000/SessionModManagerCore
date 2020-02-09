@@ -3,6 +3,7 @@ using SessionMapSwitcherCore.Classes;
 using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -23,8 +24,11 @@ namespace SessionModManagerCore.ViewModels
         private string _selectedAssetDownloadUrl;
         private List<string> _downloadTypeList;
         private List<string> _categoryList;
-        private List<AssetViewModel> _assetList;
+        private ObservableCollection<AssetViewModel> _assetList;
         private AssetViewModel _selectedAsset;
+
+        public delegate void OnInvalidUpdate(string validationMessage);
+        public event OnInvalidUpdate UpdatedAssetInvalid;
 
         internal Asset AssetToEdit { get; set; }
 
@@ -37,14 +41,12 @@ namespace SessionModManagerCore.ViewModels
                 {
                     if (AssetToEdit != null)
                     {
-                        _selectedAsset.Asset = AssetToEdit;
-                        _selectedAsset.Name = AssetToEdit.Name;
-                        _selectedAsset.Author = AssetToEdit.Author;
-                        _selectedAsset.AssetCategory = AssetToEdit.Category;
-                        _selectedAsset.Version = AssetToEdit.Version.ToString();
-                        _selectedAsset.UpdatedDate = AssetToEdit.UpdatedDate.ToString(AssetViewModel.dateTimeFormat);
+                        BoolWithMessage didUpdate = UpdateAsset(_selectedAsset);
+                        if (!didUpdate.Result)
+                        {
+                            return;
+                        }
                     }
-
 
                     _selectedAsset = value;
 
@@ -57,7 +59,7 @@ namespace SessionModManagerCore.ViewModels
                         SelectedAssetID = AssetToEdit.ID;
                         SelectedAssetImageUrl = AssetToEdit.PreviewImage;
                         SelectedAssetName = AssetToEdit.Name;
-                        SelectedAssetUpdatedDate = AssetToEdit.UpdatedDate.ToString(AssetViewModel.dateTimeFormat);
+                        SelectedAssetUpdatedDate = AssetToEdit.UpdatedDate.ToLocalTime().ToString("MM/dd/yyyy");
                         SelectedAssetVersion = AssetToEdit.Version.ToString();
 
                         AssetCatalog.TryParseDownloadUrl(AssetToEdit.DownloadLink, out DownloadLocationType downloadType, out string url);
@@ -73,10 +75,10 @@ namespace SessionModManagerCore.ViewModels
                     {
                         ClearSelectedAsset();
                     }
-
-
-                    NotifyPropertyChanged();
                 }
+
+                NotifyPropertyChanged();
+
             }
         }
 
@@ -86,12 +88,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetName = value;
-
-                if (AssetToEdit != null)
-                {
-                    AssetToEdit.Name = value;
-                }
-
                 NotifyPropertyChanged();
             }
         }
@@ -102,12 +98,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetAuthor = value;
-
-                if (AssetToEdit != null)
-                {
-                    AssetToEdit.Author = value;
-                }
-
                 NotifyPropertyChanged();
             }
         }
@@ -118,12 +108,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetDescription = value;
-
-                if (AssetToEdit != null)
-                {
-                    AssetToEdit.Description = value;
-                }
-
                 NotifyPropertyChanged();
             }
         }
@@ -134,12 +118,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetCategory = value;
-
-                if (AssetToEdit != null)
-                {
-                    AssetToEdit.Category = value;
-                }
-
                 NotifyPropertyChanged();
             }
         }
@@ -150,13 +128,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetUpdatedDate = value;
-
-                if (AssetToEdit != null)
-                {
-                    DateTime.TryParse(value, out DateTime newDate);
-                    AssetToEdit.UpdatedDate = newDate;
-                }
-
                 NotifyPropertyChanged();
             }
         }
@@ -167,13 +138,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetVersion = value;
-
-                if (AssetToEdit != null)
-                {
-                    double.TryParse(value, out double newVersion);
-                    AssetToEdit.Version = newVersion;
-                }
-
                 NotifyPropertyChanged();
             }
         }
@@ -184,12 +148,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetID = value;
-
-                if (AssetToEdit != null)
-                {
-                    AssetToEdit.ID = value;
-                }
-
                 NotifyPropertyChanged();
             }
         }
@@ -200,12 +158,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetImageUrl = value;
-
-                if (AssetToEdit != null)
-                {
-                    AssetToEdit.PreviewImage = value;
-                }
-
                 NotifyPropertyChanged();
             }
         }
@@ -216,7 +168,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetDownloadType = value;
-                SelectedAssetDownloadUrl = SelectedAssetDownloadUrl; // trigger the url to change format
                 NotifyPropertyChanged();
                 NotifyPropertyChanged(nameof(DownloadText));
                 NotifyPropertyChanged(nameof(DownloadTooltip));
@@ -230,16 +181,6 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedAssetDownloadUrl = value;
-
-                if (SelectedAssetDownloadType == "Url")
-                {
-                    AssetToEdit.DownloadLink = AssetCatalog.FormatUrl(value);
-                }
-                else if (SelectedAssetDownloadType == "Google Drive")
-                {
-                    AssetToEdit.DownloadLink = $"rsmm://GDrive/{value}";
-                }
-
                 NotifyPropertyChanged();
             }
         }
@@ -294,7 +235,7 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
-        public List<AssetViewModel> AssetList
+        public ObservableCollection<AssetViewModel> AssetList
         {
             get { return _assetList; }
             set
@@ -327,7 +268,7 @@ namespace SessionModManagerCore.ViewModels
                 "Google Drive"
             };
 
-            AssetList = new List<AssetViewModel>();
+            AssetList = new ObservableCollection<AssetViewModel>();
             ClearSelectedAsset();
         }
 
@@ -337,7 +278,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 AssetCatalog catalog = JsonConvert.DeserializeObject<AssetCatalog>(File.ReadAllText(pathToCatalog));
 
-                AssetList = catalog.Assets.Select(a => new AssetViewModel(a)).ToList();
+                AssetList = new ObservableCollection<AssetViewModel>(catalog.Assets.Select(a => new AssetViewModel(a)).ToList());
                 ClearSelectedAsset();
 
                 return BoolWithMessage.True();
@@ -352,13 +293,15 @@ namespace SessionModManagerCore.ViewModels
         {
             try
             {
+                UpdateAsset(SelectedAsset); // ensure the currently selected asset is updated before writing to file
+
                 AssetCatalog catalog = new AssetCatalog()
                 {
                     Name = "",
                     Assets = AssetList.Select(a => a.Asset).ToList()
                 };
 
-                string fileContents = JsonConvert.SerializeObject(catalog);
+                string fileContents = JsonConvert.SerializeObject(catalog, Formatting.Indented);
                 File.WriteAllText(savePath, fileContents);
 
                 return BoolWithMessage.True();
@@ -382,6 +325,191 @@ namespace SessionModManagerCore.ViewModels
             SelectedAssetName = "";
             SelectedAssetUpdatedDate = "";
             SelectedAssetVersion = "";
+        }
+
+        private BoolWithMessage UpdateAsset(AssetViewModel assetToUpdate)
+        {
+            if (assetToUpdate == null)
+            {
+                return BoolWithMessage.False("assetToUpdate is null");
+            }
+
+            string validationMsg = ValidateAssetInfo(assetToUpdate);
+
+            if (!string.IsNullOrEmpty(validationMsg))
+            {
+                UpdatedAssetInvalid?.Invoke(validationMsg);
+                return BoolWithMessage.False(validationMsg);
+            }
+
+            if (SelectedAssetDownloadType == "Url")
+            {
+                assetToUpdate.Asset.DownloadLink = AssetCatalog.FormatUrl(SelectedAssetDownloadUrl);
+            }
+            else if (SelectedAssetDownloadType == "Google Drive")
+            {
+                assetToUpdate.Asset.DownloadLink = $"rsmm://GDrive/{SelectedAssetDownloadUrl}";
+            }
+
+            assetToUpdate.Asset.ID = SelectedAssetID;
+            assetToUpdate.Asset.Name = SelectedAssetName;
+            assetToUpdate.Asset.Author = SelectedAssetAuthor;
+            assetToUpdate.Asset.Category = SelectedAssetCategory;
+            assetToUpdate.Asset.Description = SelectedAssetDescription;
+            assetToUpdate.Asset.PreviewImage = SelectedAssetImageUrl;
+
+            double.TryParse(SelectedAssetVersion, out double version);
+
+            if (version <= 0)
+            {
+                assetToUpdate.Asset.Version = 1;
+            }
+            else
+            {
+                assetToUpdate.Asset.Version = version;
+            }
+
+            DateTime.TryParse(SelectedAssetUpdatedDate, out DateTime updateDate);
+
+            if (updateDate != DateTime.MinValue)
+            {
+                assetToUpdate.Asset.UpdatedDate = updateDate.ToUniversalTime();
+            }
+            else if (string.IsNullOrWhiteSpace(SelectedAssetUpdatedDate))
+            {
+                assetToUpdate.Asset.UpdatedDate = DateTime.UtcNow;
+            }
+
+            assetToUpdate.Name = assetToUpdate.Asset.Name;
+            assetToUpdate.Author = assetToUpdate.Asset.Author;
+            assetToUpdate.AssetCategory = assetToUpdate.Asset.Category;
+            assetToUpdate.Version = assetToUpdate.Asset.Version.ToString();
+            assetToUpdate.UpdatedDate = assetToUpdate.Asset.UpdatedDate.ToLocalTime().ToString(AssetViewModel.dateTimeFormat);
+            assetToUpdate.Description = assetToUpdate.Asset.Description;
+
+            return BoolWithMessage.True();
+        }
+
+        public void DeleteAsset(AssetViewModel selectedAsset)
+        {
+            if (selectedAsset == null)
+            {
+                return;
+            }
+
+            AssetList.Remove(selectedAsset);
+        }
+
+        public BoolWithMessage AddAsset()
+        {
+            string errorMessage = ValidateAssetInfo(null);
+
+            if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                return BoolWithMessage.False($"The following errors were found:\n\n{errorMessage}");
+            }
+
+            Asset newAsset = new Asset()
+            {
+                ID = SelectedAssetID,
+                Author = SelectedAssetAuthor,
+                Category = SelectedAssetCategory,
+                Description = SelectedAssetDescription,
+                Name = SelectedAssetName,
+                PreviewImage = SelectedAssetImageUrl,
+                UpdatedDate = DateTime.UtcNow,
+                Version = 1,
+            };
+
+
+            if (!string.IsNullOrWhiteSpace(SelectedAssetUpdatedDate))
+            {
+                DateTime.TryParse(SelectedAssetUpdatedDate, out DateTime updateDate);
+                if (updateDate != null && updateDate != DateTime.MinValue)
+                {
+                    newAsset.UpdatedDate = updateDate;
+                }
+            }
+
+            double.TryParse(SelectedAssetVersion, out double version);
+
+            if (version <= 0)
+            {
+                newAsset.Version = version;
+            }
+
+            if (SelectedAssetDownloadType == "Url")
+            {
+                newAsset.DownloadLink = AssetCatalog.FormatUrl(SelectedAssetDownloadUrl);
+            }
+            else if (SelectedAssetDownloadType == "Google Drive")
+            {
+                newAsset.DownloadLink = $"rsmm://GDrive/{SelectedAssetDownloadUrl}";
+            }
+
+
+            AssetViewModel viewModel = new AssetViewModel(newAsset);
+            AssetList.Add(viewModel);
+
+            AssetToEdit = null;
+            SelectedAsset = null;
+            SelectedAsset = AssetList[AssetList.Count - 1];
+
+            return BoolWithMessage.True();
+        }
+
+        private string ValidateAssetInfo(AssetViewModel assetToExclude)
+        {
+            StringBuilder errorMessage = new StringBuilder();
+            // validate required fields
+            if (string.IsNullOrWhiteSpace(SelectedAssetID))
+            {
+                errorMessage.AppendLine("Asset ID is missing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(SelectedAssetName))
+            {
+                errorMessage.AppendLine("Name is missing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(SelectedAssetAuthor))
+            {
+                errorMessage.AppendLine("Author is missing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(SelectedAssetCategory))
+            {
+                errorMessage.AppendLine("Category is missing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(SelectedAssetDownloadUrl))
+            {
+                errorMessage.AppendLine("Download Url or Google Drive ID is missing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(SelectedAssetImageUrl))
+            {
+                errorMessage.AppendLine("Preview Image Url is missing.");
+            }
+
+            if (string.IsNullOrWhiteSpace(SelectedAssetVersion))
+            {
+                SelectedAssetVersion = "1";
+            }
+
+            // validate ID is unique
+            if (AssetList.Any(a => a != assetToExclude && a.Asset.ID == SelectedAssetID))
+            {
+                errorMessage.AppendLine($"Asset ID {SelectedAssetID} is already in use. Change the ID to be unique.");
+            }
+
+            // validate ID ends with a valid file extension
+            if (!SelectedAssetID.EndsWith(".zip") && !SelectedAssetID.EndsWith(".rar"))
+            {
+                errorMessage.AppendLine($"Asset ID must end with a file extension .zip or .rar");
+            }
+
+            return errorMessage.ToString();
         }
     }
 }
