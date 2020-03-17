@@ -841,10 +841,11 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 CreateRequiredFolders();
 
-                string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, SelectedAsset.Asset.ID);
+                string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, SelectedAsset.Asset.IDWithoutExtension);
 
-                if (File.Exists(pathToThumbnail) == false)
+                if (ImageCache.IsOutOfDate(pathToThumbnail) || ImageCache.IsSourceUrlDifferent(pathToThumbnail, SelectedAsset.Asset.PreviewImage))
                 {
+                    ImageCache.AddOrUpdate(pathToThumbnail, SelectedAsset.Asset.PreviewImage);
                     Guid downloadGuid = Guid.NewGuid();
 
                     Action onCancel = () =>
@@ -922,10 +923,12 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 foreach (AssetViewModel asset in AllAssets.ToList())
                 {
-                    string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, asset.Asset.ID);
+                    string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, asset.Asset.IDWithoutExtension);
 
-                    if (File.Exists(pathToThumbnail) == false)
+                    if (ImageCache.IsOutOfDate(pathToThumbnail) || ImageCache.IsSourceUrlDifferent(pathToThumbnail, asset.Asset.PreviewImage))
                     {
+                        ImageCache.AddOrUpdate(pathToThumbnail, asset.Asset.PreviewImage);
+
                         Guid downloadId = Guid.NewGuid();
                         Action onCancel = () => { RemoveFromDownloads(downloadId); };
                         Action onError = () => { RemoveFromDownloads(downloadId); };

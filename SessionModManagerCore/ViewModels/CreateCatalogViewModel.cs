@@ -467,6 +467,11 @@ namespace SessionModManagerCore.ViewModels
                 errorMessage.AppendLine("Asset ID is missing.");
             }
 
+            if (Path.GetInvalidFileNameChars().Any(c => SelectedAssetID.Contains(c)))
+            {
+                errorMessage.AppendLine("Asset ID contains invalid characters.");
+            }
+
             if (string.IsNullOrWhiteSpace(SelectedAssetName))
             {
                 errorMessage.AppendLine("Name is missing.");

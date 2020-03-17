@@ -4,6 +4,7 @@ using MapSwitcherUnitTests.Helpers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.ViewModels;
+using SessionModManagerCore.ViewModels;
 
 namespace MapSwitcherUnitTests
 {
