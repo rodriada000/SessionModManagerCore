@@ -218,6 +218,14 @@ namespace SessionMapSwitcherCore.Classes
                         if (SkipEzPzPatchStep == false)
                         {
                             LaunchEzPzMod();
+
+                            // delete the ObjectPlacement file after launching EzPz 
+                            // ... assume the player unpatched/patched the game after an update which causes issues and the game cannot start because this file is out of date 
+                            // ... so better to just delete the file when a user clicks 'Patch With EzPz' in the UI
+                            if (GameSettingsManager.DoesObjectPlacementFileExist())
+                            {
+                                File.Delete(GameSettingsManager.PathToObjectPlacementFile);
+                            }
                         }
 
                         if (SkipUnrealPakStep == false)

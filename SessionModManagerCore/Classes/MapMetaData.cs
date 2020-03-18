@@ -37,8 +37,15 @@ namespace SessionModManagerCore.Classes
         /// <returns></returns>
         public string GetJsonFileName()
         {
-            DirectoryInfo dirInfo = new DirectoryInfo(MapFileDirectory);
-            return $"{dirInfo.Name}_{MapName}_meta.json";
+            if (string.IsNullOrWhiteSpace(MapFileDirectory))
+            {
+                return $"{MapName}_meta.json";
+            }
+            else
+            {
+                DirectoryInfo dirInfo = new DirectoryInfo(MapFileDirectory);
+                return $"{dirInfo.Name}_{MapName}_meta.json";
+            }
         }
     }
 }

@@ -545,18 +545,17 @@ namespace SessionModManagerCore.ViewModels
                 return false;
             }
 
-            MetaDataManager.SetCustomPropertiesForMaps(AvailableMaps, createIfNotExists: true);
-
             lock (collectionLock)
             {
-                SelectCurrentlyLoadedMapInList();
-
                 // sort the maps A -> Z
                 AvailableMaps = new List<MapListItem>(AvailableMaps.OrderBy(m => m.DisplayName));
 
                 AddDefaultMapToAvailableMaps();
+
+                SelectCurrentlyLoadedMapInList();
             }
 
+            MetaDataManager.SetCustomPropertiesForMaps(AvailableMaps, createIfNotExists: true);
 
             UserMessage = "List of available maps loaded!";
             return true;
@@ -699,7 +698,7 @@ namespace SessionModManagerCore.ViewModels
         {
             map.IsHiddenByUser = !map.IsHiddenByUser;
 
-            bool didWrite = MetaDataManager.WriteCustomMapPropertiesToFile(AvailableMaps);
+            bool didWrite = MetaDataManager.WriteCustomMapPropertiesToFile(map);
 
             if (didWrite == false)
             {
