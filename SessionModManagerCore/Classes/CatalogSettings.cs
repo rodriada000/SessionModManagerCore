@@ -27,27 +27,38 @@ namespace SessionModManagerCore.Classes
         internal static void AddDefaults(CatalogSettings settings)
         {
             bool addedDefaults = false;
-
-            if (!settings.CatalogUrls.Any(c => c.Url == _defaultCatalogUrl))
+            List<string> defaultCatalogs = new List<string>()
             {
-                settings.CatalogUrls.Add(new CatalogSubscription()
+                _defaultCatalogUrl,
+                "https://pastebin.com/raw/AEyARZAM", // - redgouf catalog
+                "https://pastebin.com/raw/mKTALVCx", // - Abaddon's catalog
+                "https://pastebin.com/raw/D4e1dfZ6", // - Wattie's catalog
+                "https://pastebin.com/raw/FLa6yWDB", // - Rume's catalog
+                "https://pastebin.com/raw/L9HMs5mu", // - san van community center 
+                "https://pastebin.com/raw/GWsWTZA8", // - Spargo808 catalog
+                "https://pastebin.com/raw/XFgc8PTN", // - Onkel catalog
+                "https://pastebin.com/raw/kTU8BUDM", // - SLS London by dga
+                "https://pastebin.com/raw/n4jXqiMC", // - ReDann22's catalog
+                "https://pastebin.com/raw/KX9cKt1M", // - GHFear's catalog
+                "https://pastebin.com/raw/ib6Bbqdp", // Dizzy's catalog
+                "https://pastebin.com/raw/ge1BLWrh", // Dizzy Skateboarding Co. catalog
+                "https://pastebin.com/raw/bQ7eXTTF" // TS Tampa 2017 by Otter
+            };
+
+            foreach (string url in defaultCatalogs)
+            {
+                if (!settings.CatalogUrls.Any(c => c.Url == url))
                 {
-                    Name = GetNameFromAssetCatalog(_defaultCatalogUrl),
-                    Url = _defaultCatalogUrl
-                });
-                addedDefaults = true;
+                    settings.CatalogUrls.Add(new CatalogSubscription()
+                    {
+                        Name = GetNameFromAssetCatalog(url),
+                        Url = url,
+                    });
+                    addedDefaults = true;
+                }
             }
 
-            string redGoufDefaultCatalog = "https://pastebin.com/raw/AEyARZAM";
-            if (!settings.CatalogUrls.Any(c => c.Url == redGoufDefaultCatalog))
-            {
-                settings.CatalogUrls.Add(new CatalogSubscription()
-                {
-                    Name = GetNameFromAssetCatalog(redGoufDefaultCatalog),
-                    Url = redGoufDefaultCatalog
-                });
-                addedDefaults = true;
-            }
+
 
             if (addedDefaults)
             {

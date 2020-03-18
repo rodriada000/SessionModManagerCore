@@ -1340,7 +1340,7 @@ namespace SessionMapSwitcherCore.ViewModels
                     }
                 }
 
-                foreach (CatalogSubscription sub in currentSettings.CatalogUrls.ToArray())
+                foreach (CatalogSubscription sub in currentSettings.CatalogUrls.Where(c => c.IsActive).ToArray())
                 {
                     Logger.Info($"Checking catalog {sub.Url}");
 
