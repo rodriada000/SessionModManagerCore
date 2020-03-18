@@ -635,7 +635,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
             _catalogCache = GetCurrentCatalog();
             ReloadAllAssets();
-            CheckForCatalogUpdatesAsync();
+            CheckForCatalogUpdatesAsync(clearCache: false);
         }
 
         public void RefreshFilteredAssetList(bool checkForFileChanges = false)
@@ -1299,7 +1299,7 @@ namespace SessionMapSwitcherCore.ViewModels
             RemoveFromDownloads(toRemove);
         }
 
-        public Task CheckForCatalogUpdatesAsync()
+        public Task CheckForCatalogUpdatesAsync(bool clearCache = true)
         {
             object countLock = new object();
 
@@ -1332,9 +1332,12 @@ namespace SessionMapSwitcherCore.ViewModels
                     return;
                 }
 
-                lock(catalogCacheLock)
+                if (clearCache)
                 {
-                    _catalogCache = new AssetCatalog();
+                    lock(catalogCacheLock)
+                    {
+                        _catalogCache = new AssetCatalog();
+                    }
                 }
 
                 foreach (CatalogSubscription sub in currentSettings.CatalogUrls.ToArray())

@@ -147,6 +147,8 @@ namespace SessionModManagerCore.Classes
             catch (Exception e)
             {
                 Logger.Error(e);
+
+                _instance = new ImageCache();
                 return false;
             }
         }

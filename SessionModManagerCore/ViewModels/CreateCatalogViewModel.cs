@@ -26,6 +26,8 @@ namespace SessionModManagerCore.ViewModels
         private List<string> _categoryList;
         private ObservableCollection<AssetViewModel> _assetList;
         private AssetViewModel _selectedAsset;
+        private List<string> _idExtensions;
+        private string _selectedIDExtension;
 
         public delegate void OnInvalidUpdate(string validationMessage);
         public event OnInvalidUpdate UpdatedAssetInvalid;
@@ -56,7 +58,8 @@ namespace SessionModManagerCore.ViewModels
                         SelectedAssetAuthor = AssetToEdit.Author;
                         SelectedAssetCategory = AssetToEdit.Category;
                         SelectedAssetDescription = AssetToEdit.Description;
-                        SelectedAssetID = AssetToEdit.ID;
+                        SelectedAssetID = AssetToEdit.IDWithoutExtension;
+                        SelectedIDExtension = AssetToEdit.ID.Substring(AssetToEdit.ID.Length - 4, 4);
                         SelectedAssetImageUrl = AssetToEdit.PreviewImage;
                         SelectedAssetName = AssetToEdit.Name;
                         SelectedAssetUpdatedDate = AssetToEdit.UpdatedDate.ToLocalTime().ToString("MM/dd/yyyy");
@@ -144,7 +147,15 @@ namespace SessionModManagerCore.ViewModels
 
         public string SelectedAssetID
         {
-            get { return _selectedAssetID; }
+            get
+            {
+                if (_selectedAssetID.EndsWith(".rar", StringComparison.InvariantCultureIgnoreCase) || _selectedAssetID.EndsWith(".zip", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    _selectedAssetID = _selectedAssetID.Substring(0, _selectedAssetID.Length - 4);
+                }
+
+                return _selectedAssetID;
+            }
             set
             {
                 _selectedAssetID = value;
@@ -245,6 +256,33 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public List<string> IDExtensions
+        {
+            get
+            {
+                if (_idExtensions == null)
+                {
+                    _idExtensions = new List<string>()
+                    {
+                        ".zip",
+                        ".rar"
+                    };
+                }
+
+                return _idExtensions;
+            }
+        }
+
+        public string SelectedIDExtension
+        {
+            get { return _selectedIDExtension; }
+            set
+            {
+                _selectedIDExtension = value;
+                NotifyPropertyChanged();
+            }
+        }
+
         public CreateCatalogViewModel()
         {
             CategoryList = new List<string>()
@@ -267,6 +305,8 @@ namespace SessionModManagerCore.ViewModels
                 "Url",
                 "Google Drive"
             };
+
+            SelectedIDExtension = IDExtensions[0];
 
             AssetList = new ObservableCollection<AssetViewModel>();
             ClearSelectedAsset();
@@ -351,7 +391,7 @@ namespace SessionModManagerCore.ViewModels
                 assetToUpdate.Asset.DownloadLink = $"rsmm://GDrive/{SelectedAssetDownloadUrl}";
             }
 
-            assetToUpdate.Asset.ID = SelectedAssetID;
+            assetToUpdate.Asset.ID = $"{SelectedAssetID}{SelectedIDExtension}";
             assetToUpdate.Asset.Name = SelectedAssetName;
             assetToUpdate.Asset.Author = SelectedAssetAuthor;
             assetToUpdate.Asset.Category = SelectedAssetCategory;
@@ -411,7 +451,7 @@ namespace SessionModManagerCore.ViewModels
 
             Asset newAsset = new Asset()
             {
-                ID = SelectedAssetID,
+                ID = $"{SelectedAssetID}{SelectedIDExtension}",
                 Author = SelectedAssetAuthor,
                 Category = SelectedAssetCategory,
                 Description = SelectedAssetDescription,
@@ -503,15 +543,9 @@ namespace SessionModManagerCore.ViewModels
             }
 
             // validate ID is unique
-            if (AssetList.Any(a => a != assetToExclude && a.Asset.ID == SelectedAssetID))
+            if (AssetList.Any(a => a != assetToExclude && a.Asset.ID == $"{SelectedAssetID}{SelectedIDExtension}"))
             {
-                errorMessage.AppendLine($"Asset ID {SelectedAssetID} is already in use. Change the ID to be unique.");
-            }
-
-            // validate ID ends with a valid file extension
-            if (!SelectedAssetID.EndsWith(".zip") && !SelectedAssetID.EndsWith(".rar"))
-            {
-                errorMessage.AppendLine($"Asset ID must end with a file extension .zip or .rar");
+                errorMessage.AppendLine($"Asset ID {SelectedAssetID}{SelectedIDExtension} is already in use. Change the ID to be unique.");
             }
 
             return errorMessage.ToString();
