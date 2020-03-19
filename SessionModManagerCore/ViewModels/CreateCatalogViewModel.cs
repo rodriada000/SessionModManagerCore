@@ -219,10 +219,10 @@ namespace SessionModManagerCore.ViewModels
             {
                 if (SelectedAssetDownloadType == "Url")
                 {
-                    return "Enter the url to the direct download";
+                    return "Enter url to the direct download";
                 }
 
-                return "Enter the google drive id of the download (found in the google drive url)";
+                return "Google Drive ID of file (found in the google drive url)";
             }
         }
 
