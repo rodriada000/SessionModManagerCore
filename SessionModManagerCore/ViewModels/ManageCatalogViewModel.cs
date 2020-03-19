@@ -73,12 +73,32 @@ namespace SessionModManagerCore.ViewModels
                 try
                 {
                     CatalogSettings currentSettings = JsonConvert.DeserializeObject<CatalogSettings>(fileContents);
-                    CatalogList = currentSettings.CatalogUrls.Select(c => new CatalogSubscriptionViewModel(c.Url, c.Name)).ToList();
+                    CatalogList = currentSettings.CatalogUrls.Select(c => new CatalogSubscriptionViewModel(c)).ToList();
                 }
                 catch (Exception e)
                 {
                     Logger.Warn(e);
                 }
+            }
+        }
+
+        public void TrySaveCatalog()
+        {
+            try
+            {
+                WriteToFile();
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
+        }
+
+        public void ToggleActivationForAll(bool isActive)
+        {
+            foreach (var cat in CatalogList)
+            {
+                cat.IsActive = isActive;
             }
         }
 
@@ -120,7 +140,8 @@ namespace SessionModManagerCore.ViewModels
                 CatalogUrls = CatalogList.Select(c => new CatalogSubscription()
                 {
                     Name = c.Name,
-                    Url = c.Url
+                    Url = c.Url,
+                    IsActive = c.IsActive
                 }).ToList()
             };
 
@@ -128,38 +149,6 @@ namespace SessionModManagerCore.ViewModels
 
             string contents = JsonConvert.SerializeObject(updatedSettings, Formatting.Indented);
             File.WriteAllText(AssetStoreViewModel.AbsolutePathToCatalogSettingsJson, contents);
-        }
-    }
-
-    public class CatalogSubscriptionViewModel : ViewModelBase
-    {
-        private string _url;
-        private string _name;
-
-        public CatalogSubscriptionViewModel(string url, string name)
-        {
-            Url = url;
-            Name = name;
-        }
-
-        public string Url
-        {
-            get { return _url; }
-            set
-            {
-                _url = value;
-                NotifyPropertyChanged();
-            }
-        }
-
-        public string Name
-        {
-            get { return _name; }
-            set
-            {
-                _name = value;
-                NotifyPropertyChanged();
-            }
         }
     }
 }

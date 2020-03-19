@@ -14,6 +14,11 @@
             A unique string to identify assets
             </summary>
         </member>
+        <member name="P:SessionModManagerCore.Classes.Asset.IDWithoutExtension">
+            <summary>
+            Returns <see cref="P:SessionModManagerCore.Classes.Asset.ID"/> without the .zip or .rar extension
+            </summary>
+        </member>
         <member name="P:SessionModManagerCore.Classes.Asset.Name">
             <summary>
             The display name of the asset

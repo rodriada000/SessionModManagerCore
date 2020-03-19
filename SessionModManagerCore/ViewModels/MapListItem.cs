@@ -85,8 +85,10 @@ public class MapListItem : ViewModelBase
     {
         get
         {
-            if (_tooltip == null)
+            if (_tooltip == null && !string.IsNullOrWhiteSpace(DirectoryPath))
+            {
                 _tooltip = DirectoryPath;
+            }
 
             return _tooltip;
         }

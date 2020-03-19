@@ -14,6 +14,22 @@ namespace SessionModManagerCore.Classes
         public string ID { get; set; }
 
         /// <summary>
+        /// Returns <see cref="ID"/> without the .zip or .rar extension
+        /// </summary>
+        public string IDWithoutExtension
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(ID))
+                {
+                    return ID;
+                }
+
+                return ID.Replace(".zip", "").Replace(".rar", "");
+            }
+        }
+
+        /// <summary>
         /// The display name of the asset
         /// </summary>
         public string Name { get; set; }

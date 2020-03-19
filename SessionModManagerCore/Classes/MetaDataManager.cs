@@ -122,19 +122,20 @@ namespace SessionMapSwitcherCore.Classes
         /// Updates the meta .json files for the maps with the new
         /// custom names and if it is hidden.
         /// </summary>
-        public static void WriteCustomMapPropertiesToFile(MapListItem map)
+        public static bool WriteCustomMapPropertiesToFile(MapListItem map)
         {
             MapMetaData metaDataToSave = LoadMapMetaData(map);
 
             if (metaDataToSave == null)
             {
-                return;
+                // metadata is missing from so re-create it
+                metaDataToSave = CreateMapMetaData(map);
             }
 
             metaDataToSave.IsHiddenByUser = map.IsHiddenByUser;
             metaDataToSave.CustomName = map.CustomName;
 
-            SaveMapMetaData(metaDataToSave);
+            return SaveMapMetaData(metaDataToSave);
         }
 
 
@@ -262,9 +263,18 @@ namespace SessionMapSwitcherCore.Classes
             {
                 CreateMetaDataFolder();
 
-                DirectoryInfo dirInfo = new DirectoryInfo(mapItem.DirectoryPath);
+                string fileName;
 
-                string fileName = $"{dirInfo.Name}_{mapItem.MapName}_meta.json";
+                if (!string.IsNullOrWhiteSpace(mapItem.DirectoryPath))
+                {
+                    DirectoryInfo dirInfo = new DirectoryInfo(mapItem.DirectoryPath);
+                    fileName = $"{dirInfo.Name}_{mapItem.MapName}_meta.json";
+                }
+                else
+                {
+                    fileName = $"{mapItem.MapName}_meta.json";
+                }
+
                 string pathToFile = Path.Combine(FullPathToMetaFolder, fileName);
 
                 string fileContents = File.ReadAllText(pathToFile);
@@ -273,7 +283,8 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
-                Logger.Error(e, "failed to load map meta data");
+                Logger.Error("failed to load map meta data");
+                Logger.Error(e);
                 return null;
             }
         }
@@ -292,11 +303,11 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
-        public static void SaveMapMetaData(MapMetaData metaData)
+        public static bool SaveMapMetaData(MapMetaData metaData)
         {
             if (metaData == null)
             {
-                return;
+                return false;
             }
 
             try
@@ -310,11 +321,12 @@ namespace SessionMapSwitcherCore.Classes
                 string jsonToSave = JsonConvert.SerializeObject(metaData, Formatting.Indented);
 
                 File.WriteAllText(pathToFile, jsonToSave);
+                return true;
             }
             catch (Exception e)
             {
                 Logger.Error(e, "failed to save map meta data");
-                return;
+                return false;
             }
         }
 
