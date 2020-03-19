@@ -538,6 +538,7 @@ namespace SessionModManagerCore.ViewModels
             try
             {
                 LoadAvailableMapsInSubDirectories(SessionPath.ToContent);
+                MetaDataManager.SetCustomPropertiesForMaps(AvailableMaps, createIfNotExists: true);
             }
             catch (Exception e)
             {
@@ -547,15 +548,18 @@ namespace SessionModManagerCore.ViewModels
 
             lock (collectionLock)
             {
+
                 // sort the maps A -> Z
                 AvailableMaps = new List<MapListItem>(AvailableMaps.OrderBy(m => m.DisplayName));
 
+                // add default maps after so they are not sorted and always at top of list
                 AddDefaultMapToAvailableMaps();
 
                 SelectCurrentlyLoadedMapInList();
             }
 
             MetaDataManager.SetCustomPropertiesForMaps(AvailableMaps, createIfNotExists: true);
+            NotifyPropertyChanged(nameof(FilteredAvailableMaps));
 
             UserMessage = "List of available maps loaded!";
             return true;
@@ -578,7 +582,6 @@ namespace SessionModManagerCore.ViewModels
             }
 
             NotifyPropertyChanged(nameof(AvailableMaps));
-            NotifyPropertyChanged(nameof(FilteredAvailableMaps));
         }
 
         private void SelectCurrentlyLoadedMapInList()
