@@ -24,6 +24,11 @@ namespace SessionMapSwitcherCore.Classes
                     _toSession = _toSession.TrimEnd('/');
                 }
 
+                if (string.IsNullOrEmpty(_toSession))
+                {
+                    return "";
+                }
+
                 return _toSession;
             }
             set
@@ -48,7 +53,7 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
-        public static string ToBinaries
+        public static string ToBinariesWin64
         {
             get
             {
@@ -144,7 +149,7 @@ namespace SessionMapSwitcherCore.Classes
         {
             get
             {
-                return Path.Combine(ToBinaries, "SessionGame-Win64-Shipping.exe");
+                return Path.Combine(ToBinariesWin64, "SessionGame-Win64-Shipping.exe");
             }
         }
 

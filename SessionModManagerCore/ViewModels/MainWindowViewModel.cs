@@ -406,7 +406,12 @@ namespace SessionModManagerCore.ViewModels
 
             SetRandomHintMessage();
 
-            if (EzPzPatcher.IsGamePatched())
+            InitMapSwitcher();
+        }
+
+        private void InitMapSwitcher()
+        {
+            if (UeModUnlocker.IsGamePatched())
             {
                 MapSwitcher = new EzPzMapSwitcher();
             }
@@ -420,7 +425,6 @@ namespace SessionModManagerCore.ViewModels
                 RefreshGameSettings();
                 SetCurrentlyLoadedMap();
             }
-
         }
 
         public void RefreshGameSettings()
@@ -489,7 +493,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 MapSwitcher = new UnpackedMapSwitcher();
             }
-            else if (EzPzPatcher.IsGamePatched())
+            else if (UeModUnlocker.IsGamePatched())
             {
                 MapSwitcher = new EzPzMapSwitcher();
             }
@@ -535,9 +539,12 @@ namespace SessionModManagerCore.ViewModels
                 return false;
             }
 
+            InitMapSwitcher();
+
             try
             {
                 LoadAvailableMapsInSubDirectories(SessionPath.ToContent);
+                MetaDataManager.SetCustomPropertiesForMaps(AvailableMaps, createIfNotExists: true);
             }
             catch (Exception e)
             {
@@ -547,15 +554,18 @@ namespace SessionModManagerCore.ViewModels
 
             lock (collectionLock)
             {
+
                 // sort the maps A -> Z
                 AvailableMaps = new List<MapListItem>(AvailableMaps.OrderBy(m => m.DisplayName));
 
+                // add default maps after so they are not sorted and always at top of list
                 AddDefaultMapToAvailableMaps();
 
                 SelectCurrentlyLoadedMapInList();
             }
 
             MetaDataManager.SetCustomPropertiesForMaps(AvailableMaps, createIfNotExists: true);
+            NotifyPropertyChanged(nameof(FilteredAvailableMaps));
 
             UserMessage = "List of available maps loaded!";
             return true;
@@ -578,7 +588,6 @@ namespace SessionModManagerCore.ViewModels
             }
 
             NotifyPropertyChanged(nameof(AvailableMaps));
-            NotifyPropertyChanged(nameof(FilteredAvailableMaps));
         }
 
         private void SelectCurrentlyLoadedMapInList()
@@ -904,7 +913,7 @@ namespace SessionModManagerCore.ViewModels
                     UserMessage = "Required game files extracted! You should now be able to set game settings and custom object count.";
                 }
 
-                if (MapSwitcher == null && EzPzPatcher.IsGamePatched())
+                if (MapSwitcher == null && UeModUnlocker.IsGamePatched())
                 {
                     MapSwitcher = new EzPzMapSwitcher();
                 }

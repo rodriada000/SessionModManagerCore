@@ -506,14 +506,6 @@ namespace SessionMapSwitcherCore.Classes
             ProgressChanged($"Downloading .zip file -  {(double)totalBytesDownloaded / 1000000:0.00} / {(double)totalFileSize / 1000000:0.00} MB | {progressPercentage:0.00}% Complete");
         }
 
-        /// <summary>
-        /// Checks if EzPz has been ran by looking for the UserEngine.ini file
-        /// </summary>
-        public static bool IsGamePatched()
-        {
-            return File.Exists(SessionPath.ToUserEngineIniFile);
-        }
-
 
         public BoolWithMessage CopyUnrealPakToPakFolder()
         {

@@ -224,6 +224,8 @@ namespace SessionMapSwitcherCore.Classes
                 return "";
             }
 
+            CreateDefaultUserEngineIniFile();
+
             if (!File.Exists(SessionPath.ToUserEngineIniFile))
             {
                 return "";
@@ -251,6 +253,8 @@ namespace SessionMapSwitcherCore.Classes
             {
                 return false;
             }
+
+            CreateDefaultUserEngineIniFile();
 
             if (!File.Exists(SessionPath.ToUserEngineIniFile))
             {
@@ -284,6 +288,27 @@ namespace SessionMapSwitcherCore.Classes
                 Logger.Error(e);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Creates UserEngine.ini file if does not exist
+        /// </summary>
+        public static void CreateDefaultUserEngineIniFile()
+        {
+            if (File.Exists(SessionPath.ToUserEngineIniFile))
+            {
+                return; // already exists
+            }
+
+            string defaultIniValues = @"[/Script/EngineSettings.GameMapsSettings]
+GameDefaultMap = /Game/Tutorial/Intro/MAP_EntryPoint";
+
+            if (!Directory.Exists(SessionPath.ToConfig))
+            {
+                Directory.CreateDirectory(SessionPath.ToConfig);
+            }
+
+            File.WriteAllText(SessionPath.ToUserEngineIniFile, defaultIniValues);
         }
     }
 }
