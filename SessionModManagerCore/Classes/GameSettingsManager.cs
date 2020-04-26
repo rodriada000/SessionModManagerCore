@@ -43,8 +43,9 @@ namespace SessionMapSwitcherCore.Classes
                 {
                     engineFile = parser.ReadFile(SessionPath.ToDefaultEngineIniFile);
                 }
-                else if (EzPzPatcher.IsGamePatched())
+                else if (UeModUnlocker.IsGamePatched())
                 {
+                    EzPzMapSwitcher.CreateDefaultUserEngineIniFile();
                     engineFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
                 }
 
@@ -140,8 +141,9 @@ namespace SessionMapSwitcherCore.Classes
                 {
                     engineFile = parser.ReadFile(SessionPath.ToDefaultEngineIniFile);
                 }
-                else if (EzPzPatcher.IsGamePatched())
+                else if (UeModUnlocker.IsGamePatched())
                 {
+                    EzPzMapSwitcher.CreateDefaultUserEngineIniFile();
                     engineFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
                 }
 
@@ -151,7 +153,7 @@ namespace SessionMapSwitcherCore.Classes
                 {
                     parser.WriteFile(SessionPath.ToDefaultEngineIniFile, engineFile);
                 }
-                else if (EzPzPatcher.IsGamePatched())
+                else if (UeModUnlocker.IsGamePatched())
                 {
                     parser.WriteFile(SessionPath.ToUserEngineIniFile, engineFile);
                 }                

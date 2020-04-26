@@ -68,7 +68,7 @@ namespace SessionModManagerCore.ViewModels
         {
             get
             {
-                return EzPzPatcher.IsGamePatched() || UnpackUtils.IsSessionUnpacked();
+                return UeModUnlocker.IsGamePatched() || UnpackUtils.IsSessionUnpacked();
             }
         }
 

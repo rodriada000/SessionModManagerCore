@@ -406,7 +406,12 @@ namespace SessionModManagerCore.ViewModels
 
             SetRandomHintMessage();
 
-            if (EzPzPatcher.IsGamePatched())
+            InitMapSwitcher();
+        }
+
+        private void InitMapSwitcher()
+        {
+            if (UeModUnlocker.IsGamePatched())
             {
                 MapSwitcher = new EzPzMapSwitcher();
             }
@@ -420,7 +425,6 @@ namespace SessionModManagerCore.ViewModels
                 RefreshGameSettings();
                 SetCurrentlyLoadedMap();
             }
-
         }
 
         public void RefreshGameSettings()
@@ -489,7 +493,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 MapSwitcher = new UnpackedMapSwitcher();
             }
-            else if (EzPzPatcher.IsGamePatched())
+            else if (UeModUnlocker.IsGamePatched())
             {
                 MapSwitcher = new EzPzMapSwitcher();
             }
@@ -534,6 +538,8 @@ namespace SessionModManagerCore.ViewModels
                 UserMessage = $"Cannot load available maps: {SessionPath.ToContent} does not exist. Make sure the Session Path is set correctly.";
                 return false;
             }
+
+            InitMapSwitcher();
 
             try
             {
@@ -907,7 +913,7 @@ namespace SessionModManagerCore.ViewModels
                     UserMessage = "Required game files extracted! You should now be able to set game settings and custom object count.";
                 }
 
-                if (MapSwitcher == null && EzPzPatcher.IsGamePatched())
+                if (MapSwitcher == null && UeModUnlocker.IsGamePatched())
                 {
                     MapSwitcher = new EzPzMapSwitcher();
                 }

@@ -273,6 +273,11 @@
             Checks .ini file for the map that will load on game start
             </summary>
         </member>
+        <member name="M:SessionMapSwitcherCore.Classes.EzPzMapSwitcher.CreateDefaultUserEngineIniFile">
+            <summary>
+            Creates UserEngine.ini file if does not exist
+            </summary>
+        </member>
         <member name="T:SessionMapSwitcherCore.Classes.EzPzPatcher">
             <summary>
             Class to provide methods for patching the game with dga's EzPz Mod.
@@ -341,11 +346,6 @@
             </summary>
             <returns></returns>
         </member>
-        <member name="M:SessionMapSwitcherCore.Classes.EzPzPatcher.IsGamePatched">
-            <summary>
-            Checks if EzPz has been ran by looking for the UserEngine.ini file
-            </summary>
-        </member>
         <member name="M:SessionMapSwitcherCore.Classes.GameSettingsManager.ValidateAndUpdateObjectCount(System.String)">
             <summary>
             validates the object count and then writes to the correct file to update object count.
@@ -411,6 +411,21 @@
         <member name="P:SessionMapSwitcherCore.Classes.SessionPath.ToNYCFolder">
             <summary>
             Returns absolute path to the NYC folder in Session game directory. Requires <see cref="T:SessionMapSwitcherCore.Classes.SessionPath"/>.
+            </summary>
+        </member>
+        <member name="T:SessionMapSwitcherCore.Classes.UeModUnlocker">
+            <summary>
+            Class to provide methods for patching the game with Illusory UE Universal Mod Unlocker
+            </summary>
+        </member>
+        <member name="F:SessionMapSwitcherCore.Classes.UeModUnlocker.ModUnlockerGitHubUrl">
+            <summary>
+            Github link to .json file that contains the latest download link to the Universal Mod Unlocker
+            </summary>
+        </member>
+        <member name="M:SessionMapSwitcherCore.Classes.UeModUnlocker.IsGamePatched">
+            <summary>
+            Checks if mod unlocker has been ran by looking for the dxgi .dll in Binaries\Win64
             </summary>
         </member>
         <member name="T:SessionMapSwitcherCore.Classes.UnpackedMapSwitcher">
