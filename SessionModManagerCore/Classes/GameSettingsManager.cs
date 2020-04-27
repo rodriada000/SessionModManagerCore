@@ -192,7 +192,7 @@ namespace SessionMapSwitcherCore.Classes
             {
                 using (var stream = new FileStream(PathToObjectPlacementFile, FileMode.Open, FileAccess.Read))
                 {
-                    stream.Position = 351; // 351 (0x0000015f) is the first address of a object count
+                    stream.Position = 352; // 352 (0x00000160) is the first address of a object count
                     int byte1 = stream.ReadByte();
                     int byte2 = stream.ReadByte();
                     byte[] byteArray;
@@ -243,7 +243,8 @@ namespace SessionMapSwitcherCore.Classes
 
             // this is a list of addresses where the item count for placeable objects are stored in the .uexp file
             // ... if this file is modified then these addresses will NOT match so it is important to not mod/change the PBP_ObjectPlacementInventory file (until further notice...)
-            List<int> addresses = new List<int>() { 351, 615, 681, 747, 879, 945, 1011, 1077, 1143, 1209, 1275, 1341, 1407, 1473, 1605, 1671, 1737, 1803, 1869, 1935, 2001, 2067 };
+            // ... as of Session 0.0.0.5 these addresses are shifted by one
+            List<int> addresses = new List<int>() { 352, 616, 682, 748, 880, 946, 1012, 1078, 1144, 1210, 1276, 1342, 1408, 1474, 1540, 1606, 1672, 1738, 1804, 1870, 1936, 2002, 2068 };
 
             try
             {
