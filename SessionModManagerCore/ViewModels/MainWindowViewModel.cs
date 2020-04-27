@@ -374,7 +374,7 @@ namespace SessionModManagerCore.ViewModels
                     return "Game is already unpacked. You can not apply the patch for an unpacked game.";
                 }
 
-                return "Use this after updating Session to a new version or to patch the game again.";
+                return "Click to download/open the Illusory Mod Unlocker which patches the game.";
             }
         }
 
@@ -447,7 +447,7 @@ namespace SessionModManagerCore.ViewModels
 
             if (GameSettingsManager.DoesObjectPlacementFileExist() == false)
             {
-                concatenatedErrorMsg = "Custom object count will not be applied until required file is extracted; ";
+                concatenatedErrorMsg = "Custom object count can not be applied until required file is extracted; ";
             }
 
             InputControlsEnabled = false;

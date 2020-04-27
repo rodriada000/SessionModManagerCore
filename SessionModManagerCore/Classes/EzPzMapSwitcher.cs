@@ -33,36 +33,6 @@ namespace SessionMapSwitcherCore.Classes
                     GlobalDefaultGameModeSetting = "/Game/Data/PBP_InGameSessionGameMode.PBP_InGameSessionGameMode_C",
                     MapName = "Crea-ture Dev Park",
                     IsDefaultMap = true
-                },
-                new MapListItem()
-                {
-                    GameDefaultMapSetting ="/Game/TEMP/GYM/FilmerMode_Gym",
-                    MapName = "FilmerMode Gym Dev Park",
-                    IsDefaultMap = true
-                },
-                new MapListItem()
-                {
-                    GameDefaultMapSetting = "/Game/Art/Env/GYM/DevGyms/GYM_Dev_Grindabru",
-                    MapName = "Grindabru Dev Park",
-                    IsDefaultMap = true
-                },
-                new MapListItem()
-                {
-                    GameDefaultMapSetting ="/Game/TEMP/chris/GrindCity_Yeah",
-                    MapName = "Grind City Yeah Dev Park",
-                    IsDefaultMap = true
-                },
-                new MapListItem()
-                {
-                    GameDefaultMapSetting ="/Game/TEMP/mah/TrickMap",
-                    MapName = "Mah TrickMap Dev Park",
-                    IsDefaultMap = true
-                },
-                new MapListItem()
-                {
-                    GameDefaultMapSetting ="/Game/TEMP/Vince/VinceMap",
-                    MapName = "Vinces Dev Map",
-                    IsDefaultMap = true
                 }
             };
         }
