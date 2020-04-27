@@ -12,6 +12,7 @@ namespace SessionModManagerCore.ViewModels
 {
     public class CreateCatalogViewModel : ViewModelBase
     {
+        private string _catalogName;
         private string _selectedAssetName;
         private string _selectedAssetAuthor;
         private string _selectedAssetDescription;
@@ -31,6 +32,16 @@ namespace SessionModManagerCore.ViewModels
 
         public delegate void OnInvalidUpdate(string validationMessage);
         public event OnInvalidUpdate UpdatedAssetInvalid;
+
+        public string CatalogName
+        {
+            get { return _catalogName; }
+            set
+            {
+                _catalogName = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         internal Asset AssetToEdit { get; set; }
 
@@ -309,6 +320,7 @@ namespace SessionModManagerCore.ViewModels
             SelectedIDExtension = IDExtensions[0];
 
             AssetList = new ObservableCollection<AssetViewModel>();
+            CatalogName = "";
             ClearSelectedAsset();
         }
 
@@ -320,6 +332,8 @@ namespace SessionModManagerCore.ViewModels
 
                 AssetList = new ObservableCollection<AssetViewModel>(catalog.Assets.Select(a => new AssetViewModel(a)).ToList());
                 ClearSelectedAsset();
+
+                CatalogName = catalog.Name;
 
                 return BoolWithMessage.True();
             }
@@ -337,7 +351,7 @@ namespace SessionModManagerCore.ViewModels
 
                 AssetCatalog catalog = new AssetCatalog()
                 {
-                    Name = "",
+                    Name = CatalogName,
                     Assets = AssetList.Select(a => a.Asset).ToList()
                 };
 
