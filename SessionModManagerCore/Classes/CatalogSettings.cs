@@ -31,7 +31,6 @@ namespace SessionModManagerCore.Classes
             {
                 _defaultCatalogUrl,
                 "https://pastebin.com/raw/AEyARZAM", // - redgouf catalog
-                "https://pastebin.com/raw/mKTALVCx", // - Abaddon's catalog
                 "https://pastebin.com/raw/D4e1dfZ6", // - Wattie's catalog
                 "https://pastebin.com/raw/FLa6yWDB", // - Rume's catalog
                 "https://pastebin.com/raw/L9HMs5mu", // - san van community center 
@@ -40,9 +39,13 @@ namespace SessionModManagerCore.Classes
                 "https://pastebin.com/raw/kTU8BUDM", // - SLS London by dga
                 "https://pastebin.com/raw/n4jXqiMC", // - ReDann22's catalog
                 "https://pastebin.com/raw/KX9cKt1M", // - GHFear's catalog
-                "https://pastebin.com/raw/ib6Bbqdp", // Dizzy's catalog
-                "https://pastebin.com/raw/ge1BLWrh", // Dizzy Skateboarding Co. catalog
-                "https://pastebin.com/raw/bQ7eXTTF" // TS Tampa 2017 by Otter
+                "https://pastebin.com/raw/ib6Bbqdp", // - Dizzy's catalog
+                "https://pastebin.com/raw/ge1BLWrh", // - Dizzy Skateboarding Co. catalog
+                "https://pastebin.com/raw/9xdZpnQk", // - Otter's catalog
+                "https://pastebin.com/raw/eEp2SKKf", // - JammieDodgers catalog
+                "https://pastebin.com/raw/Gs7HVBNA", // - haens_daempf catalog
+                "https://pastebin.com/raw/hPFif3cf", // - Colyns catalog
+                "https://pastebin.com/raw/aFeLjau8", // - FlyRCs catalog
             };
 
             foreach (string url in defaultCatalogs)
