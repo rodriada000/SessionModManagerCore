@@ -122,6 +122,41 @@ namespace SessionModManagerCore.ViewModels
             ReloadCatalogList();
         }
 
+        public void AddDefaultCatalogs()
+        {
+            CatalogSettings updatedSettings = new CatalogSettings()
+            {
+                CatalogUrls = CatalogList.Select(c => new CatalogSubscription()
+                {
+                    Name = c.Name,
+                    Url = c.Url,
+                    IsActive = c.IsActive
+                }).ToList()
+            };
+
+            CatalogSettings.AddDefaults(updatedSettings);
+            CatalogList = updatedSettings.CatalogUrls.Select(c => new CatalogSubscriptionViewModel(c)).ToList();
+        }
+
+        public void RemoveUrls(List<CatalogSubscriptionViewModel> urls)
+        {
+            bool didRemove = false;
+
+            foreach (var url in urls)
+            {
+                if (CatalogList.Remove(url))
+                {
+                    didRemove = true;
+                }
+            }
+
+            if (didRemove)
+            {
+                WriteToFile();
+                ReloadCatalogList();
+            }
+        }
+
         public void RemoveUrl(CatalogSubscriptionViewModel url)
         {
             bool didRemove = CatalogList.Remove(url);

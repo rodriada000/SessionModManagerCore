@@ -1316,8 +1316,11 @@ namespace SessionMapSwitcherCore.ViewModels
                     currentSettings = JsonConvert.DeserializeObject<CatalogSettings>(File.ReadAllText(catFile));
                     currentSettings.CatalogUrls.RemoveAll(s => string.IsNullOrWhiteSpace(s.Url));
                 }
+                else
+                {
+                    CatalogSettings.AddDefaults(currentSettings);
+                }
 
-                CatalogSettings.AddDefaults(currentSettings);
 
                 if (currentSettings.CatalogUrls.Count == 0)
                 {
@@ -1372,9 +1375,6 @@ namespace SessionMapSwitcherCore.ViewModels
                                 _catalogCache = AssetCatalog.Merge(_catalogCache, c);
                                 File.WriteAllText(AbsolutePathToCatalogJson, JsonConvert.SerializeObject(_catalogCache, Formatting.Indented));
                             }
-
-                            ReloadAllAssets();
-                            RefreshFilteredAssetList();
                         }
                         catch (Exception ex)
                         {
@@ -1387,6 +1387,9 @@ namespace SessionMapSwitcherCore.ViewModels
                             {
                                 File.Delete(path);
                             }
+
+                            ReloadAllAssets();
+                            RefreshFilteredAssetList();
                         }
                     };
 
