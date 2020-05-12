@@ -16,6 +16,9 @@ namespace SessionMapSwitcherCore.Classes
 
         public static bool SkipIntroMovie { get; set; }
 
+        public static bool EnableDBuffer { get; set; }
+        public static bool EnableLightPropagationVolume { get; set; }
+
         public static int ObjectCount { get; set; }
 
         public static string PathToObjectPlacementFile
@@ -39,29 +42,12 @@ namespace SessionMapSwitcherCore.Classes
                 var parser = new FileIniDataParser();
                 parser.Parser.Configuration.AllowDuplicateKeys = true;
 
-                if (UnpackUtils.IsSessionUnpacked())
-                {
-                    engineFile = parser.ReadFile(SessionPath.ToDefaultEngineIniFile);
-                }
-                else if (UeModUnlocker.IsGamePatched())
-                {
-                    EzPzMapSwitcher.CreateDefaultUserEngineIniFile();
-                    engineFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
-                }
+                EzPzMapSwitcher.CreateDefaultUserEngineIniFile();
+                engineFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
 
-                string gravitySetting = null;
-                try
-                {
-                    gravitySetting = engineFile["/Script/Engine.PhysicsSettings"]["DefaultGravityZ"];
-                }
-                catch (Exception) { };
+                GetGravityFromIniFile(engineFile);
 
-                if (String.IsNullOrWhiteSpace(gravitySetting))
-                {
-                    gravitySetting = "-980";
-                }
-
-                double.TryParse(gravitySetting, out _gravity);
+                GetRenderSettingsFromIniFile(engineFile);
 
                 SkipIntroMovie = IsSkippingMovies();
 
@@ -77,6 +63,60 @@ namespace SessionMapSwitcherCore.Classes
                 Logger.Error(e);
                 return BoolWithMessage.False($"Could not get game settings: {e.Message}");
             }
+        }
+
+        private static void GetGravityFromIniFile(IniData engineFile)
+        {
+            string gravitySetting = null;
+            try
+            {
+                gravitySetting = engineFile["/Script/Engine.PhysicsSettings"]["DefaultGravityZ"];
+            }
+            catch (Exception) { };
+
+            if (String.IsNullOrWhiteSpace(gravitySetting))
+            {
+                gravitySetting = "-980";
+            }
+
+            double.TryParse(gravitySetting, out _gravity);
+        }
+
+        private static void GetRenderSettingsFromIniFile(IniData engineFile)
+        {
+            string setting = null;
+            bool parsedBool = false;
+
+            try
+            {
+                setting = engineFile["/Script/Engine.RendererSettings"]["r.LightPropagationVolume"];
+            }
+            catch (Exception) { };
+
+            if (String.IsNullOrWhiteSpace(setting))
+            {
+                setting = "false";
+            }
+
+            bool.TryParse(setting, out parsedBool);
+            EnableLightPropagationVolume = parsedBool;
+
+
+            try
+            {
+                setting = null;
+                parsedBool = false;
+                setting = engineFile["/Script/Engine.RendererSettings"]["r.DBuffer"];
+            }
+            catch (Exception) { };
+
+            if (String.IsNullOrWhiteSpace(setting))
+            {
+                setting = "true";
+            }
+
+            bool.TryParse(setting, out parsedBool);
+            EnableDBuffer = parsedBool;
         }
 
         /// <summary>
@@ -112,7 +152,10 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
-        public static BoolWithMessage ValidateAndUpdateGravityAndSkipMoviesSettings(string gravityText, bool skipMovie)
+        /// <summary>
+        /// updates various settings in UserEngine.ini and rename 'Movies' folder to skip movies if enabled
+        /// </summary>
+        public static BoolWithMessage ValidateAndUpdateGameSettings(string gravityText, bool skipMovie, bool enableLpv, bool enableDBuffer)
         {
             if (SessionPath.IsSessionPathValid() == false)
             {
@@ -137,35 +180,29 @@ namespace SessionMapSwitcherCore.Classes
                 parser.Parser.Configuration.AllowDuplicateKeys = true;
                 IniData engineFile = null;
 
-                if (UnpackUtils.IsSessionUnpacked())
-                {
-                    engineFile = parser.ReadFile(SessionPath.ToDefaultEngineIniFile);
-                }
-                else if (UeModUnlocker.IsGamePatched())
-                {
-                    EzPzMapSwitcher.CreateDefaultUserEngineIniFile();
-                    engineFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
-                }
+                EzPzMapSwitcher.CreateDefaultUserEngineIniFile();
+                engineFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
 
                 engineFile["/Script/Engine.PhysicsSettings"]["DefaultGravityZ"] = gravityText;
+                engineFile["/Script/Engine.RendererSettings"]["r.LightPropagationVolume"] = enableLpv.ToString();
+                engineFile["/Script/Engine.RendererSettings"]["r.DBuffer"] = enableDBuffer.ToString();
 
-                if (UnpackUtils.IsSessionUnpacked())
-                {
-                    parser.WriteFile(SessionPath.ToDefaultEngineIniFile, engineFile);
-                }
-                else if (UeModUnlocker.IsGamePatched())
-                {
-                    parser.WriteFile(SessionPath.ToUserEngineIniFile, engineFile);
-                }                
+                parser.WriteFile(SessionPath.ToUserEngineIniFile, engineFile);
 
                 RenameMoviesFolderToSkipMovies(skipMovie);
 
+                // update in-memory static data members
                 Gravity = gravityFloat;
                 SkipIntroMovie = skipMovie;
+                EnableLightPropagationVolume = enableLpv;
+                EnableDBuffer = enableDBuffer;
             }
             catch (Exception e)
             {
                 Logger.Error(e);
+                Logger.Warn("Re-creating UserEngine.ini file in case it is corrupted");
+                EzPzMapSwitcher.CreateDefaultUserEngineIniFile(deleteExisting: true);
+
                 return BoolWithMessage.False($"Failed to update gravity and/or skip movie: {e.Message}");
             }
 

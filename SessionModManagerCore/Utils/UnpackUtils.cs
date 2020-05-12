@@ -7,6 +7,10 @@ using System.Threading.Tasks;
 
 namespace SessionMapSwitcherCore.Utils
 {
+    /// <summary>
+    /// (DEPRECATED AS OF v2.6.3)
+    /// Was used to handle unpacking the game (old method of modding)
+    /// </summary>
     public class UnpackUtils
     {
         public delegate void SendMessageDelegate(string message);

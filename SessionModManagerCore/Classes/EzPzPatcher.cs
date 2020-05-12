@@ -8,7 +8,8 @@ using System.Threading.Tasks;
 namespace SessionMapSwitcherCore.Classes
 {
     /// <summary>
-    /// Class to provide methods for patching the game with dga's EzPz Mod.
+    /// (DEPRECATED AS OF v2.6.3)
+    /// Class to provide methods for patching the game with dga's EzPz Mod. 
     /// </summary>
     public class EzPzPatcher
     {
@@ -30,16 +31,6 @@ namespace SessionMapSwitcherCore.Classes
         public string PathToSession;
 
 
-        public string PathToDownloadedZip
-        {
-            get => Path.Combine(SessionPath.ToPaks, DownloadedZipFileName);
-        }
-
-        /// <summary>
-        /// Name of zip file downloaded with unrealpak.exe files
-        /// </summary>
-        private const string DownloadedZipFileName = "SessionUnpack.zip";
-
         /// <summary>
         /// Name of zip file with EzPz patcher exe
         /// </summary>
@@ -53,15 +44,6 @@ namespace SessionMapSwitcherCore.Classes
         /// </summary>
         private const string EzPzGitHubUrl = "https://raw.githubusercontent.com/rodriada000/SessionMapSwitcher/url_updates/docs/ezpzDownloadLink.txt";
 
-
-        /// <summary>
-        /// Github link to .txt file that contains the latest download link to the files required for unpacking
-        /// </summary>
-        private const string UnpackGitHubUrl = "https://raw.githubusercontent.com/rodriada000/SessionMapSwitcher/url_updates/docs/direct_unpackDownloadLink.txt";
-
-
-        private const string CryptoJsonGitHubUrl = "https://raw.githubusercontent.com/rodriada000/SessionMapSwitcher/url_updates/docs/direct_cryptojsonDownloadLink.txt";
-
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
         /// <summary>
@@ -74,7 +56,6 @@ namespace SessionMapSwitcherCore.Classes
         {
             this.PathToSession = pathToSession;
             bool didEzPzDownload = false;
-            bool didUnrealPakDownload = false;
 
             Logger.Info("Starting EzPz Patch Process ...");
 
@@ -97,26 +78,6 @@ namespace SessionMapSwitcherCore.Classes
                     didEzPzDownload = true;
                 }
 
-                // download the unrealpak files if the user does not have them locally
-                didUnrealPakDownload = true;
-
-                if (SkipUnrealPakStep == false)
-                {
-                    if (IsUnrealPakInstalledLocally() == false)
-                    {
-                        didUnrealPakDownload = DownloadUnrealPackZip();
-                    }
-                    else if (IsUnrealPakInstalledLocally() && File.Exists(SessionPath.ToCryptoJsonFile) == false)
-                    {
-                        // download crypto.json file
-                        didUnrealPakDownload = DownloadCryptoJsonFile();
-                    }
-                }
-                else
-                {
-                    Logger.Info($"... skipping unrealpak download");
-                }
-
             });
 
             t.ContinueWith((task) =>
@@ -128,43 +89,11 @@ namespace SessionMapSwitcherCore.Classes
                     return;
                 }
 
-                if (!didUnrealPakDownload || !didEzPzDownload)
+                if (!didEzPzDownload)
                 {
                     Logger.Warn("Failed to download files, cannot continue");
                     PatchCompleted(false);
                     return;
-                }
-
-                //
-                // Extract/Copy Required Files
-                //
-
-                if (SkipUnrealPakStep == false)
-                {
-                    if (IsUnrealPakInstalledLocally())
-                    {
-                        ProgressChanged("Copying UnrealPak files ...");
-                        BoolWithMessage isUnrealPakCopied = CopyUnrealPakToPakFolder();
-
-                        if (isUnrealPakCopied.Result == false)
-                        {
-                            ProgressChanged($"Failed to copy UnrealPak: {isUnrealPakCopied.Message}. Cannot continue.");
-                            PatchCompleted(false);
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        ProgressChanged("Extracting UnrealPak .zip files ...");
-                        BoolWithMessage isUnrealPakExtracted = FileUtils.ExtractZipFile(PathToDownloadedZip, SessionPath.ToPaks);
-
-                        if (isUnrealPakExtracted.Result == false)
-                        {
-                            ProgressChanged($"Failed to unzip file: {isUnrealPakExtracted.Message}. Cannot continue.");
-                            PatchCompleted(false);
-                            return;
-                        }
-                    }
                 }
 
 
@@ -227,11 +156,6 @@ namespace SessionMapSwitcherCore.Classes
                                 File.Delete(GameSettingsManager.PathToObjectPlacementFile);
                             }
                         }
-
-                        if (SkipUnrealPakStep == false)
-                        {
-                            ExtractGameFilesFromPak(); // this will wait for UnrealPak to finish
-                        }
                     }
                     catch (Exception e)
                     {
@@ -252,49 +176,6 @@ namespace SessionMapSwitcherCore.Classes
                     PatchCompleted(true);
                 });
             });
-        }
-
-        private bool DownloadCryptoJsonFile()
-        {
-            ProgressChanged("Downloading crypto.json file ...");
-            Logger.Info("downloading crypto.json ...");
-
-
-            try
-            {
-                DownloadUtils.ProgressChanged += DownloadUtils_ProgressChanged; ;
-
-                // visit github to get current direct download link
-                ProgressChanged("Downloading crypto.json file - getting download url from git ...");
-                string directLinkToZip = DownloadUtils.GetTextResponseFromUrl(CryptoJsonGitHubUrl);
-
-                directLinkToZip = directLinkToZip.TrimEnd(new char[] { ' ', '\n' });
-
-                // download to Paks folder
-                ProgressChanged("Downloading crypto.json file -  downloading actual file ...");
-                var downloadTask = DownloadUtils.DownloadFileToFolderAsync(directLinkToZip, SessionPath.ToCryptoJsonFile, System.Threading.CancellationToken.None);
-                downloadTask.Wait();
-
-                Logger.Info("... download complete");
-            }
-            catch (AggregateException e)
-            {
-                Logger.Error(e);
-                ProgressChanged($"Failed to download crypto.json: {e.InnerExceptions[0].Message}. Cannot continue.");
-                return false;
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-                ProgressChanged($"Failed to download crypto.json: {e.Message}. Cannot continue.");
-                return false;
-            }
-            finally
-            {
-                DownloadUtils.ProgressChanged -= DownloadUtils_ProgressChanged;
-            }
-
-            return true;
         }
 
         private void LaunchEzPzMod()
@@ -399,15 +280,6 @@ namespace SessionMapSwitcherCore.Classes
         }
 
         /// <summary>
-        /// Returns true if SessionUnpack.zip is in Paks folder
-        /// </summary>
-        /// <returns></returns>
-        private bool IsUnpackZipDownloaded()
-        {
-            return File.Exists(PathToDownloadedZip);
-        }
-
-        /// <summary>
         /// Download EzPz .zip to Paks folder
         /// </summary>
         /// <returns></returns>
@@ -455,100 +327,10 @@ namespace SessionMapSwitcherCore.Classes
             return true;
         }
 
-        /// <summary>
-        /// Download SessionUnpack .zip to Paks folder
-        /// </summary>
-        /// <returns></returns>
-        internal bool DownloadUnrealPackZip()
-        {
-            ProgressChanged("Downloading UnrealPak .zip file ...");
-            Logger.Info("UnrealPak.zip downloading");
-
-            try
-            {
-                DownloadUtils.ProgressChanged += DownloadUtils_ProgressChanged; ;
-
-                // visit github to get current direct download link
-                ProgressChanged("Downloading UnrealPak .zip file - getting download url from git ...");
-                string directLinkToZip = DownloadUtils.GetTextResponseFromUrl(UnpackGitHubUrl);
-
-                directLinkToZip = directLinkToZip.TrimEnd(new char[] { ' ', '\n' });
-
-                // download to Paks folder
-                ProgressChanged("Downloading UnrealPak .zip file -  downloading actual file ...");
-                var downloadTask = DownloadUtils.DownloadFileToFolderAsync(directLinkToZip, Path.Combine(SessionPath.ToPaks, DownloadedZipFileName), System.Threading.CancellationToken.None);
-                downloadTask.Wait();
-
-                Logger.Info("... download complete");
-            }
-            catch (AggregateException e)
-            {
-                Logger.Error(e);
-                ProgressChanged($"Failed to download .zip file: {e.InnerExceptions[0].Message}. Cannot continue.");
-                return false;
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-                ProgressChanged($"Failed to download .zip file: {e.Message}. Cannot continue.");
-                return false;
-            }
-            finally
-            {
-                DownloadUtils.ProgressChanged -= DownloadUtils_ProgressChanged;
-            }
-
-            return true;
-        }
-
         private void DownloadUtils_ProgressChanged(long? totalFileSize, long totalBytesDownloaded, double? progressPercentage)
         {
             ProgressChanged($"Downloading .zip file -  {(double)totalBytesDownloaded / 1000000:0.00} / {(double)totalFileSize / 1000000:0.00} MB | {progressPercentage:0.00}% Complete");
         }
-
-
-        public BoolWithMessage CopyUnrealPakToPakFolder()
-        {
-            if (IsUnrealPakInstalledLocally() == false)
-            {
-                return BoolWithMessage.False("Unreal Engine not installed locally.");
-            }
-
-            try
-            {
-                Logger.Info($"Copying files from {PathToUnrealEngine}");
-                string pathToUnrealPak = Path.Combine(new string[] { PathToUnrealEngine, "Engine", "Binaries", "Win64" });
-
-                foreach (string file in Directory.GetFiles(pathToUnrealPak))
-                {
-                    if (file.Contains("UnrealPak"))
-                    {
-                        FileInfo info = new FileInfo(file);
-                        string targetPath = Path.Combine(SessionPath.ToPaks, info.Name);
-
-                        File.Copy(file, targetPath, overwrite: true);
-                    }
-                }
-
-                return BoolWithMessage.True();
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-                return BoolWithMessage.False($"Failed to copy unrealpak files: {e.Message}");
-            }
-        }
-
-        public bool IsUnrealPakInstalledLocally()
-        {
-            if (String.IsNullOrEmpty(PathToUnrealEngine))
-            {
-                return false;
-            }
-
-            return File.Exists(Path.Combine(new string[] { PathToUnrealEngine, "Engine", "Binaries", "Win64", "UnrealPak.exe" }));
-        }
-
 
     }
 }

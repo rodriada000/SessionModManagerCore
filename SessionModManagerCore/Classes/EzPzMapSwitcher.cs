@@ -263,11 +263,16 @@ namespace SessionMapSwitcherCore.Classes
         /// <summary>
         /// Creates UserEngine.ini file if does not exist
         /// </summary>
-        public static void CreateDefaultUserEngineIniFile()
+        public static void CreateDefaultUserEngineIniFile(bool deleteExisting = false)
         {
             if (File.Exists(SessionPath.ToUserEngineIniFile))
             {
-                return; // already exists
+                if (!deleteExisting)
+                {
+                    return; // already exists and not deleting so just return
+                }
+
+                File.Delete(SessionPath.ToUserEngineIniFile);
             }
 
             string defaultIniValues = @"[/Script/EngineSettings.GameMapsSettings]
