@@ -29,9 +29,11 @@ namespace SessionModManagerCore.ViewModels
         private string _gravityText;
         private string _objectCountText;
         private bool _skipMovieIsChecked;
-        private EzPzPatcher _patcher;
         private MapListItem _secondMapToLoad;
         private bool _loadSecondMapIsChecked;
+        private bool _dBufferIsChecked;
+        private bool _lightPropagationVolumeIsChecked;
+        UnrealPakExtractor _extractor;
 
         private IMapSwitcher MapSwitcher { get; set; }
 
@@ -265,23 +267,6 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
-        public bool IsOriginalMapFilesBackedUp()
-        {
-            if (IsSessionUnpacked() == false)
-            {
-                return false;
-            }
-
-            UnpackedMapSwitcher mapSwitcher = (MapSwitcher as UnpackedMapSwitcher);
-
-            if (mapSwitcher != null)
-            {
-                return mapSwitcher.IsOriginalMapFilesBackedUp();
-            }
-
-            return false;
-        }
-
         public bool SkipMovieIsChecked
         {
             get { return _skipMovieIsChecked; }
@@ -289,30 +274,6 @@ namespace SessionModManagerCore.ViewModels
             {
                 _skipMovieIsChecked = value;
                 NotifyPropertyChanged();
-            }
-        }
-
-        public void BackupOriginalMapFiles()
-        {
-            if (IsSessionUnpacked() == false)
-            {
-                return;
-            }
-
-            if ((MapSwitcher as UnpackedMapSwitcher) == null)
-            {
-                return;
-            }
-
-            BoolWithMessage backupResult = (MapSwitcher as UnpackedMapSwitcher).BackupOriginalMapFiles();
-
-            if (backupResult.Result)
-            {
-                UserMessage = $"Original map files backed up to {SessionPath.ToOriginalSessionMapFiles}";
-            }
-            else
-            {
-                UserMessage = backupResult.Message;
             }
         }
 
@@ -352,7 +313,7 @@ namespace SessionModManagerCore.ViewModels
         {
             get
             {
-                if (SessionPath.IsSessionPathValid() == false || UnpackUtils.IsSessionUnpacked())
+                if (SessionPath.IsSessionPathValid() == false)
                 {
                     return false;
                 }
@@ -368,10 +329,6 @@ namespace SessionModManagerCore.ViewModels
                 if (SessionPath.IsSessionPathValid() == false)
                 {
                     return "Enter a valid path to Session.";
-                }
-                else if (UnpackUtils.IsSessionUnpacked())
-                {
-                    return "Game is already unpacked. You can not apply the patch for an unpacked game.";
                 }
 
                 return "Click to download/open the Illusory Mod Unlocker which patches the game.";
@@ -392,6 +349,26 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public bool DBufferIsChecked
+        {
+            get { return _dBufferIsChecked; }
+            set
+            {
+                _dBufferIsChecked = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public bool LightPropagationVolumeIsChecked
+        {
+            get { return _lightPropagationVolumeIsChecked; }
+            set
+            {
+                _lightPropagationVolumeIsChecked = value;
+                NotifyPropertyChanged();
+            }
+        }
+
         #endregion
 
 
@@ -403,6 +380,8 @@ namespace SessionModManagerCore.ViewModels
             InputControlsEnabled = true;
             GravityText = "-980";
             ObjectCountText = "1000";
+            LightPropagationVolumeIsChecked = false;
+            DBufferIsChecked = true;
 
             SetRandomHintMessage();
 
@@ -414,10 +393,6 @@ namespace SessionModManagerCore.ViewModels
             if (UeModUnlocker.IsGamePatched())
             {
                 MapSwitcher = new EzPzMapSwitcher();
-            }
-            else if (UnpackUtils.IsSessionUnpacked())
-            {
-                MapSwitcher = new UnpackedMapSwitcher();
             }
 
             if (MapSwitcher != null)
@@ -439,20 +414,16 @@ namespace SessionModManagerCore.ViewModels
             ObjectCountText = GameSettingsManager.ObjectCount.ToString();
             GravityText = GameSettingsManager.Gravity.ToString();
             SkipMovieIsChecked = GameSettingsManager.SkipIntroMovie;
+            LightPropagationVolumeIsChecked = GameSettingsManager.EnableLightPropagationVolume;
+            DBufferIsChecked = GameSettingsManager.EnableDBuffer;
         }
 
         public bool UpdateGameSettings()
         {
             string concatenatedErrorMsg = "";
-
-            if (GameSettingsManager.DoesObjectPlacementFileExist() == false)
-            {
-                concatenatedErrorMsg = "Custom object count can not be applied until required file is extracted; ";
-            }
-
             InputControlsEnabled = false;
 
-            BoolWithMessage didSetSettings = GameSettingsManager.ValidateAndUpdateGravityAndSkipMoviesSettings(GravityText, SkipMovieIsChecked);
+            BoolWithMessage didSetSettings = GameSettingsManager.ValidateAndUpdateGameSettings(GravityText, SkipMovieIsChecked, LightPropagationVolumeIsChecked, DBufferIsChecked);
             BoolWithMessage didSetObjCount = BoolWithMessage.True(); // set to true by default in case the user does not have the file to modify
 
 
@@ -471,13 +442,23 @@ namespace SessionModManagerCore.ViewModels
                 concatenatedErrorMsg += didSetSettings.Message;
             }
 
+
             if (String.IsNullOrEmpty(concatenatedErrorMsg) == false)
             {
                 UserMessage = concatenatedErrorMsg;
             }
+            else
+            {
+                UserMessage = "Game settings updated!";
+
+                if (GameSettingsManager.DoesObjectPlacementFileExist() == false)
+                {
+                    UserMessage += " Custom object count can not be applied until required file is extracted.";
+                }
+            }
 
             InputControlsEnabled = true;
-            return didSetSettings.Result || didSetObjCount.Result;
+            return didSetSettings.Result && didSetObjCount.Result;
         }
 
         /// <summary>
@@ -488,12 +469,8 @@ namespace SessionModManagerCore.ViewModels
             SessionPath.ToSession = pathToSession;
             SessionPathTextInput = pathToSession;
             AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.PathToSession, SessionPath.ToSession);
-
-            if (UnpackUtils.IsSessionUnpacked())
-            {
-                MapSwitcher = new UnpackedMapSwitcher();
-            }
-            else if (UeModUnlocker.IsGamePatched())
+            
+            if (UeModUnlocker.IsGamePatched())
             {
                 MapSwitcher = new EzPzMapSwitcher();
             }
@@ -765,11 +742,6 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
-        public bool IsSessionUnpacked()
-        {
-            return UnpackUtils.IsSessionUnpacked();
-        }
-
         public void SetCurrentlyLoadedMap()
         {
             if (MapSwitcher == null)
@@ -871,61 +843,47 @@ namespace SessionModManagerCore.ViewModels
 
         #region Methods related to EzPz Patching
 
-        private void Patch_ProgressChanged(string message)
+        private void UnrealPakExtractor_ProgressChanged(string message)
         {
             Logger.Info(message);
             UserMessage = message;
         }
 
-        public void StartPatching(bool skipPatching = false, bool skipUnpacking = false, string unrealPathFromRegistry = "")
+        public void StartUnrealPakProcess(string unrealPathFromRegistry = "")
         {
             if (SessionPath.IsSessionPathValid() == false)
             {
-                UserMessage = "Cannot patch: Set Path to Session before patching game.";
+                UserMessage = "Cannot run: Set Path to Session before modifying the object count.";
                 return;
             }
 
-            _patcher = new EzPzPatcher();
-            _patcher.SkipEzPzPatchStep = skipPatching;
-            _patcher.SkipUnrealPakStep = skipUnpacking;
-            _patcher.PathToUnrealEngine = unrealPathFromRegistry;
-
-            _patcher.ProgressChanged += Patch_ProgressChanged;
-            _patcher.PatchCompleted += EzPzPatcher_PatchCompleted;
+            _extractor = new UnrealPakExtractor()
+            {
+                PathToUnrealEngine = unrealPathFromRegistry
+            };
+            _extractor.ProgressChanged += UnrealPakExtractor_ProgressChanged;
+            _extractor.ExtractCompleted += UnrealPakExtractor_Completed;
 
             InputControlsEnabled = false;
-            _patcher.StartPatchingAsync(SessionPath.ToSession);
+            _extractor.StartUnrealPakExtraction(SessionPath.ToSession);
         }
 
-        private void EzPzPatcher_PatchCompleted(bool wasSuccessful)
+        private void UnrealPakExtractor_Completed(bool wasSuccessful)
         {
-            _patcher.ProgressChanged -= Patch_ProgressChanged;
-            _patcher.PatchCompleted -= EzPzPatcher_PatchCompleted;
+            _extractor.ProgressChanged -= UnrealPakExtractor_ProgressChanged;
+            _extractor.ExtractCompleted -= UnrealPakExtractor_Completed;
 
             if (wasSuccessful)
             {
-                if (_patcher.SkipEzPzPatchStep == false)
-                {
-                    UserMessage = "Patching complete! You should now be able to play custom maps and replace textures.";
-                }
-                else if (_patcher.SkipEzPzPatchStep)
-                {
-                    UserMessage = "Required game files extracted! You should now be able to set game settings and custom object count.";
-                }
-
-                if (MapSwitcher == null && UeModUnlocker.IsGamePatched())
-                {
-                    MapSwitcher = new EzPzMapSwitcher();
-                }
-
+                UserMessage = "Required game files extracted! You should now be able to set a custom object count.";
                 RefreshGameSettings();
             }
             else
             {
-                UserMessage = "Patching failed. You should re-run the patching process: " + UserMessage;
+                UserMessage = "Failed to download/run UnrealPak.exe: " + UserMessage;
             }
 
-            _patcher = null;
+            _extractor = null;
             InputControlsEnabled = true;
         }
 

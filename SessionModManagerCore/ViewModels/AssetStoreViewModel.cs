@@ -43,7 +43,6 @@ namespace SessionMapSwitcherCore.ViewModels
         private bool _deleteDownloadAfterInstall;
         private bool _isInstallButtonEnabled;
         private bool _isRemoveButtonEnabled;
-        private bool _isLoadingManifests;
         private bool _isInstallingAsset;
         private bool _isLoadingImage;
         private List<AssetViewModel> _filteredAssetList;
@@ -71,6 +70,7 @@ namespace SessionMapSwitcherCore.ViewModels
         private bool _displayShoes;
         private bool _displayMeshes;
         private bool _displayCharacters;
+        private string _searchText;
 
         #endregion
 
@@ -607,6 +607,26 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        public string SearchText
+        {
+            get
+            {
+                if (_searchText == null)
+                    _searchText = "";
+
+                return _searchText;
+            }
+            set
+            {
+                if (_searchText != value)
+                {
+                    _searchText = value;
+                    NotifyPropertyChanged();
+                    RefreshFilteredAssetList();
+                }
+            }
+        }
+
 
         #endregion
 
@@ -638,7 +658,7 @@ namespace SessionMapSwitcherCore.ViewModels
             CheckForCatalogUpdatesAsync(clearCache: false);
         }
 
-        public void RefreshFilteredAssetList(bool checkForFileChanges = false)
+        public void RefreshFilteredAssetList()
         {
             List<AssetCategory> categories = GetSelectedCategories();
             List<AssetViewModel> newList = new List<AssetViewModel>();
@@ -677,12 +697,26 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
             }
 
-
-            FilteredAssetList = newList;
-
-            if (FilteredAssetList.Count == 0 && GetSelectedCategories().Count() == 0)
+            if (string.IsNullOrWhiteSpace(SearchText) || SearchText.Length <= 2)
             {
-                UserMessage = "Check categories to view the list of downloadable assets ...";
+                FilteredAssetList = newList;
+            }
+            else
+            {
+                FilteredAssetList = newList.Where(a => a.Name.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0 || a.Description.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0).ToList();
+            }
+
+            UserMessage = "";
+            if (FilteredAssetList.Count == 0)
+            {
+                if (GetSelectedCategories().Count() == 0)
+                {
+                    UserMessage = "Check categories to view the list of downloadable assets ...";
+                }
+                else if (!string.IsNullOrWhiteSpace(SearchText))
+                {
+                    UserMessage = $"No results found for: {SearchText}";
+                }
             }
         }
 
@@ -840,6 +874,19 @@ namespace SessionMapSwitcherCore.ViewModels
             Task t = Task.Factory.StartNew(() =>
             {
                 CreateRequiredFolders();
+
+                if (SelectedAsset == null || SelectedAsset.Asset == null)
+                {
+                    UserMessage = "";
+
+                    if (PreviewImageSource != null)
+                    {
+                        PreviewImageSource.Close();
+                        PreviewImageSource = null;
+                    }
+
+                    return;
+                }
 
                 string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, SelectedAsset.Asset.IDWithoutExtension);
 
@@ -1337,7 +1384,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (clearCache)
                 {
-                    lock(catalogCacheLock)
+                    lock (catalogCacheLock)
                     {
                         _catalogCache = new AssetCatalog();
                     }
