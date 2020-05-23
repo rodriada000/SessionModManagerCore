@@ -5,6 +5,7 @@ using SessionModManagerCore.Classes;
 using SessionModManagerCore.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -907,8 +908,9 @@ namespace SessionMapSwitcherCore.ViewModels
                         RemoveFromDownloads(downloadGuid);
                     };
 
-                    Action onError = () =>
+                    Action<Exception> onError = ex =>
                     {
+                        Logger.Warn(ex);
                         RemoveFromDownloads(downloadGuid);
                     };
 
@@ -990,7 +992,10 @@ namespace SessionMapSwitcherCore.ViewModels
 
                         Guid downloadId = Guid.NewGuid();
                         Action onCancel = () => { RemoveFromDownloads(downloadId); };
-                        Action onError = () => { RemoveFromDownloads(downloadId); };
+                        Action<Exception> onError = ex => {
+                            Logger.Warn(ex);
+                            RemoveFromDownloads(downloadId); 
+                        };
 
                         Action onComplete = () =>
                         {
@@ -1111,10 +1116,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
             };
 
-            Action onError = () =>
+            Action<Exception> onError = ex =>
             {
+                Logger.Warn(ex);
                 RemoveFromDownloads(downloadId);
-                UserMessage = $"Failed to download {assetToDownload.Name}";
+                UserMessage = $"Failed to download {assetToDownload.Name} - {ex.Message}";
             };
 
             Action onCancel = () =>
@@ -1416,8 +1422,9 @@ namespace SessionMapSwitcherCore.ViewModels
                         RemoveFromDownloads(downloadId);
                     };
 
-                    Action onError = () =>
+                    Action<Exception> onError = ex =>
                     {
+                        Logger.Warn(ex);
                         RemoveFromDownloads(downloadId);
                     };
 
@@ -1484,6 +1491,28 @@ namespace SessionMapSwitcherCore.ViewModels
             }
 
             return JsonConvert.DeserializeObject<AssetCatalog>(File.ReadAllText(AbsolutePathToCatalogJson));
+        }
+
+        public void LaunchDownloadInBrowser()
+        {
+            if (SelectedAsset == null)
+            {
+                return;
+            }
+
+            if (AssetCatalog.TryParseDownloadUrl(SelectedAsset.Asset.DownloadLink, out DownloadLocationType type, out string url))
+            {
+                if (type == DownloadLocationType.GDrive)
+                {
+                    url = $"https://drive.google.com/file/d/{url}/view?usp=sharing";
+                }
+                else if (type == DownloadLocationType.MegaFile)
+                {
+                    url = $"https://mega.nz/file/{url}";
+                }
+
+                Process.Start(new ProcessStartInfo(url));
+            }
         }
     }
 }

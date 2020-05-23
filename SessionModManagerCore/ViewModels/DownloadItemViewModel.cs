@@ -38,7 +38,7 @@ namespace SessionModManagerCore.ViewModels
         public Action PerformCancel { get; set; }
         public Action OnCancel { get; set; }
 
-        public Action OnError { get; set; }
+        public Action<Exception> OnError { get; set; }
         public Action OnComplete { get; set; }
 
         public string DownloadUrl { get; set; }

@@ -84,6 +84,10 @@ namespace SessionModManagerCore.ViewModels
                         {
                             SelectedAssetDownloadType = "Google Drive";
                         }
+                        if (downloadType == DownloadLocationType.MegaFile)
+                        {
+                            SelectedAssetDownloadType = "Mega";
+                        }
                     }
                     else
                     {
@@ -219,6 +223,10 @@ namespace SessionModManagerCore.ViewModels
                 {
                     return "Drive ID:";
                 }
+                else if (SelectedAssetDownloadType == "Mega")
+                {
+                    return "File ID:";
+                }
 
                 return "Url:";
             }
@@ -231,6 +239,10 @@ namespace SessionModManagerCore.ViewModels
                 if (SelectedAssetDownloadType == "Url")
                 {
                     return "Enter url to the direct download";
+                }
+                else if (SelectedAssetDownloadType == "Mega")
+                {
+                    return "Mega File ID (found in download url)";
                 }
 
                 return "Google Drive ID of file (found in the google drive url)";
@@ -314,7 +326,8 @@ namespace SessionModManagerCore.ViewModels
             DownloadTypeList = new List<string>()
             {
                 "Url",
-                "Google Drive"
+                "Google Drive",
+                "Mega"
             };
 
             SelectedIDExtension = IDExtensions[0];
@@ -404,7 +417,10 @@ namespace SessionModManagerCore.ViewModels
             {
                 assetToUpdate.Asset.DownloadLink = $"rsmm://GDrive/{SelectedAssetDownloadUrl}";
             }
-
+            else if (SelectedAssetDownloadType == "Mega")
+            {
+                assetToUpdate.Asset.DownloadLink = $"rsmm://MegaFile/{SelectedAssetDownloadUrl}";
+            }
             assetToUpdate.Asset.ID = $"{SelectedAssetID}{SelectedIDExtension}";
             assetToUpdate.Asset.Name = SelectedAssetName;
             assetToUpdate.Asset.Author = SelectedAssetAuthor;
@@ -499,6 +515,10 @@ namespace SessionModManagerCore.ViewModels
             else if (SelectedAssetDownloadType == "Google Drive")
             {
                 newAsset.DownloadLink = $"rsmm://GDrive/{SelectedAssetDownloadUrl}";
+            }
+            else if (SelectedAssetDownloadType == "Mega")
+            {
+                newAsset.DownloadLink = $"rsmm://MegaFile/{SelectedAssetDownloadUrl}";
             }
 
 

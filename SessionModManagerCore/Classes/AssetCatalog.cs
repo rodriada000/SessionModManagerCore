@@ -9,8 +9,8 @@ namespace SessionModManagerCore.Classes
     {
         INVALID,
         Url,
-        MegaSharedFolder, //Format: SharedFolderLink,FileIDString,HintFileName
-        GDrive,
+        MegaFile, // Format: Mega file id e.g. https://mega.nz/file/{ThisIsTheMegaFileID}
+        GDrive    // Format: google drive id e.g. https://drive.google.com/file/d/{ThisIsTheDriveID}/view?usp=sharing
     }
 
     public class AssetCatalog

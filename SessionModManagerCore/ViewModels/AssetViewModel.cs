@@ -21,7 +21,7 @@ namespace SessionModManagerCore.ViewModels
         private bool _isSelected;
         private string _version;
 
-        internal Asset Asset { get; set; }
+        public Asset Asset { get; set; }
 
         public bool IsSelected
         {
