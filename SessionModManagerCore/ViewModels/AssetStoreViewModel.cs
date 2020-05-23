@@ -71,6 +71,7 @@ namespace SessionMapSwitcherCore.ViewModels
         private bool _displayMeshes;
         private bool _displayCharacters;
         private string _searchText;
+        private AssetViewModel _selectedAsset;
 
         #endregion
 
@@ -544,14 +545,15 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             get
             {
-                lock (filteredListLock)
+                return _selectedAsset;
+            }
+            set
+            {
+                if (_selectedAsset != value)
                 {
-                    if (FilteredAssetList.Where(a => a.IsSelected).Count() > 1)
-                    {
-                        FilteredAssetList.ForEach(a => a.IsSelected = false);
-                    }
-
-                    return FilteredAssetList.Where(a => a.IsSelected).FirstOrDefault();
+                    _selectedAsset = value;
+                    RefreshPreviewForSelected();
+                    NotifyPropertyChanged();
                 }
             }
         }
@@ -748,6 +750,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
         public void RefreshPreviewForSelected()
         {
+            if (SelectedAsset == null)
+            {
+                return;
+            }
+
             SelectedAuthor = SelectedAsset?.Author;
             SelectedDescription = SelectedAsset?.Description;
 
@@ -939,13 +946,18 @@ namespace SessionMapSwitcherCore.ViewModels
                     PreviewImageSource = null;
                 }
 
-                using (FileStream stream = File.Open(pathToThumbnail, FileMode.Open, FileAccess.Read, FileShare.Read))
+                // ensure the preview image is NOT downloading before trying to open the filestream...
+                if (!CurrentDownloads.Any(d => d.SaveFilePath.Equals(pathToThumbnail)))
                 {
-                    PreviewImageSource = new MemoryStream();
-                    stream.CopyTo(PreviewImageSource);
+                    using (FileStream stream = File.Open(pathToThumbnail, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        PreviewImageSource = new MemoryStream();
+                        stream.CopyTo(PreviewImageSource);
+                    }
+
+                    PreviewImageSource = new MemoryStream(File.ReadAllBytes(pathToThumbnail));
                 }
 
-                PreviewImageSource = new MemoryStream(File.ReadAllBytes(pathToThumbnail));
             });
 
             t.ContinueWith((taskResult) =>
@@ -1025,8 +1037,8 @@ namespace SessionMapSwitcherCore.ViewModels
             categoryToText.Add(AssetCategory.Shoes.Value, "Shoes");
             categoryToText.Add(AssetCategory.Trucks.Value, "Trucks");
             categoryToText.Add(AssetCategory.Wheels.Value, "Wheels");
-            categoryToText.Add(AssetCategory.Meshes.Value, "Meshes");
-            categoryToText.Add(AssetCategory.Characters.Value, "Characters");
+            categoryToText.Add(AssetCategory.Meshes.Value, "Mesh");
+            categoryToText.Add(AssetCategory.Characters.Value, "Character");
 
             if (categoryToText.ContainsKey(assetCatName))
             {

@@ -9,8 +9,6 @@ namespace SessionMapSwitcherCore.Utils
         ShowInvalidMaps,
         ProjectWatcherPath,
         CustomWindowSize,
-        PathToCredentialsFile,
-        UploaderAuthor,
         FetchAllPreviewImages,
         DeleteDownloadAfterAssetInstall,
         AssetStoreMapsChecked,
@@ -24,7 +22,7 @@ namespace SessionMapSwitcherCore.Utils
         AssetStoreShoesChecked,
         AssetStoreMeshesChecked,
         AssetStoreCharactersChecked,
-        AssetStoreSelectedBucket
+        WindowState
     }
 
     public class AppSettingsUtil

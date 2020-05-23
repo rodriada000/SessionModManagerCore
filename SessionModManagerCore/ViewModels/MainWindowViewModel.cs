@@ -469,7 +469,7 @@ namespace SessionModManagerCore.ViewModels
             SessionPath.ToSession = pathToSession;
             SessionPathTextInput = pathToSession;
             AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.PathToSession, SessionPath.ToSession);
-            
+
             if (UeModUnlocker.IsGamePatched())
             {
                 MapSwitcher = new EzPzMapSwitcher();
@@ -645,7 +645,8 @@ namespace SessionModManagerCore.ViewModels
 
             UserMessage = "Re-importing in progress ...";
 
-            importViewModel.ImportMapAsyncAndContinueWith((antecedent) =>
+            importViewModel.ImportMapAsync().ContinueWith(
+                (antecedent) =>
                 {
                     if (antecedent.Result.Result)
                     {
