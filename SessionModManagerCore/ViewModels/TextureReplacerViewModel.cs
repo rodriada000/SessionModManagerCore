@@ -15,6 +15,8 @@ namespace SessionModManagerCore.ViewModels
 
         private string _pathToFile;
         private const string _tempZipFolder = "Temp_Texture_Unzipped";
+        private static readonly List<string> StockFoldersToExclude = new List<string> { "Customization", "Data", "ObjectPlacement"};
+
 
         public Asset AssetToInstall { get; set; }
 
@@ -61,14 +63,6 @@ namespace SessionModManagerCore.ViewModels
                     return false;
 
                 return PathToFile.EndsWith(".zip") || PathToFile.EndsWith(".rar");
-            }
-        }
-
-        public bool IsReplaceButtonEnabled
-        {
-            get
-            {
-                return UeModUnlocker.IsGamePatched();
             }
         }
 
@@ -289,7 +283,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 DirectoryInfo folderInfo = new DirectoryInfo(folder);
 
-                if (ComputerImportViewModel.AllStockFoldersToExclude.Contains(folderInfo.Name) == false)
+                if (StockFoldersToExclude.Contains(folderInfo.Name) == false)
                 {
                     List<string> fileNames = filesToExclude.Select(s =>
                     {
@@ -309,14 +303,6 @@ namespace SessionModManagerCore.ViewModels
         }
 
         /// <summary>
-        /// Enable or disable the 'Replace' button based on the game being patched/unpacked
-        /// </summary>
-        public void TriggerPropertyChanged()
-        {
-            NotifyPropertyChanged(nameof(IsReplaceButtonEnabled));
-        }
-
-        /// <summary>
         /// Return true if unzipped temp folder has subfolders other than the games stock folders e.g. 'Customization' folder
         /// </summary>
         private bool UnzippedTempFolderHasOtherFolders()
@@ -325,7 +311,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 DirectoryInfo folderInfo = new DirectoryInfo(folder);
 
-                if (ComputerImportViewModel.AllStockFoldersToExclude.Contains(folderInfo.Name) == false)
+                if (StockFoldersToExclude.Contains(folderInfo.Name) == false)
                 {
                     return true;
                 }

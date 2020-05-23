@@ -6,9 +6,9 @@
     <RootNamespace>SessionModManagerCore</RootNamespace>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <DocumentationFile></DocumentationFile>
-    <Version>1.4.3</Version>
-    <AssemblyVersion>1.4.3.0</AssemblyVersion>
-    <FileVersion>1.4.3.0</FileVersion>
+    <Version>1.4.4</Version>
+    <AssemblyVersion>1.4.4.0</AssemblyVersion>
+    <FileVersion>1.4.4.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +24,7 @@
   <ItemGroup>
     <PackageReference Include="avantgarde" Version="1.0.4" />
     <PackageReference Include="ini-parser" Version="2.5.2" />
+    <PackageReference Include="MegaApiClient" Version="1.8.1" />
     <PackageReference Include="NLog" Version="4.6.8" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="SharpCompress" Version="0.24.0" />

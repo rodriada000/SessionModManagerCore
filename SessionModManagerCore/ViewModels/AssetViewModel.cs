@@ -2,6 +2,7 @@
 using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace SessionModManagerCore.ViewModels
@@ -20,7 +21,7 @@ namespace SessionModManagerCore.ViewModels
         private bool _isSelected;
         private string _version;
 
-        internal Asset Asset { get; set; }
+        public Asset Asset { get; set; }
 
         public bool IsSelected
         {
@@ -89,6 +90,19 @@ namespace SessionModManagerCore.ViewModels
             {
                 _version = value;
                 NotifyPropertyChanged();
+            }
+        }
+
+        /// <summary>
+        /// Asset is considered out of date if it was before the Session 0.0.0.5 game update (4/24/2020) and
+        /// has no mention in the description that it was recooked with Unreal Engine 4.24
+        /// </summary>
+        public bool IsOutOfDate
+        {
+            get
+            {
+                string[] keywords = new string[] { "UE 4.24", "4.24.3", "Updated for Session 0.0.0.5" };
+                return this.Asset.UpdatedDate < new DateTime(2020, 4, 24) && keywords.All(k => Description.IndexOf(k, StringComparison.OrdinalIgnoreCase) < 0);
             }
         }
 

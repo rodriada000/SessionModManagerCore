@@ -13,7 +13,7 @@ namespace SessionModManagerCore.ViewModels
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
         public static readonly List<string> FilesToExclude = new List<string>() { "DefaultEngine.ini", "DefaultGame.ini" };
-        public static readonly List<string> AllStockFoldersToExclude = new List<string> { "Animation", "Art", "Audio", "Challenges", "Character", "Cinematics", "Customization", "Data", "FilmerMode", "KickStarter", "Localization", "MainHUB", "Menus", "Mixer", "Movies", "ObjectPlacement", "Paks", "PartyGames", "Skateboard", "Skeletons", "Splash", "TEMP", "Transit", "Tutorial", "VideoEditor" };
+        public static readonly List<string> StockFoldersToExclude = new List<string> { "Data", "ObjectPlacement"};
 
 
         private bool _isZipFileImport;
@@ -184,12 +184,6 @@ namespace SessionModManagerCore.ViewModels
             return pathToMapFiles;
         }
 
-        internal void ImportMapAsyncAndContinueWith(Action<Task<BoolWithMessage>> continuationTask)
-        {
-            Task<BoolWithMessage> task = ImportMapAsync();
-            task.ContinueWith(continuationTask);
-        }
-
         internal Task<BoolWithMessage> ImportMapAsync()
         {
             Task<BoolWithMessage> task = Task.Factory.StartNew(() =>
@@ -263,11 +257,11 @@ namespace SessionModManagerCore.ViewModels
                 // copy/move files
                 if (IsZipFileImport)
                 {
-                    FileUtils.MoveDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
+                    FileUtils.MoveDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: StockFoldersToExclude, doContainsSearch: false);
                 }
                 else
                 {
-                    FileUtils.CopyDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: AllStockFoldersToExclude, doContainsSearch: false);
+                    FileUtils.CopyDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: StockFoldersToExclude, doContainsSearch: false);
                 }
 
 
