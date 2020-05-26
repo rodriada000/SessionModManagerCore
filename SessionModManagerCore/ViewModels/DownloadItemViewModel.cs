@@ -98,6 +98,7 @@ namespace SessionModManagerCore.ViewModels
         }
 
         public bool IsStarted { get; set; }
+        public bool IsCanceled { get; set; }
 
         public DownloadItemViewModel()
         {
@@ -106,6 +107,7 @@ namespace SessionModManagerCore.ViewModels
             PercentComplete = 0;
             IsSelected = false;
             IsStarted = false;
+            IsCanceled = false;
         }
 
     }

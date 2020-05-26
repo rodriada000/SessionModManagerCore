@@ -70,6 +70,23 @@ namespace SessionModManagerCore.ViewModels
             {
                 _assetCategory = value;
                 NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(Category));
+            }
+        }
+
+        public string Category
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(AssetCategory))
+                {
+                    return "";
+                }
+
+                string trimmedCat = AssetCategory.Replace("session-", "");
+                System.Globalization.TextInfo textInfo = new System.Globalization.CultureInfo("en-US", false).TextInfo;
+
+                return textInfo.ToTitleCase(trimmedCat);
             }
         }
 

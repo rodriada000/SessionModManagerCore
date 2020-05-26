@@ -40,7 +40,6 @@ namespace SessionMapSwitcherCore.ViewModels
         private string _selectedAuthor;
         private AuthorDropdownViewModel _authorToFilterBy;
         private string _selectedInstallStatus;
-        private bool _fetchAllPreviewImages;
         private bool _deleteDownloadAfterInstall;
         private bool _isInstallButtonEnabled;
         private bool _isRemoveButtonEnabled;
@@ -73,6 +72,7 @@ namespace SessionMapSwitcherCore.ViewModels
         private bool _displayCharacters;
         private string _searchText;
         private AssetViewModel _selectedAsset;
+        private bool _isDownloadingAllImages;
 
         #endregion
 
@@ -174,6 +174,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
             }
         }
+
         public bool DisplayGriptapes
         {
             get { return _displayGriptapes; }
@@ -387,24 +388,6 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
-        public bool FetchAllPreviewImages
-        {
-            get { return _fetchAllPreviewImages; }
-            set
-            {
-                if (_fetchAllPreviewImages != value)
-                {
-                    _fetchAllPreviewImages = value;
-                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.FetchAllPreviewImages, _fetchAllPreviewImages.ToString());
-                }
-
-                if (_fetchAllPreviewImages)
-                {
-                    DownloadAllPreviewImagesAsync();
-                }
-            }
-        }
-
         public bool DeleteDownloadAfterInstall
         {
             get { return _deleteDownloadAfterInstall; }
@@ -601,11 +584,7 @@ namespace SessionMapSwitcherCore.ViewModels
             }
             set
             {
-                lock (downloadListLock)
-                {
-                    _currentDownloads = value;
-                }
-
+                _currentDownloads = value;
                 NotifyPropertyChanged();
             }
         }
@@ -630,6 +609,27 @@ namespace SessionMapSwitcherCore.ViewModels
             }
         }
 
+        public bool IsDownloadingAllImages
+        {
+            get
+            {
+                return _isDownloadingAllImages;
+            }
+            set
+            {
+                _isDownloadingAllImages = value;
+                NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(IsNotDownloadingAllImages));
+            }
+        }
+
+        public bool IsNotDownloadingAllImages
+        {
+            get
+            {
+                return !_isDownloadingAllImages;
+            }
+        }
 
         #endregion
 
@@ -637,9 +637,9 @@ namespace SessionMapSwitcherCore.ViewModels
         public AssetStoreViewModel()
         {
             IsInstallingAsset = false;
+            IsDownloadingAllImages = false;
             DisplayMaps = true;
             SetSelectedCategoriesFromAppSettings();
-            FetchAllPreviewImages = AppSettingsUtil.GetAppSetting(SettingKey.FetchAllPreviewImages).Equals("true", StringComparison.OrdinalIgnoreCase);
 
             if (AppSettingsUtil.GetAppSetting(SettingKey.DeleteDownloadAfterAssetInstall) == "")
             {
@@ -875,7 +875,6 @@ namespace SessionMapSwitcherCore.ViewModels
             }
 
             IsLoadingImage = true;
-            UserMessage = "Fetching preview image ...";
 
             bool isDownloadingImage = false;
 
@@ -896,51 +895,7 @@ namespace SessionMapSwitcherCore.ViewModels
                     return;
                 }
 
-                string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, SelectedAsset.Asset.IDWithoutExtension);
-
-                if (ImageCache.IsOutOfDate(pathToThumbnail) || ImageCache.IsSourceUrlDifferent(pathToThumbnail, SelectedAsset.Asset.PreviewImage))
-                {
-                    ImageCache.AddOrUpdate(pathToThumbnail, SelectedAsset.Asset.PreviewImage);
-                    Guid downloadGuid = Guid.NewGuid();
-
-                    Action onCancel = () =>
-                    {
-                        RemoveFromDownloads(downloadGuid);
-                    };
-
-                    Action<Exception> onError = ex =>
-                    {
-                        Logger.Warn(ex);
-                        RemoveFromDownloads(downloadGuid);
-                    };
-
-                    Action onComplete = () =>
-                    {
-                        RemoveFromDownloads(downloadGuid);
-                        GetSelectedPreviewImageAsync();
-                    };
-
-                    isDownloadingImage = true;
-                    string formattedUrl = "rsmm://Url/" + SelectedAsset.Asset.PreviewImage.Replace("://", "$");
-                    DownloadItemViewModel imageDownload = new DownloadItemViewModel()
-                    {
-                        UniqueId = downloadGuid,
-                        DownloadType = DownloadType.Image,
-                        ItemName = "Downloading preview image",
-                        OnCancel = onCancel,
-                        OnComplete = onComplete,
-                        OnError = onError,
-                        DownloadUrl = formattedUrl,
-                        SaveFilePath = pathToThumbnail
-                    };
-
-                    AddToDownloads(imageDownload);
-                    return;
-                }
-                else
-                {
-                    UserMessage = "";
-                }
+                DownloadPreviewImage(SelectedAsset, refreshSelectedImagePreview: true);
 
                 if (PreviewImageSource != null)
                 {
@@ -949,7 +904,10 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
 
                 // ensure the preview image is NOT downloading before trying to open the filestream...
-                if (!CurrentDownloads.Any(d => d.SaveFilePath.Equals(pathToThumbnail)))
+                string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, SelectedAsset.Asset.IDWithoutExtension);
+                isDownloadingImage = CurrentDownloads.Any(d => d.SaveFilePath.Equals(pathToThumbnail));
+
+                if (!isDownloadingImage)
                 {
                     using (FileStream stream = File.Open(pathToThumbnail, FileMode.Open, FileAccess.Read, FileShare.Read))
                     {
@@ -976,49 +934,90 @@ namespace SessionMapSwitcherCore.ViewModels
 
         }
 
-        private void DownloadAllPreviewImagesAsync()
+        public Task DownloadAllPreviewImagesAsync()
         {
+            if (IsDownloadingAllImages)
+            {
+                return null; // don't allow for multiple tasks to run (wait for the task to complete so all images that need to be fetched are added to download queue)
+            }
+
+            IsDownloadingAllImages = true;
+
             Task t = Task.Factory.StartNew(() =>
             {
                 CreateRequiredFolders();
 
-                foreach (AssetViewModel asset in AllAssets.ToList())
+                foreach (AssetViewModel asset in FilteredAssetList.ToList())
                 {
-                    string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, asset.Asset.IDWithoutExtension);
-
-                    if (ImageCache.IsOutOfDate(pathToThumbnail) || ImageCache.IsSourceUrlDifferent(pathToThumbnail, asset.Asset.PreviewImage))
-                    {
-                        ImageCache.AddOrUpdate(pathToThumbnail, asset.Asset.PreviewImage);
-
-                        Guid downloadId = Guid.NewGuid();
-                        Action onCancel = () => { RemoveFromDownloads(downloadId); };
-                        Action<Exception> onError = ex => {
-                            Logger.Warn(ex);
-                            RemoveFromDownloads(downloadId); 
-                        };
-
-                        Action onComplete = () =>
-                        {
-                            RemoveFromDownloads(downloadId);
-                        };
-
-                        string formattedUrl = "rsmm://Url/" + asset.Asset.PreviewImage.Replace("://", "$");
-                        DownloadItemViewModel downloadItem = new DownloadItemViewModel()
-                        {
-                            UniqueId = downloadId,
-                            DownloadType = DownloadType.Image,
-                            ItemName = "Downloading preview image",
-                            DownloadUrl = formattedUrl,
-                            SaveFilePath = pathToThumbnail,
-                            OnCancel = onCancel,
-                            OnComplete = onComplete,
-                            OnError = onError
-                        };
-
-                        AddToDownloads(downloadItem);
-                    }
+                    DownloadPreviewImage(asset);
                 }
             });
+
+            t.ContinueWith((result) =>
+            {
+                IsDownloadingAllImages = false;
+
+                if (result.IsFaulted)
+                {
+                    Logger.Warn(result.Exception);
+                }
+            });
+
+            return t;
+        }
+
+        /// <summary>
+        /// Adds image to download queue if out of date, the url is different, or missing from cache.
+        /// </summary>
+        /// <param name="asset"></param>
+        private void DownloadPreviewImage(AssetViewModel asset, bool refreshSelectedImagePreview = false)
+        {
+            string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, asset.Asset.IDWithoutExtension);
+
+            if (ImageCache.IsOutOfDate(pathToThumbnail) || ImageCache.IsSourceUrlDifferent(pathToThumbnail, asset.Asset.PreviewImage))
+            {
+                ImageCache.AddOrUpdate(pathToThumbnail, asset.Asset.PreviewImage);
+
+                Guid downloadId = Guid.NewGuid();
+                Action onCancel = () =>
+                {
+                    ImageCache.Remove(pathToThumbnail);
+                    RemoveFromDownloads(downloadId);
+                };
+
+                Action<Exception> onError = ex =>
+                {
+                    Logger.Warn(ex);
+
+                    ImageCache.Remove(pathToThumbnail);
+                    RemoveFromDownloads(downloadId);
+                };
+
+                Action onComplete = () =>
+                {
+                    RemoveFromDownloads(downloadId);
+
+                    if (refreshSelectedImagePreview)
+                    {
+                        GetSelectedPreviewImageAsync();
+                    }
+                };
+
+                string formattedUrl = "rsmm://Url/" + asset.Asset.PreviewImage.Replace("://", "$");
+                DownloadItemViewModel downloadItem = new DownloadItemViewModel()
+                {
+                    UniqueId = downloadId,
+                    DownloadType = DownloadType.Image,
+                    ItemName = $"Downloading preview image - {asset.Name}",
+                    DownloadUrl = formattedUrl,
+                    SaveFilePath = pathToThumbnail,
+                    OnCancel = onCancel,
+                    OnComplete = onComplete,
+                    OnError = onError
+                };
+
+                AddToDownloads(downloadItem);
+            }
         }
 
         public void RefreshInstallButtonText()
@@ -1300,7 +1299,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private void AddToDownloads(DownloadItemViewModel downloadItem)
         {
-            if (downloadItem == null)
+            if (downloadItem == null || downloadItem?.IsCanceled == true)
             {
                 return;
             }
@@ -1315,24 +1314,25 @@ namespace SessionMapSwitcherCore.ViewModels
 
             currentList.Add(downloadItem);
 
-            CurrentDownloads = currentList;
-
-            if (CurrentDownloads.Count == 1)
+            lock (downloadListLock)
             {
-                // first item added to queue so start download
-                AssetDownloader.Instance.Download(downloadItem);
-            }
-            else if (CurrentDownloads.Count > 1 && CurrentDownloads[0].IsStarted && CurrentDownloads[0].DownloadType == DownloadType.Asset)
-            {
-                // multiple items queued with the first item being an asset... 
-                // ... in this case start the next non-asset download
-                int nextItemIndex = CurrentDownloads.FindIndex(d => d.DownloadType != DownloadType.Asset && !d.IsStarted);
+                CurrentDownloads = currentList;
 
-                if (nextItemIndex >= 0)
+                if (CurrentDownloads.Count == 1)
                 {
-                    AssetDownloader.Instance.Download(CurrentDownloads[nextItemIndex]);
+                    // first item added to queue so start download
+                    AssetDownloader.Instance.Download(downloadItem);
+                }
+                else if (CurrentDownloads.Count > 1 && CurrentDownloads[0].IsStarted && CurrentDownloads[0].DownloadType == DownloadType.Asset)
+                {
+                    // the first item being downloaded in the queue is an asset so start the next item in queue (if not another asset e.g. preview image)
+                    if (!CurrentDownloads[1].IsStarted && CurrentDownloads[1].DownloadType != DownloadType.Asset && !CurrentDownloads[1].IsCanceled)
+                    {
+                        AssetDownloader.Instance.Download(CurrentDownloads[1]);
+                    }
                 }
             }
+
         }
 
         private void RemoveFromDownloads(DownloadItemViewModel download)
@@ -1345,22 +1345,31 @@ namespace SessionMapSwitcherCore.ViewModels
             var currentList = CurrentDownloads.ToList();
             currentList.Remove(download);
 
-            CurrentDownloads = currentList;
-
-            if (CurrentDownloads.Count > 0)
+            lock (downloadListLock)
             {
-                int nextItemIndex = CurrentDownloads.FindIndex(d => !d.IsStarted);
+                CurrentDownloads = currentList;
 
-                if (nextItemIndex >= 0)
+                // get next item in queue to start downloading
+                if (CurrentDownloads.Count > 0)
                 {
-                    AssetDownloader.Instance.Download(CurrentDownloads[nextItemIndex]);
+                    int nextItemIndex = CurrentDownloads.FindIndex(d => !d.IsStarted && !d.IsCanceled);
+
+                    if (nextItemIndex >= 0)
+                    {
+                        AssetDownloader.Instance.Download(CurrentDownloads[nextItemIndex]);
+                    }
                 }
             }
         }
 
         private void RemoveFromDownloads(Guid downloadID)
         {
-            DownloadItemViewModel toRemove = CurrentDownloads.FirstOrDefault(d => d.UniqueId == downloadID);
+            DownloadItemViewModel toRemove = null;
+            lock (downloadListLock)
+            {
+                toRemove = CurrentDownloads.FirstOrDefault(d => d.UniqueId == downloadID);
+            }
+
             RemoveFromDownloads(toRemove);
         }
 
@@ -1512,6 +1521,39 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
 
                 Process.Start(new ProcessStartInfo(url));
+            }
+        }
+
+        public void CancelAllDownloads()
+        {
+            // first mark all items as being canceled
+            foreach (DownloadItemViewModel item in CurrentDownloads)
+            {
+                item.IsCanceled = true;
+            }
+
+            // then peform actual cancelling of download which will remove from CurrentDownloads (hence .ToList())
+            foreach (DownloadItemViewModel item in CurrentDownloads.ToList())
+            {
+                CancelDownload(item);
+            }
+        }
+
+        public void CancelDownload(DownloadItemViewModel item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            // if download has not started then PerformCancel (which calls OnCancel internall) will be null and we will need to invoke the OnCancel method instead
+            if (item.PerformCancel != null)
+            {
+                item.PerformCancel.Invoke();
+            }
+            else
+            {
+                item.OnCancel?.Invoke();
             }
         }
     }
