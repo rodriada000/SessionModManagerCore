@@ -1325,10 +1325,13 @@ namespace SessionMapSwitcherCore.ViewModels
                 }
                 else if (CurrentDownloads.Count > 1 && CurrentDownloads[0].IsStarted && CurrentDownloads[0].DownloadType == DownloadType.Asset)
                 {
-                    // the first item being downloaded in the queue is an asset so start the next item in queue (if not another asset e.g. preview image)
-                    if (!CurrentDownloads[1].IsStarted && CurrentDownloads[1].DownloadType != DownloadType.Asset && !CurrentDownloads[1].IsCanceled)
+                    // only start another download if no other image or catalog is already downloading
+                    bool isOtherDownloadStarted = CurrentDownloads.Any(d => d.IsStarted && d.DownloadType != DownloadType.Asset && !d.IsCanceled);
+                    DownloadItemViewModel nextDownload = CurrentDownloads.FirstOrDefault(d => !d.IsStarted && d.DownloadType != DownloadType.Asset && !d.IsCanceled);
+
+                    if (!isOtherDownloadStarted && nextDownload != null)
                     {
-                        AssetDownloader.Instance.Download(CurrentDownloads[1]);
+                        AssetDownloader.Instance.Download(nextDownload);
                     }
                 }
             }
@@ -1352,7 +1355,18 @@ namespace SessionMapSwitcherCore.ViewModels
                 // get next item in queue to start downloading
                 if (CurrentDownloads.Count > 0)
                 {
-                    int nextItemIndex = CurrentDownloads.FindIndex(d => !d.IsStarted && !d.IsCanceled);
+                    bool isDownloadingAsset = CurrentDownloads.Any(d => d.IsStarted && d.DownloadType == DownloadType.Asset);
+                    int nextItemIndex = -1;
+
+                    // if an asset is currently downloading then start the next image/catalog download in queue
+                    if (isDownloadingAsset)
+                    {
+                        nextItemIndex = CurrentDownloads.FindIndex(d => !d.IsStarted && !d.IsCanceled && d.DownloadType != DownloadType.Asset);
+                    }
+                    else
+                    {
+                        nextItemIndex = CurrentDownloads.FindIndex(d => !d.IsStarted && !d.IsCanceled);
+                    }
 
                     if (nextItemIndex >= 0)
                     {
