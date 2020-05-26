@@ -14,7 +14,9 @@ namespace SessionModManagerCore.ViewModels
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
+        private bool _isInAddMode;
         private bool _isAdding;
+
 
         private List<CatalogSubscriptionViewModel> _catalogList;
         private string _newUrlText;
@@ -29,6 +31,17 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public bool IsInAddMode
+        {
+            get { return _isInAddMode; }
+            set
+            {
+                _isInAddMode = value;
+                NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(ContextMenuIsEnabled));
+            }
+        }
+
         public bool IsAdding
         {
             get { return _isAdding; }
@@ -36,7 +49,16 @@ namespace SessionModManagerCore.ViewModels
             {
                 _isAdding = value;
                 NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(ContextMenuIsEnabled));
             }
+        }
+
+        /// <summary>
+        /// context menu is enabled if not currently adding urls
+        /// </summary>
+        public bool ContextMenuIsEnabled
+        {
+            get { return !IsAdding; }
         }
 
         public List<CatalogSubscriptionViewModel> CatalogList
@@ -55,10 +77,12 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+
         public ManageCatalogViewModel()
         {
             NewUrlText = "";
             IsAdding = false;
+            IsInAddMode = false;
             ReloadCatalogList();
         }
 
@@ -102,7 +126,7 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
-        public void AddUrl(string newUrl)
+        public async Task AddUrl(string newUrl)
         {
             if (CatalogList.Any(c => c.Url.Equals(newUrl, StringComparison.InvariantCultureIgnoreCase)))
             {
@@ -113,29 +137,57 @@ namespace SessionModManagerCore.ViewModels
             {
                 return;
             }
-            string name = CatalogSettings.GetNameFromAssetCatalog(newUrl);
 
-            CatalogList.Add(new CatalogSubscriptionViewModel(newUrl, name));
+            IsAdding = true;
 
-            WriteToFile();
+            await Task.Factory.StartNew(() =>
+            {
+                string name = CatalogSettings.GetNameFromAssetCatalog(newUrl);
 
-            ReloadCatalogList();
+                CatalogList.Add(new CatalogSubscriptionViewModel(newUrl, name));
+
+                WriteToFile();
+                ReloadCatalogList();
+
+            }).ContinueWith((result) =>
+            {
+                IsAdding = false;
+            });
         }
 
-        public void AddDefaultCatalogs()
+        public async Task AddDefaultCatalogsAsync()
         {
-            CatalogSettings updatedSettings = new CatalogSettings()
-            {
-                CatalogUrls = CatalogList.Select(c => new CatalogSubscription()
-                {
-                    Name = c.Name,
-                    Url = c.Url,
-                    IsActive = c.IsActive
-                }).ToList()
-            };
+            IsAdding = true;
 
-            CatalogSettings.AddDefaults(updatedSettings);
-            CatalogList = updatedSettings.CatalogUrls.Select(c => new CatalogSubscriptionViewModel(c)).ToList();
+            Task addTask = Task.Factory.StartNew(() =>
+            {
+                // get current list of catalogs from the list
+                CatalogSettings updatedSettings = new CatalogSettings()
+                {
+                    CatalogUrls = CatalogList.Select(c => new CatalogSubscription()
+                    {
+                        Name = c.Name,
+                        Url = c.Url,
+                        IsActive = c.IsActive
+                    }).ToList()
+                };
+
+                CatalogSettings.AddDefaults(updatedSettings);
+
+                // update the UI list with the new catalogs
+                CatalogList = updatedSettings.CatalogUrls.Select(c => new CatalogSubscriptionViewModel(c)).ToList();
+            });
+
+            // ensure error is logged when task is done and IsAdding is set back to false
+            await addTask.ContinueWith((result) =>
+            {
+                if (result.IsFaulted)
+                {
+                    Logger.Error(result.Exception.GetBaseException());
+                }
+
+                IsAdding = false;
+            });
         }
 
         public void RemoveUrls(List<CatalogSubscriptionViewModel> urls)
