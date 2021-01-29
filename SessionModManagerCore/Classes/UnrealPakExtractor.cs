@@ -209,7 +209,7 @@ namespace SessionMapSwitcherCore.Classes
             ProgressChanged("Starting UnrealPak.exe ...");
             Logger.Info("Extracting game files with UnrealPak.exe ...");
 
-            List<string> filesToExtract = new List<string>() { "SessionGame/Content/ObjectPlacement/Blueprints/PBP_ObjectPlacementInventory.uexp" };
+            List<string> filesToExtract = new List<string>() { "SessionGame/Content/ObjectPlacement/Blueprints/PBP_ObjectPlacementManager.uexp" };
 
             try
             {
@@ -253,7 +253,7 @@ namespace SessionMapSwitcherCore.Classes
                 FileInfo fileInfo = new FileInfo(filePath);
                 string fileName = fileInfo.Name;
 
-                if (!fileName.Contains("SessionGame-WindowsNoEditor") && fileName != "crypto.json")
+                if (fileInfo.Extension != ".pak" && fileInfo.Extension != ".sig" && fileName != "crypto.json")
                 {
                     File.Delete(filePath);
                 }

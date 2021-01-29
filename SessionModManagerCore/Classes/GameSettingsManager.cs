@@ -25,7 +25,7 @@ namespace SessionMapSwitcherCore.Classes
         {
             get
             {
-                return Path.Combine(new string[] { SessionPath.ToContent, "ObjectPlacement", "Blueprints", "PBP_ObjectPlacementInventory.uexp" });
+                return Path.Combine(new string[] { SessionPath.ToContent, "ObjectPlacement", "Blueprints", "PBP_ObjectPlacementManager.uexp" });
             }
         }
 
@@ -51,7 +51,7 @@ namespace SessionMapSwitcherCore.Classes
 
                 SkipIntroMovie = IsSkippingMovies();
 
-                GetObjectCountFromFile();
+                //GetObjectCountFromFile();
 
                 return BoolWithMessage.True();
             }

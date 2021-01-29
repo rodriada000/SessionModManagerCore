@@ -429,7 +429,7 @@ namespace SessionModManagerCore.ViewModels
 
             if (GameSettingsManager.DoesObjectPlacementFileExist())
             {
-                didSetObjCount = GameSettingsManager.ValidateAndUpdateObjectCount(ObjectCountText);
+                //didSetObjCount = GameSettingsManager.ValidateAndUpdateObjectCount(ObjectCountText); NOTE CURRENTLY BROKEN FOR 0.0.0.7
 
                 if (didSetObjCount.Result == false)
                 {
@@ -451,10 +451,10 @@ namespace SessionModManagerCore.ViewModels
             {
                 UserMessage = "Game settings updated!";
 
-                if (GameSettingsManager.DoesObjectPlacementFileExist() == false)
-                {
-                    UserMessage += " Custom object count can not be applied until required file is extracted.";
-                }
+                //if (GameSettingsManager.DoesObjectPlacementFileExist() == false)
+                //{
+                //    UserMessage += " Custom object count can not be applied until required file is extracted.";
+                //}
             }
 
             InputControlsEnabled = true;
