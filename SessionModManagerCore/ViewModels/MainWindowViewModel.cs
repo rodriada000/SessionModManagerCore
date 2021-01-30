@@ -26,7 +26,6 @@ namespace SessionModManagerCore.ViewModels
         private object collectionLock = new object();
         private bool _inputControlsEnabled;
         private bool _showInvalidMaps;
-        private string _gravityText;
         private string _objectCountText;
         private bool _skipMovieIsChecked;
         private MapListItem _secondMapToLoad;
@@ -247,16 +246,6 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
-        public string GravityText
-        {
-            get { return _gravityText; }
-            set
-            {
-                _gravityText = value;
-                NotifyPropertyChanged();
-            }
-        }
-
         public string ObjectCountText
         {
             get { return _objectCountText; }
@@ -378,7 +367,6 @@ namespace SessionModManagerCore.ViewModels
             ShowInvalidMapsIsChecked = AppSettingsUtil.GetAppSetting(SettingKey.ShowInvalidMaps).Equals("true", StringComparison.OrdinalIgnoreCase);
             UserMessage = "";
             InputControlsEnabled = true;
-            GravityText = "-980";
             ObjectCountText = "1000";
             LightPropagationVolumeIsChecked = false;
             DBufferIsChecked = true;
@@ -412,7 +400,6 @@ namespace SessionModManagerCore.ViewModels
             }
 
             ObjectCountText = GameSettingsManager.ObjectCount.ToString();
-            GravityText = GameSettingsManager.Gravity.ToString();
             SkipMovieIsChecked = GameSettingsManager.SkipIntroMovie;
             LightPropagationVolumeIsChecked = GameSettingsManager.EnableLightPropagationVolume;
             DBufferIsChecked = GameSettingsManager.EnableDBuffer;
@@ -423,11 +410,11 @@ namespace SessionModManagerCore.ViewModels
             string concatenatedErrorMsg = "";
             InputControlsEnabled = false;
 
-            BoolWithMessage didSetSettings = GameSettingsManager.ValidateAndUpdateGameSettings(GravityText, SkipMovieIsChecked, LightPropagationVolumeIsChecked, DBufferIsChecked);
+            BoolWithMessage didSetSettings = GameSettingsManager.ValidateAndUpdateGameSettings(SkipMovieIsChecked, LightPropagationVolumeIsChecked, DBufferIsChecked);
             BoolWithMessage didSetObjCount = BoolWithMessage.True(); // set to true by default in case the user does not have the file to modify
 
 
-            if (GameSettingsManager.DoesObjectPlacementFileExist())
+            if (GameSettingsManager.DoesInventorySaveFileExist())
             {
                 didSetObjCount = GameSettingsManager.ValidateAndUpdateObjectCount(ObjectCountText);
 
@@ -451,9 +438,9 @@ namespace SessionModManagerCore.ViewModels
             {
                 UserMessage = "Game settings updated!";
 
-                if (GameSettingsManager.DoesObjectPlacementFileExist() == false)
+                if (GameSettingsManager.DoesInventorySaveFileExist() == false)
                 {
-                    UserMessage += " Custom object count can not be applied until required file is extracted.";
+                    UserMessage += " Object count cannot be changed until a .sav file exists.";
                 }
             }
 
@@ -777,6 +764,18 @@ namespace SessionModManagerCore.ViewModels
             try
             {
                 Process.Start(SessionPath.ToSession);
+            }
+            catch (Exception ex)
+            {
+                UserMessage = $"Cannot open folder: {ex.Message}";
+            }
+        }
+
+        public void OpenFolderToSaveFiles()
+        {
+            try
+            {
+                Process.Start(SessionPath.ToSaveGamesFolder);
             }
             catch (Exception ex)
             {

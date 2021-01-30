@@ -4,15 +4,15 @@ using SessionMapSwitcherCore.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net.Sockets;
+using System.Reflection;
 
 namespace SessionMapSwitcherCore.Classes
 {
     public static class GameSettingsManager
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
-
-        private static double _gravity;
-        public static double Gravity { get => _gravity; set => _gravity = value; }
 
         public static bool SkipIntroMovie { get; set; }
 
@@ -21,11 +21,11 @@ namespace SessionMapSwitcherCore.Classes
 
         public static int ObjectCount { get; set; }
 
-        public static string PathToObjectPlacementFile
+        public static string PathToInventorySaveSlotFile
         {
             get
             {
-                return Path.Combine(new string[] { SessionPath.ToContent, "ObjectPlacement", "Blueprints", "PBP_ObjectPlacementInventory.uexp" });
+                return Path.Combine(SessionPath.ToSaveGamesFolder, "PlayerInventorySaveSlot.sav");
             }
         }
 
@@ -45,8 +45,6 @@ namespace SessionMapSwitcherCore.Classes
                 EzPzMapSwitcher.CreateDefaultUserEngineIniFile();
                 engineFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
 
-                GetGravityFromIniFile(engineFile);
-
                 GetRenderSettingsFromIniFile(engineFile);
 
                 SkipIntroMovie = IsSkippingMovies();
@@ -57,7 +55,6 @@ namespace SessionMapSwitcherCore.Classes
             }
             catch (Exception e)
             {
-                Gravity = -980;
                 SkipIntroMovie = false;
 
                 Logger.Error(e);
@@ -65,22 +62,22 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
-        private static void GetGravityFromIniFile(IniData engineFile)
-        {
-            string gravitySetting = null;
-            try
-            {
-                gravitySetting = engineFile["/Script/Engine.PhysicsSettings"]["DefaultGravityZ"];
-            }
-            catch (Exception) { };
+        //private static void GetGravityFromIniFile(IniData engineFile)
+        //{
+        //    string gravitySetting = null;
+        //    try
+        //    {
+        //        gravitySetting = engineFile["/Script/Engine.PhysicsSettings"]["DefaultGravityZ"];
+        //    }
+        //    catch (Exception) { };
 
-            if (String.IsNullOrWhiteSpace(gravitySetting))
-            {
-                gravitySetting = "-980";
-            }
+        //    if (String.IsNullOrWhiteSpace(gravitySetting))
+        //    {
+        //        gravitySetting = "-980";
+        //    }
 
-            double.TryParse(gravitySetting, out _gravity);
-        }
+        //    double.TryParse(gravitySetting, out _gravity);
+        //}
 
         private static void GetRenderSettingsFromIniFile(IniData engineFile)
         {
@@ -155,23 +152,11 @@ namespace SessionMapSwitcherCore.Classes
         /// <summary>
         /// updates various settings in UserEngine.ini and rename 'Movies' folder to skip movies if enabled
         /// </summary>
-        public static BoolWithMessage ValidateAndUpdateGameSettings(string gravityText, bool skipMovie, bool enableLpv, bool enableDBuffer)
+        public static BoolWithMessage ValidateAndUpdateGameSettings(bool skipMovie, bool enableLpv, bool enableDBuffer)
         {
             if (SessionPath.IsSessionPathValid() == false)
             {
                 return BoolWithMessage.False("Session Path invalid.");
-            }
-
-            // remove trailing 0's from float value for it to parse correctly
-            int indexOfDot = gravityText.IndexOf(".");
-            if (indexOfDot >= 0)
-            {
-                gravityText = gravityText.Substring(0, indexOfDot);
-            }
-
-            if (float.TryParse(gravityText, out float gravityFloat) == false)
-            {
-                return BoolWithMessage.False("Invalid Gravity setting.");
             }
 
             try
@@ -183,7 +168,6 @@ namespace SessionMapSwitcherCore.Classes
                 EzPzMapSwitcher.CreateDefaultUserEngineIniFile();
                 engineFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
 
-                engineFile["/Script/Engine.PhysicsSettings"]["DefaultGravityZ"] = gravityText;
                 engineFile["/Script/Engine.RendererSettings"]["r.LightPropagationVolume"] = enableLpv.ToString();
                 engineFile["/Script/Engine.RendererSettings"]["r.DBuffer"] = enableDBuffer.ToString();
 
@@ -192,7 +176,6 @@ namespace SessionMapSwitcherCore.Classes
                 RenameMoviesFolderToSkipMovies(skipMovie);
 
                 // update in-memory static data members
-                Gravity = gravityFloat;
                 SkipIntroMovie = skipMovie;
                 EnableLightPropagationVolume = enableLpv;
                 EnableDBuffer = enableDBuffer;
@@ -220,16 +203,23 @@ namespace SessionMapSwitcherCore.Classes
                 return BoolWithMessage.False("Session Path invalid.");
             }
 
-            if (DoesObjectPlacementFileExist() == false)
+            if (DoesInventorySaveFileExist() == false)
             {
                 return BoolWithMessage.False("Object Count file does not exist.");
             }
 
             try
             {
-                using (var stream = new FileStream(PathToObjectPlacementFile, FileMode.Open, FileAccess.Read))
+                List<int> fileAddresses = GetQuantityFileAddresses();
+
+                if (fileAddresses.Count == 0)
                 {
-                    stream.Position = 352; // 352 (0x00000160) is the first address of a object count
+                    return BoolWithMessage.False($"Failed to find address in file - {PathToInventorySaveSlotFile}");
+                }
+
+                using (var stream = new FileStream(PathToInventorySaveSlotFile, FileMode.Open, FileAccess.Read))
+                {
+                    stream.Position = fileAddresses[0];
                     int byte1 = stream.ReadByte();
                     int byte2 = stream.ReadByte();
                     byte[] byteArray;
@@ -273,19 +263,23 @@ namespace SessionMapSwitcherCore.Classes
                 return BoolWithMessage.False("Session Path invalid.");
             }
 
-            if (DoesObjectPlacementFileExist() == false)
+            if (DoesInventorySaveFileExist() == false)
             {
                 return BoolWithMessage.False("Object Count file does not exist.");
             }
 
-            // this is a list of addresses where the item count for placeable objects are stored in the .uexp file
-            // ... if this file is modified then these addresses will NOT match so it is important to not mod/change the PBP_ObjectPlacementInventory file (until further notice...)
-            // ... as of Session 0.0.0.5 these addresses are shifted by one
-            List<int> addresses = new List<int>() { 352, 616, 682, 748, 880, 946, 1012, 1078, 1144, 1210, 1276, 1342, 1408, 1474, 1540, 1606, 1672, 1738, 1804, 1870, 1936, 2002, 2068 };
+            // as of Session 0.0.0.7 the quantity is saved in the player inventory .sav file. So we need to dynamically find all the addresses for each DIY item in the player inventory
+            List<int> addresses = GetQuantityFileAddresses();
+
+            if (!File.Exists(PathToInventorySaveSlotFile + ".smm.bak"))
+            {
+                // create a backup before modifying the file in case we break someones inventory....
+                File.Copy(PathToInventorySaveSlotFile, PathToInventorySaveSlotFile + ".smm.bak");
+            }
 
             try
             {
-                using (var stream = new FileStream(PathToObjectPlacementFile, FileMode.Open, FileAccess.ReadWrite))
+                using (var stream = new FileStream(PathToInventorySaveSlotFile, FileMode.Open, FileAccess.ReadWrite))
                 {
                     // convert the base 10 int into a hex string (e.g. 10 => 'A' or 65535 => 'FF')
                     string hexValue = int.Parse(objectCountText).ToString("X");
@@ -348,9 +342,83 @@ namespace SessionMapSwitcherCore.Classes
             return bytes;
         }
 
-        public static bool DoesObjectPlacementFileExist()
+        public static List<int> GetQuantityFileAddresses()
         {
-            return File.Exists(PathToObjectPlacementFile);
+            List<int> foundQtyAddresses = new List<int>();
+
+            if (SessionPath.IsSessionPathValid() == false)
+            {
+                return foundQtyAddresses;
+            }
+
+            if (DoesInventorySaveFileExist() == false)
+            {
+                return foundQtyAddresses;
+            }
+
+            try
+            {
+                byte[] fileBytes = File.ReadAllBytes(PathToInventorySaveSlotFile);
+                string hexString = BitConverter.ToString(fileBytes);
+                List<string> hexFileArray = hexString.Split('-').ToList();
+
+                string hexToFind = "51-75-61-6e-74-69-74-79-00-0c-00-00-00-49-6e-74-50-72-6f-70-65-72-74-79-00-04-00-00-00-00-00-00-00-00".ToUpper();
+                List<string> hexArray = hexToFind.Split('-').ToList();
+
+                int address = 0;
+
+                do
+                {
+                    address = FindSequenceInArray(hexFileArray, hexArray, address);
+
+                    if (address != -1)
+                    {
+                        foundQtyAddresses.Add((address + hexArray.Count));
+                    }
+
+                } while (address != -1);
+
+                return foundQtyAddresses;
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e, "Failed to get object count");
+                return foundQtyAddresses;
+            }
+        }
+
+        public static int FindSequenceInArray(List<string> arrayToSearch, List<string> sequence, int startIndex = 0)
+        {
+            if (startIndex == 0)
+            {
+                startIndex = arrayToSearch.Count - 1;
+            }
+            // reference: https://stackoverflow.com/questions/55150204/find-subarray-in-array-in-c-sharp
+            // iterate backwards, stop if the rest of the array is shorter than needle (i >= needle.Length)
+            for (int i = startIndex; i >= sequence.Count - 1; i--)
+            {
+                bool found = true;
+                // also iterate backwards through needle, stop if elements do not match (!found)
+                for (int j = sequence.Count - 1; j >= 0 && found; j--)
+                {
+                    // compare needle's element with corresponding element of haystack
+                    found = arrayToSearch[i - (sequence.Count - 1 - j)] == sequence[j];
+                }
+
+                if (found)
+                {
+                    // result was found, i is now the index of the last found element, so subtract needle's length - 1
+                    return i - (sequence.Count - 1);
+                }
+            }
+
+            // not found, return -1
+            return -1;
+        }
+
+        public static bool DoesInventorySaveFileExist()
+        {
+            return File.Exists(PathToInventorySaveSlotFile);
         }
 
         /// <summary>
@@ -367,6 +435,11 @@ namespace SessionMapSwitcherCore.Classes
                 {
                     if (Directory.Exists(SessionPath.ToMovies))
                     {
+                        if (Directory.Exists(movieSkipFolderPath)) // in the case that "Movies" and "Movies_SKIP" folder both exist then make sure the existing _SKIP folder is deleted before renaming folder
+                        {
+                            Directory.Delete(movieSkipFolderPath, true);
+                        }
+
                         Directory.Move(SessionPath.ToMovies, movieSkipFolderPath);
                     }
                 }
@@ -390,7 +463,7 @@ namespace SessionMapSwitcherCore.Classes
 
         public static bool IsSkippingMovies()
         {
-            return Directory.Exists(SessionPath.ToMovies.Replace("Movies", "Movies_SKIP"));
+            return Directory.Exists(SessionPath.ToMovies.Replace("Movies", "Movies_SKIP")) && !Directory.Exists(SessionPath.ToMovies);
         }
     }
 }

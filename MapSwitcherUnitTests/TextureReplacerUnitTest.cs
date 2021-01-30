@@ -52,5 +52,15 @@ namespace MapSwitcherUnitTests
 
             Assert.AreEqual(expectedResult, actualResult);
         }
+
+        [TestMethod]
+        public void Test_GetObjectCountFromSavFile()
+        {
+            SessionPath.ToSession = TestPaths.ToSessionTestFolder;
+
+
+            GameSettingsManager.GetQuantityFileAddresses();
+
+        }
     }
 }

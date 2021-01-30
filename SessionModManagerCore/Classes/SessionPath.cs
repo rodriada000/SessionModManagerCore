@@ -9,7 +9,7 @@ namespace SessionMapSwitcherCore.Classes
     {
         public const string MapBackupFolderName = "Original_Session_Map";
 
-        private static string _toSession;
+        private static string _toSession = "";
         public static string ToSession
         {
             get
@@ -89,6 +89,11 @@ namespace SessionMapSwitcherCore.Classes
         {
             get
             {
+                if (File.Exists(Path.Combine(ToPaks, "pakchunk0-WindowsNoEditor.pak"))) // they changed the .pak file in 0.0.0.7
+                {
+                    return Path.Combine(ToPaks, "pakchunk0-WindowsNoEditor.pak");
+                }
+
                 return Path.Combine(ToPaks, "SessionGame-WindowsNoEditor.pak");
             }
         }
@@ -150,6 +155,14 @@ namespace SessionMapSwitcherCore.Classes
             get
             {
                 return Path.Combine(ToBinariesWin64, "SessionGame-Win64-Shipping.exe");
+            }
+        }
+
+        public static string ToSaveGamesFolder
+        {
+            get
+            {
+                return Path.Combine(new string[] { Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SessionGame", "Saved", "SaveGames" });
             }
         }
 
