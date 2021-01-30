@@ -158,6 +158,14 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
+        public static string ToSaveGamesFolder
+        {
+            get
+            {
+                return Path.Combine(new string[] { Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SessionGame", "Saved", "SaveGames" });
+            }
+        }
+
         public static bool IsSessionPathValid()
         {
             if (String.IsNullOrEmpty(ToSession))
