@@ -1,11 +1,13 @@
 ﻿using SessionMapSwitcherCore.Classes;
 using SessionMapSwitcherCore.Utils;
+using SessionMapSwitcherCore.ViewModels;
 using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace SessionModManagerCore.ViewModels
 {
@@ -18,7 +20,8 @@ namespace SessionModManagerCore.ViewModels
         private static readonly List<string> StockFoldersToExclude = new List<string> { "Data" };
         private List<InstalledTextureItemViewModel> _installedTextures;
         private InstalledTextureItemViewModel _selectedTexture;
-
+        private Stream _modPreviewSource;
+        private bool _isLoadingImage;
         public List<InstalledTextureItemViewModel> InstalledTextures
         {
             get
@@ -44,6 +47,7 @@ namespace SessionModManagerCore.ViewModels
             set
             {
                 _selectedTexture = value;
+                GetSelectedPreviewImageAsync();
                 NotifyPropertyChanged();
             }
         }
@@ -100,6 +104,30 @@ namespace SessionModManagerCore.ViewModels
                 return PathToFile.EndsWith(".zip") || PathToFile.EndsWith(".rar");
             }
         }
+
+        public Stream ModPreviewSource
+        {
+            get { return _modPreviewSource; }
+            set
+            {
+                _modPreviewSource = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public bool IsLoadingImage
+        {
+            get
+            {
+                return _isLoadingImage;
+            }
+            set
+            {
+                _isLoadingImage = value;
+                NotifyPropertyChanged();
+            }
+        }
+
 
         public void ReplaceTextures()
         {
@@ -205,6 +233,13 @@ namespace SessionModManagerCore.ViewModels
                 // if not replacing from Asset Store then just use name of compressed file being used to replace textures
                 newTextureMetaData.AssetName = Path.GetFileName(PathToFile);
                 newTextureMetaData.Name = Path.GetFileName(PathToFile);
+            }
+            else
+            {
+                if (File.Exists(AssetToInstall.PathToDownloadedImage))
+                {
+                    newTextureMetaData.PathToImage = AssetToInstall.PathToDownloadedImage;
+                }
             }
 
             do
@@ -3519,6 +3554,35 @@ namespace SessionModManagerCore.ViewModels
             {
                 MessageService.Instance.ShowMessage($"Failed to remove texture: {deleteResult.Message}");
             }
+        }
+
+        public void GetSelectedPreviewImageAsync()
+        {
+            if (SelectedTexture == null || string.IsNullOrWhiteSpace(SelectedTexture.MetaData.PathToImage))
+            {
+                ModPreviewSource = null;
+                return;
+            }
+
+            IsLoadingImage = true;
+
+            Task t = Task.Factory.StartNew(() =>
+            {
+                ModPreviewSource = new MemoryStream(File.ReadAllBytes(SelectedTexture.MetaData.PathToImage));
+            });
+
+            t.ContinueWith((taskResult) =>
+            {
+                if (taskResult.IsFaulted)
+                {
+                    MessageService.Instance.ShowMessage("Failed to get preview image.");
+                    ModPreviewSource = null;
+                    Logger.Error(taskResult.Exception);
+                }
+
+                IsLoadingImage = false;
+            });
+
         }
     }
 }

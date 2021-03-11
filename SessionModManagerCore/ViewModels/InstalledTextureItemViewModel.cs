@@ -19,6 +19,22 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public string Category
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(this.MetaData.Category))
+                {
+                    return "";
+                }
+
+                string trimmedCat = this.MetaData.Category.Replace("session-", "");
+                System.Globalization.TextInfo textInfo = new System.Globalization.CultureInfo("en-US", false).TextInfo;
+
+                return textInfo.ToTitleCase(trimmedCat);
+            }
+        }
+
         public bool IsSelected
         {
             get { return _isSelected; }

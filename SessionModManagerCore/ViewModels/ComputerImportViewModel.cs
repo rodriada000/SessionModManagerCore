@@ -245,6 +245,11 @@ namespace SessionModManagerCore.ViewModels
                 if (AssetToImport != null)
                 {
                     metaData.AssetName = AssetToImport.ID;
+                    
+                    if (File.Exists(AssetToImport.PathToDownloadedImage))
+                    {
+                        metaData.PathToImage = AssetToImport.PathToDownloadedImage;
+                    }
                 }
 
                 if (IsZipFileImport == false && metaData != null)

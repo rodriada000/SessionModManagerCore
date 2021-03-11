@@ -21,11 +21,16 @@ namespace SessionModManagerCore.Classes
         /// </summary>
         public string Name { get; set; }
 
+        public string Category { get; set; }
+
+        public string PathToImage { get; set; }
+
         public TextureMetaData()
         {
             FilePaths = new List<string>();
             AssetName = "";
             Name = "";
+            PathToImage = "";
         }
 
         public TextureMetaData(Asset assetToInstall)
@@ -39,6 +44,7 @@ namespace SessionModManagerCore.Classes
 
             AssetName = assetToInstall.ID;
             Name = assetToInstall.Name;
+            Category = assetToInstall.Category;
         }
     }
 }
