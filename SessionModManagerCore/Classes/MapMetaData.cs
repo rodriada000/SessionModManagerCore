@@ -30,6 +30,7 @@ namespace SessionModManagerCore.Classes
         /// List of absolute paths to files that were imported for the map
         /// </summary>
         public List<string> FilePaths { get; set; }
+        public string PathToImage { get; internal set; }
 
         /// <summary>
         /// Returns the name of the json file that this meta data is saved as

@@ -15,8 +15,38 @@ namespace SessionModManagerCore.ViewModels
 
         private string _pathToFile;
         private const string _tempZipFolder = "Temp_Texture_Unzipped";
-        private static readonly List<string> StockFoldersToExclude = new List<string> { "Customization", "Data", "ObjectPlacement"};
+        private static readonly List<string> StockFoldersToExclude = new List<string> { "Data" };
+        private List<InstalledTextureItemViewModel> _installedTextures;
+        private InstalledTextureItemViewModel _selectedTexture;
 
+        public List<InstalledTextureItemViewModel> InstalledTextures
+        {
+            get
+            {
+                if (_installedTextures == null)
+                    _installedTextures = new List<InstalledTextureItemViewModel>();
+
+                return _installedTextures;
+            }
+            set
+            {
+                _installedTextures = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+        public InstalledTextureItemViewModel SelectedTexture
+        {
+            get
+            {
+                return _selectedTexture;
+            }
+            set
+            {
+                _selectedTexture = value;
+                NotifyPropertyChanged();
+            }
+        }
 
         public Asset AssetToInstall { get; set; }
 
@@ -25,6 +55,11 @@ namespace SessionModManagerCore.ViewModels
         public event MessageChange MessageChanged;
 
         private List<TexturePathInfo> _texturePaths;
+
+        public TextureReplacerViewModel()
+        {
+            PathToFile = "";
+        }
 
         public List<TexturePathInfo> TexturePaths
         {
@@ -3444,13 +3479,46 @@ namespace SessionModManagerCore.ViewModels
 
 
         }
-    }
-
-    public class TexturePathInfo
-    {
-        public string TextureName { get; set; }
-        public string RelativePath { get; set; }
 
 
+        /// <summary>
+        /// Reads installed_textures.json meta data and initializes <see cref="InstalledTextures"/> with results
+        /// </summary>
+        public void InitInstalledTextures()
+        {
+            InstalledTexturesMetaData installedMetaData = MetaDataManager.LoadTextureMetaData();
+
+            List<InstalledTextureItemViewModel> textures = new List<InstalledTextureItemViewModel>();
+
+            foreach (TextureMetaData item in installedMetaData.InstalledTextures)
+            {
+                textures.Add(new InstalledTextureItemViewModel(item));
+            }
+
+            InstalledTextures = textures.OrderBy(t => t.TextureName).ToList();
+        }
+
+        public void RemoveSelectedTexture()
+        {
+            InstalledTextureItemViewModel textureToRemove = SelectedTexture;
+
+            if (textureToRemove == null)
+            {
+                Logger.Warn("textureToRemove is null");
+                return;
+            }
+
+            BoolWithMessage deleteResult = MetaDataManager.DeleteTextureFiles(textureToRemove.MetaData);
+
+            if (deleteResult.Result)
+            {
+                MessageService.Instance.ShowMessage($"Successfully removed {textureToRemove.TextureName}!");
+                InitInstalledTextures();
+            }
+            else
+            {
+                MessageService.Instance.ShowMessage($"Failed to remove texture: {deleteResult.Message}");
+            }
+        }
     }
 }

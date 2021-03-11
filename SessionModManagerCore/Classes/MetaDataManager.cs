@@ -24,6 +24,14 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
+        public static string FullPathToMetaImagesFolder
+        {
+            get
+            {
+                return Path.Combine(FullPathToMetaFolder, "images");
+            }
+        }
+
         public static string PathToInstalledTextureFile
         {
             get
@@ -99,6 +107,11 @@ namespace SessionMapSwitcherCore.Classes
         /// </summary>
         public static void SetCustomPropertiesForMap(MapListItem map, bool createIfNotExists = false)
         {
+            if (map.IsDefaultMap)
+            {
+                return;
+            }
+
             MapMetaData savedMetaData = LoadMapMetaData(map);
 
             if (savedMetaData == null)
@@ -116,6 +129,7 @@ namespace SessionMapSwitcherCore.Classes
 
             map.IsHiddenByUser = savedMetaData.IsHiddenByUser;
             map.CustomName = savedMetaData.CustomName;
+            map.PathToImage = savedMetaData.PathToImage;
         }
 
         /// <summary>
@@ -124,6 +138,11 @@ namespace SessionMapSwitcherCore.Classes
         /// </summary>
         public static bool WriteCustomMapPropertiesToFile(MapListItem map)
         {
+            if (map.IsDefaultMap)
+            {
+                return true;
+            }
+
             MapMetaData metaDataToSave = LoadMapMetaData(map);
 
             if (metaDataToSave == null)

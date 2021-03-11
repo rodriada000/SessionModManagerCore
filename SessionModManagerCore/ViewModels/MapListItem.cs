@@ -8,6 +8,7 @@ public class MapListItem : ViewModelBase
     private string _customName;
     private string _fullPath;
     private string _validationHint;
+    private string _pathToImage;
     private string _tooltip;
     private bool _isEnabled = true;
     private bool _isSelected = false;
@@ -45,6 +46,16 @@ public class MapListItem : ViewModelBase
                 return MapName;
             }
             return CustomName;
+        }
+    }
+
+    public string PathToImage
+    {
+        get { return _pathToImage; }
+        set
+        {
+            _pathToImage = value;
+            NotifyPropertyChanged();
         }
     }
 

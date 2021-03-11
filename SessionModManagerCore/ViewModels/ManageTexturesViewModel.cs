@@ -56,83 +56,11 @@ namespace SessionModManagerCore.ViewModels
         public ManageTexturesViewModel()
         {
             StatusMessage = null;
-            InitInstalledTextures();
+            //InitInstalledTextures();
         }
 
-        /// <summary>
-        /// Reads installed_textures.json meta data and initializes <see cref="InstalledTextures"/> with results
-        /// </summary>
-        private void InitInstalledTextures()
-        {
-            InstalledTexturesMetaData installedMetaData = MetaDataManager.LoadTextureMetaData();
 
-            List<InstalledTextureItemViewModel> textures = new List<InstalledTextureItemViewModel>();
 
-            foreach (TextureMetaData item in installedMetaData.InstalledTextures)
-            {
-                textures.Add(new InstalledTextureItemViewModel(item));
-            }
-
-            InstalledTextures = textures.OrderBy(t => t.TextureName).ToList();
-        }
-
-        public void RemoveSelectedTexture()
-        {
-            InstalledTextureItemViewModel textureToRemove = SelectedTexture;
-
-            if (textureToRemove == null)
-            {
-                Logger.Warn("textureToRemove is null");
-                return;
-            }
-
-            BoolWithMessage deleteResult = MetaDataManager.DeleteTextureFiles(textureToRemove.MetaData);
-
-            if (deleteResult.Result)
-            {
-                StatusMessage = $"Successfully removed {textureToRemove.TextureName}!";
-                InitInstalledTextures();
-            }
-            else
-            {
-                StatusMessage = $"Failed to remove texture: {deleteResult.Message}";
-            }
-        }
-    }
-
-    public class InstalledTextureItemViewModel : ViewModelBase
-    {
-        private string _textureName;
-        private bool _isSelected;
-
-        public TextureMetaData MetaData { get; set; }
-
-        public string TextureName
-        {
-            get { return _textureName; }
-            set
-            {
-                _textureName = value;
-                NotifyPropertyChanged();
-            }
-        }
-
-        public bool IsSelected
-        {
-            get { return _isSelected; }
-            set
-            {
-                _isSelected = value;
-                NotifyPropertyChanged();
-            }
-        }
-
-        public InstalledTextureItemViewModel(TextureMetaData metaData)
-        {
-            this.IsSelected = false;
-            this.MetaData = metaData;
-            TextureName = this.MetaData.Name == null ? this.MetaData.AssetName : this.MetaData.Name;
-        }
 
     }
 }
