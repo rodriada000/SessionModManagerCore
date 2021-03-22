@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using SessionMapSwitcherCore.Utils;
+using SessionMapSwitcherCore.ViewModels;
 using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
@@ -124,6 +125,18 @@ namespace SessionMapSwitcherCore.Classes
                 else
                 {
                     return;
+                }
+            }
+
+            // grab image from asset store if exists and path not set yet
+            if (string.IsNullOrWhiteSpace(savedMetaData.PathToImage) && !string.IsNullOrEmpty(savedMetaData.AssetNameWithoutExtension))
+            {
+                string pathToStoreThumbnail = Path.Combine(AssetStoreViewModel.AbsolutePathToThumbnails, savedMetaData.AssetNameWithoutExtension);
+
+                if (File.Exists(pathToStoreThumbnail))
+                {
+                    savedMetaData.PathToImage = pathToStoreThumbnail;
+                    SaveMapMetaData(savedMetaData);
                 }
             }
 

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -12,6 +13,23 @@ namespace SessionModManagerCore.Classes
         public string CustomName { get; set; }
 
         public string AssetName { get; set; }
+
+        /// <summary>
+        /// Returns <see cref="AssetName"/> without the .zip or .rar extension
+        /// </summary>
+        [JsonIgnore]
+        public string AssetNameWithoutExtension
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(AssetName))
+                {
+                    return AssetName;
+                }
+
+                return AssetName.Replace(".zip", "").Replace(".rar", "");
+            }
+        }
 
         public bool IsHiddenByUser { get; set; }
 

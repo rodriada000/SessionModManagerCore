@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -15,6 +16,23 @@ namespace SessionModManagerCore.Classes
         /// Name of the asset file that this texture file came from
         /// </summary>
         public string AssetName { get; set; }
+
+        /// <summary>
+        /// Returns <see cref="AssetName"/> without the .zip or .rar extension
+        /// </summary>
+        [JsonIgnore]
+        public string AssetNameWithoutExtension
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(AssetName))
+                {
+                    return AssetName;
+                }
+
+                return AssetName.Replace(".zip", "").Replace(".rar", "");
+            }
+        }
 
         /// <summary>
         /// Display name of the asset from the asset store

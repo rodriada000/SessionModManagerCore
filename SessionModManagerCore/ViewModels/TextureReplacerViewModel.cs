@@ -3519,7 +3519,7 @@ namespace SessionModManagerCore.ViewModels
         /// <summary>
         /// Reads installed_textures.json meta data and initializes <see cref="InstalledTextures"/> with results
         /// </summary>
-        public void InitInstalledTextures()
+        public void LoadInstalledTextures()
         {
             InstalledTexturesMetaData installedMetaData = MetaDataManager.LoadTextureMetaData();
 
@@ -3530,7 +3530,39 @@ namespace SessionModManagerCore.ViewModels
                 textures.Add(new InstalledTextureItemViewModel(item));
             }
 
+            // remember selected item or select first in list
+            string assetName = "";
+            if (SelectedTexture != null)
+            {
+                assetName = SelectedTexture.MetaData?.AssetName;
+            }
+
             InstalledTextures = textures.OrderBy(t => t.TextureName).ToList();
+            SetMissingImageFilePaths();
+
+            if (assetName != "")
+            {
+                SelectedTexture = InstalledTextures.Where(t => t.MetaData?.AssetName == assetName).FirstOrDefault();
+            }
+            
+            if (SelectedTexture == null)
+            {
+                SelectedTexture = InstalledTextures.FirstOrDefault();
+            }
+        }
+
+        public void SetMissingImageFilePaths()
+        {
+            foreach (InstalledTextureItemViewModel item in InstalledTextures)
+            {
+                string pathToImage = Path.Combine(AssetStoreViewModel.AbsolutePathToThumbnails, item.MetaData.AssetNameWithoutExtension);
+
+                if (string.IsNullOrWhiteSpace(item.MetaData.PathToImage) && File.Exists(pathToImage))
+                {
+                    item.MetaData.PathToImage = pathToImage;
+                    MetaDataManager.SaveTextureMetaData(item.MetaData);
+                }
+            }
         }
 
         public void RemoveSelectedTexture()
@@ -3548,7 +3580,7 @@ namespace SessionModManagerCore.ViewModels
             if (deleteResult.Result)
             {
                 MessageService.Instance.ShowMessage($"Successfully removed {textureToRemove.TextureName}!");
-                InitInstalledTextures();
+                LoadInstalledTextures();
             }
             else
             {

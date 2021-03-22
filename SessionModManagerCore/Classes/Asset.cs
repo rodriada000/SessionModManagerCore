@@ -18,6 +18,7 @@ namespace SessionModManagerCore.Classes
         /// <summary>
         /// Returns <see cref="ID"/> without the .zip or .rar extension
         /// </summary>
+        [JsonIgnore]
         public string IDWithoutExtension
         {
             get

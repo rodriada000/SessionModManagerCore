@@ -31,33 +31,6 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
-        public bool IsPatchButtonEnabled
-        {
-            get
-            {
-                if (SessionPath.IsSessionPathValid() == false)
-                {
-                    return false;
-                }
-
-                return true;
-            }
-        }
-
-        public string PatchButtonToolTip
-        {
-            get
-            {
-                if (SessionPath.IsSessionPathValid() == false)
-                {
-                    return "Enter a valid path to Session.";
-                }
-
-                return "Click to download/open the Illusory Mod Unlocker which patches the game.";
-            }
-        }
-
-
         #endregion
 
         public MainWindowViewModel()

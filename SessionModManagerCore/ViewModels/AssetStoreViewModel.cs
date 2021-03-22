@@ -958,7 +958,7 @@ namespace SessionMapSwitcherCore.ViewModels
         /// Adds image to download queue if out of date, the url is different, or missing from cache.
         /// </summary>
         /// <param name="asset"></param>
-        private void DownloadPreviewImage(AssetViewModel asset, bool refreshSelectedImagePreview = false)
+        internal void DownloadPreviewImage(AssetViewModel asset, bool refreshSelectedImagePreview = false)
         {
             string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, asset.Asset.IDWithoutExtension);
 
@@ -1050,6 +1050,12 @@ namespace SessionMapSwitcherCore.ViewModels
         public void DownloadSelectedAssetAsync()
         {
             CreateRequiredFolders();
+
+            if (SessionPath.IsSessionPathValid() == false)
+            {
+                MessageService.Instance.ShowMessage($"Cannot install: 'Path To Session' has not been set.");
+                return;
+            }
 
             AssetViewModel assetToDownload = SelectedAsset; // get the selected asset currently in-case user selection changes while download occurs
 
