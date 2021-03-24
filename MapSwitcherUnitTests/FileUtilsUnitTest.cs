@@ -25,9 +25,9 @@ namespace MapSwitcherUnitTests
 
             Directory.CreateDirectory(extractPath);
 
-            BoolWithMessage result = FileUtils.ExtractRarFile(pathToRar, extractPath);
+            //BoolWithMessage result = FileUtils.ExtractRarFile(pathToRar, extractPath);
 
-            Assert.IsTrue(result.Result);
+            //Assert.IsTrue(result.Result);
 
             bool extractedFileExists = File.Exists(Path.Combine(extractPath, "testFile.txt"));
             Assert.IsTrue(extractedFileExists);
@@ -53,9 +53,9 @@ namespace MapSwitcherUnitTests
 
             Directory.CreateDirectory(extractPath);
 
-            BoolWithMessage result = FileUtils.ExtractZipFile(pathToZip, extractPath);
+            //BoolWithMessage result = FileUtils.ExtractZipFile(pathToZip, extractPath);
 
-            Assert.IsTrue(result.Result);
+            //Assert.IsTrue(result.Result);
 
             bool extractedFileExists = File.Exists(Path.Combine(extractPath, "testFile.txt"));
             Assert.IsTrue(extractedFileExists);
@@ -76,9 +76,9 @@ namespace MapSwitcherUnitTests
 
 
 
-            BoolWithMessage result = FileUtils.ExtractZipFile(pathToZip, extractPath);
+            //BoolWithMessage result = FileUtils.ExtractZipFile(pathToZip, extractPath);
 
-            Assert.IsFalse(result.Result);
+            //Assert.IsFalse(result.Result);
         }
 
         [TestMethod]

@@ -6,6 +6,7 @@ using SessionModManagerCore.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -32,7 +33,6 @@ namespace SessionMapSwitcherCore.ViewModels
         public const string defaultInstallStatusValue = "Installed / Not Installed";
         public const string defaultAuthorValue = "Show All";
 
-        private string _userMessage;
         private string _installButtonText;
         private string _removeButtonText;
         private Stream _imageSource;
@@ -303,17 +303,6 @@ namespace SessionMapSwitcherCore.ViewModels
                     RefreshFilteredAssetList();
                     AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.AssetStoreCharactersChecked, DisplayCharacters.ToString());
                 }
-            }
-        }
-
-        public string UserMessage
-        {
-            get { return _userMessage; }
-            set
-            {
-                _userMessage = value;
-                Logger.Info($"UserMessage = {_userMessage}");
-                NotifyPropertyChanged();
             }
         }
 
@@ -702,23 +691,23 @@ namespace SessionMapSwitcherCore.ViewModels
 
             if (string.IsNullOrWhiteSpace(SearchText) || SearchText.Length <= 2)
             {
-                FilteredAssetList = newList;
+                FilteredAssetList = newList.OrderByDescending(a => a.Asset.UpdatedDate).ToList();
             }
             else
             {
-                FilteredAssetList = newList.Where(a => a.Name.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0 || a.Description.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0).ToList();
+                FilteredAssetList = newList.Where(a => a.Name.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0 || a.Description.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0).OrderByDescending(a => a.Asset.UpdatedDate).ToList();
             }
 
-            UserMessage = "";
+            MessageService.Instance.ShowMessage("");
             if (FilteredAssetList.Count == 0)
             {
                 if (GetSelectedCategories().Count() == 0)
                 {
-                    UserMessage = "Check categories to view the list of downloadable assets ...";
+                    MessageService.Instance.ShowMessage("Check categories to view the list of downloadable assets ...");
                 }
                 else if (!string.IsNullOrWhiteSpace(SearchText))
                 {
-                    UserMessage = $"No results found for: {SearchText}";
+                    MessageService.Instance.ShowMessage($"No results found for: {SearchText}");
                 }
             }
         }
@@ -884,7 +873,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (SelectedAsset == null || SelectedAsset.Asset == null)
                 {
-                    UserMessage = "";
+                    MessageService.Instance.ShowMessage("");
 
                     if (PreviewImageSource != null)
                     {
@@ -924,7 +913,7 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 if (taskResult.IsFaulted)
                 {
-                    UserMessage = "Failed to get preview image.";
+                    MessageService.Instance.ShowMessage("Failed to get preview image.");
                     PreviewImageSource = null;
                     Logger.Error(taskResult.Exception);
                 }
@@ -970,7 +959,7 @@ namespace SessionMapSwitcherCore.ViewModels
         /// Adds image to download queue if out of date, the url is different, or missing from cache.
         /// </summary>
         /// <param name="asset"></param>
-        private void DownloadPreviewImage(AssetViewModel asset, bool refreshSelectedImagePreview = false)
+        internal void DownloadPreviewImage(AssetViewModel asset, bool refreshSelectedImagePreview = false)
         {
             string pathToThumbnail = Path.Combine(AbsolutePathToThumbnails, asset.Asset.IDWithoutExtension);
 
@@ -1063,6 +1052,12 @@ namespace SessionMapSwitcherCore.ViewModels
         {
             CreateRequiredFolders();
 
+            if (SessionPath.IsSessionPathValid() == false)
+            {
+                MessageService.Instance.ShowMessage($"Cannot install: 'Path To Session' has not been set.");
+                return;
+            }
+
             AssetViewModel assetToDownload = SelectedAsset; // get the selected asset currently in-case user selection changes while download occurs
 
             string pathToDownload = Path.Combine(AbsolutePathToTempDownloads, assetToDownload.Asset.ID);
@@ -1074,7 +1069,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 RemoveFromDownloads(downloadId);
 
-                UserMessage = $"Installing asset: {assetToDownload.Name} ... ";
+                MessageService.Instance.ShowMessage($"Installing asset: {assetToDownload.Name} ... ");
                 Task installTask = Task.Factory.StartNew(() =>
                 {
                     InstallDownloadedAsset(assetToDownload, pathToDownload);
@@ -1084,7 +1079,7 @@ namespace SessionMapSwitcherCore.ViewModels
                 {
                     if (installResult.IsFaulted)
                     {
-                        UserMessage = $"Failed to install asset ...";
+                        MessageService.Instance.ShowMessage($"Failed to install asset ...");
                         Logger.Error(installResult.Exception);
                         IsInstallingAsset = false;
                         return;
@@ -1119,13 +1114,13 @@ namespace SessionMapSwitcherCore.ViewModels
             {
                 Logger.Warn(ex);
                 RemoveFromDownloads(downloadId);
-                UserMessage = $"Failed to download {assetToDownload.Name} - {ex.Message}";
+                MessageService.Instance.ShowMessage($"Failed to download {assetToDownload.Name} - {ex.Message}");
             };
 
             Action onCancel = () =>
             {
                 RemoveFromDownloads(downloadId);
-                UserMessage = $"Canceled downloading {assetToDownload.Name}";
+                MessageService.Instance.ShowMessage($"Canceled downloading {assetToDownload.Name}");
             };
 
             DownloadItemViewModel downloadItem = new DownloadItemViewModel()
@@ -1153,7 +1148,7 @@ namespace SessionMapSwitcherCore.ViewModels
             if (assetToInstall.AssetCategory == AssetCategory.Maps.Value)
             {
                 // import map
-                ComputerImportViewModel importViewModel = new ComputerImportViewModel()
+                MapImportViewModel importViewModel = new MapImportViewModel()
                 {
                     IsZipFileImport = true,
                     PathInput = pathToDownload,
@@ -1164,11 +1159,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (importTask.Result.Result)
                 {
-                    UserMessage = $"Successfully installed {assetToInstall.Name}!";
+                    MessageService.Instance.ShowMessage($"Successfully installed {assetToInstall.Name}!");
                 }
                 else
                 {
-                    UserMessage = $"Failed to install {assetToInstall.Name}: {importTask.Result.Message}";
+                    MessageService.Instance.ShowMessage($"Failed to install {assetToInstall.Name}: {importTask.Result.Message}");
                     Logger.Warn($"install failed: {importTask.Result.Message}");
                 }
             }
@@ -1188,7 +1183,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
         private void TextureReplacerViewModel_MessageChanged(string message)
         {
-            UserMessage = message;
+            MessageService.Instance.ShowMessage(message);
         }
 
         public void CreateRequiredFolders()
@@ -1212,7 +1207,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (mapToDelete == null)
                 {
-                    UserMessage = "Failed to find meta data to delete map files ...";
+                    MessageService.Instance.ShowMessage("Failed to find meta data to delete map files ...");
                     return;
                 }
 
@@ -1224,7 +1219,7 @@ namespace SessionMapSwitcherCore.ViewModels
 
                 if (textureToDelete == null)
                 {
-                    UserMessage = $"Failed to find meta data to delete texture files for {assetToRemove.Asset.ID}...";
+                    MessageService.Instance.ShowMessage($"Failed to find meta data to delete texture files for {assetToRemove.Asset.ID}...");
                     return;
                 }
 
@@ -1232,7 +1227,7 @@ namespace SessionMapSwitcherCore.ViewModels
             }
 
 
-            UserMessage = deleteResult.Message;
+            MessageService.Instance.ShowMessage(deleteResult.Message);
 
             if (deleteResult.Result)
             {

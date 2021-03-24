@@ -12,7 +12,7 @@ namespace SessionModManagerCore.ViewModels
     {
         private const int burstDuration = 3000;
 
-        private ComputerImportViewModel _importViewModel;
+        private MapImportViewModel _importViewModel;
 
         private FileSystemWatcher _projectWatcher;
 
@@ -121,17 +121,24 @@ namespace SessionModManagerCore.ViewModels
                 IniData engineFile = parser.ReadFile(PathToDefaultEngineIni);
                 var fullPath = engineFile["/Script/EngineSettings.GameMapsSettings"]["GameDefaultMap"];
                 // Get everything after the last slash
-                var slashIndex = fullPath.LastIndexOf("/") + 1;
-                fullPath = fullPath.Substring(slashIndex);
-                // Get everything after the last dot, if it exists:
-                var dotIndex = fullPath.LastIndexOf(".") + 1;
-                return fullPath.Substring(dotIndex);
+                if (!string.IsNullOrWhiteSpace(fullPath))
+                {
+                    var slashIndex = fullPath.LastIndexOf("/") + 1;
+                    fullPath = fullPath.Substring(slashIndex);
+
+                    var dotIndex = fullPath.LastIndexOf(".") + 1;
+
+                    // Get everything after the last dot, if it exists:
+                    return fullPath.Substring(dotIndex);
+                }
+
+                return ProjectName;
             }
         }
 
         public ProjectWatcherViewModel()
         {
-            _importViewModel = new ComputerImportViewModel()
+            _importViewModel = new MapImportViewModel()
             {
                 IsZipFileImport = false
             };

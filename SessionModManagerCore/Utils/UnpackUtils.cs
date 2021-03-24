@@ -68,11 +68,14 @@ namespace SessionMapSwitcherCore.Utils
                 }
 
                 ProgressChanged("Extracting .zip file ...");
-                BoolWithMessage isExtracted = FileUtils.ExtractZipFile(Path.Combine(PathToPakFolder, DownloadedZipFileName), PathToPakFolder);
 
-                if (isExtracted.Result == false)
+                try
                 {
-                    ProgressChanged($"Failed to unzip file: {isExtracted.Message}. Cannot continue.");
+                    FileUtils.ExtractZipFile(Path.Combine(PathToPakFolder, DownloadedZipFileName), PathToPakFolder);
+                }
+                catch (Exception e)
+                {
+                    ProgressChanged($"Failed to unzip file: {e.Message}. Cannot continue.");
                     UnpackCompleted(false);
                     return;
                 }

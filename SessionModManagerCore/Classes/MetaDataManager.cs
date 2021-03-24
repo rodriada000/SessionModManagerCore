@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using SessionMapSwitcherCore.Utils;
+using SessionMapSwitcherCore.ViewModels;
 using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,14 @@ namespace SessionMapSwitcherCore.Classes
             get
             {
                 return Path.Combine(SessionPath.ToContent, MetaFolderName);
+            }
+        }
+
+        public static string FullPathToMetaImagesFolder
+        {
+            get
+            {
+                return Path.Combine(FullPathToMetaFolder, "images");
             }
         }
 
@@ -99,6 +108,11 @@ namespace SessionMapSwitcherCore.Classes
         /// </summary>
         public static void SetCustomPropertiesForMap(MapListItem map, bool createIfNotExists = false)
         {
+            if (map.IsDefaultMap)
+            {
+                return;
+            }
+
             MapMetaData savedMetaData = LoadMapMetaData(map);
 
             if (savedMetaData == null)
@@ -114,8 +128,34 @@ namespace SessionMapSwitcherCore.Classes
                 }
             }
 
+            // grab image from asset store if exists and path not set yet
+            bool hasChanged = false;
+            if (!string.IsNullOrWhiteSpace(savedMetaData.PathToImage) && !File.Exists(savedMetaData.PathToImage))
+            {
+                // remove image path if file does not exist
+                savedMetaData.PathToImage = "";
+                hasChanged = true;
+            }
+
+            if (string.IsNullOrWhiteSpace(savedMetaData.PathToImage) && !string.IsNullOrEmpty(savedMetaData.AssetNameWithoutExtension))
+            {
+                string pathToStoreThumbnail = Path.Combine(AssetStoreViewModel.AbsolutePathToThumbnails, savedMetaData.AssetNameWithoutExtension);
+
+                if (File.Exists(pathToStoreThumbnail))
+                {
+                    savedMetaData.PathToImage = pathToStoreThumbnail;
+                    hasChanged = true;
+                }
+            }
+
+            if (hasChanged)
+            {
+                SaveMapMetaData(savedMetaData);
+            }
+
             map.IsHiddenByUser = savedMetaData.IsHiddenByUser;
             map.CustomName = savedMetaData.CustomName;
+            map.PathToImage = savedMetaData.PathToImage;
         }
 
         /// <summary>
@@ -124,6 +164,11 @@ namespace SessionMapSwitcherCore.Classes
         /// </summary>
         public static bool WriteCustomMapPropertiesToFile(MapListItem map)
         {
+            if (map.IsDefaultMap)
+            {
+                return true;
+            }
+
             MapMetaData metaDataToSave = LoadMapMetaData(map);
 
             if (metaDataToSave == null)

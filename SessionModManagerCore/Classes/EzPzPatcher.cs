@@ -109,7 +109,7 @@ namespace SessionMapSwitcherCore.Classes
 
                         try
                         {
-                            isEzPzExtracted = FileUtils.ExtractZipFile(pathToZip, SessionPath.ToPaks);
+                            FileUtils.ExtractZipFile(pathToZip, SessionPath.ToPaks);
                         }
                         catch (Exception e)
                         {

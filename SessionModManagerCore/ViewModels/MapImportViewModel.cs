@@ -4,20 +4,23 @@ using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace SessionModManagerCore.ViewModels
 {
-    public class ComputerImportViewModel : ViewModelBase
+    public class MapImportViewModel : ViewModelBase
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
         public static readonly List<string> FilesToExclude = new List<string>() { "DefaultEngine.ini", "DefaultGame.ini" };
-        public static readonly List<string> StockFoldersToExclude = new List<string> { "Data", "ObjectPlacement"};
+        public static readonly List<string> StockFoldersToExclude = new List<string> { "Data" };
 
 
         private bool _isZipFileImport;
         private bool _isImporting;
+        private double _importProgress;
         private string _userMessage;
         private string _pathInput;
 
@@ -59,17 +62,27 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public double ImportProgress
+        {
+            get { return _importProgress; }
+            set
+            {
+                _importProgress = value;
+                NotifyPropertyChanged();
+            }
+        }
+
         public string PathLabel
         {
             get
             {
                 if (IsZipFileImport)
                 {
-                    return "Path To Zip/Rar File:";
+                    return "Path To Zip/Rar File";
                 }
                 else
                 {
-                    return "Folder Path To Map Files:";
+                    return "Folder Path To Map Files";
                 }
             }
         }
@@ -119,24 +132,19 @@ namespace SessionModManagerCore.ViewModels
 
         public Asset AssetToImport { get; set; }
 
-        public ComputerImportViewModel()
+        public MapImportViewModel()
         {
             this.UserMessage = "";
-            this.IsZipFileImport = false;
+            this.IsZipFileImport = true; //usually a zip file to import so default to this
             this.PathInput = "";
         }
 
         public void BeginImportMapAsync()
         {
-            UserMessage = "Importing Map ...";
+            UserMessage = "Importing Map ... this can take a few minutes for larger maps.";
 
-            if (IsZipFileImport)
+            if (!IsZipFileImport)
             {
-                UserMessage += " Unzipping and copying can take a couple of minutes depending on the .zip file size.";
-            }
-            else
-            {
-                UserMessage += " Copying can take a couple of minutes depending on the amount of files to copy.";
                 PathInput = EnsurePathToMapFilesIsCorrect(PathToFileOrFolder);
             }
 
@@ -188,38 +196,42 @@ namespace SessionModManagerCore.ViewModels
         {
             Task<BoolWithMessage> task = Task.Factory.StartNew(() =>
             {
-                string sourceFolderToCopy;
+                List<string> filesCopied;
+                IProgress<double> progress = new Progress<double>(percent => this.ImportProgress = percent * 100);
 
                 if (IsZipFileImport)
                 {
-                    // extract compressed file before copying
+                    // extract compressed file to correct location
                     if (File.Exists(PathToFileOrFolder) == false)
                     {
                         return BoolWithMessage.False($"{PathToFileOrFolder} does not exist.");
                     }
 
-                    // extract files first before copying
-                    BoolWithMessage didExtract = BoolWithMessage.False("");
+                    if (!FileUtils.CompressedFileHasFile(PathToFileOrFolder, ".umap"))
+                    {
+                        return BoolWithMessage.False($"{PathToFileOrFolder} does not contain a valid .umap file to import.");
+                    }
+
+                    this.ImportProgress = 0;
 
                     try
                     {
-                        Directory.CreateDirectory(PathToTempUnzipFolder);
-                        didExtract = FileUtils.ExtractCompressedFile(PathToFileOrFolder, PathToTempUnzipFolder);
+                        if (FileUtils.CompressedFileHasFile(PathToFileOrFolder, "Content/") || FileUtils.CompressedFileHasFile(PathToFileOrFolder, "Content\\"))
+                        {
+                            // extract files to SessionGame/ instead if the zipped up root folder is 'Content/'
+                            filesCopied = FileUtils.ExtractCompressedFile(PathToFileOrFolder, SessionPath.ToSessionGame, progress);
+                        }
+                        else
+                        {
+                            filesCopied = FileUtils.ExtractCompressedFile(PathToFileOrFolder, SessionPath.ToContent, progress);
+                        }
                     }
                     catch (Exception e)
                     {
-                        Logger.Error(e, "failed to extract zip");
-                        didExtract.Message = e.Message;
+                        Logger.Error(e, "failed to extract file");
+                        UserMessage = $"Failed to extract file: {e.Message}";
+                        return BoolWithMessage.False($"Failed to extract: {e.Message}.");
                     }
-
-
-                    if (didExtract.Result == false)
-                    {
-                        UserMessage = $"Failed to extract file: {didExtract.Message}";
-                        return BoolWithMessage.False($"Failed to extract: {didExtract.Message}.");
-                    }
-
-                    sourceFolderToCopy = EnsurePathToMapFilesIsCorrect(PathToTempUnzipFolder);
                 }
                 else
                 {
@@ -229,53 +241,65 @@ namespace SessionModManagerCore.ViewModels
                         return BoolWithMessage.False($"{PathToFileOrFolder} does not exist.");
                     }
 
-                    sourceFolderToCopy = PathToFileOrFolder;
-
-                    bool hasValidMap = MetaDataManager.DoesValidMapExistInFolder(sourceFolderToCopy);
-
-                    if (hasValidMap == false)
+                    if (!MetaDataManager.DoesValidMapExistInFolder(PathToFileOrFolder))
                     {
                         return BoolWithMessage.False($"{PathToFileOrFolder} does not contain a valid .umap file to import.");
                     }
+
+                    filesCopied = FileUtils.CopyDirectoryRecursively(PathToFileOrFolder, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: StockFoldersToExclude, doContainsSearch: false, progress);
                 }
+
 
                 // create meta data for new map and save to disk
-                MapMetaData metaData = MetaDataManager.CreateMapMetaData(sourceFolderToCopy, true);
-
-                if (AssetToImport != null)
-                {
-                    metaData.AssetName = AssetToImport.ID;
-                }
-
-                if (IsZipFileImport == false && metaData != null)
-                {
-                    metaData.OriginalImportPath = sourceFolderToCopy;
-                }
-
+                MapMetaData metaData = GenerateMetaData(filesCopied);
                 MetaDataManager.SaveMapMetaData(metaData);
-
-                // copy/move files
-                if (IsZipFileImport)
-                {
-                    FileUtils.MoveDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: StockFoldersToExclude, doContainsSearch: false);
-                }
-                else
-                {
-                    FileUtils.CopyDirectoryRecursively(sourceFolderToCopy, SessionPath.ToContent, filesToExclude: FilesToExclude, foldersToExclude: StockFoldersToExclude, doContainsSearch: false);
-                }
-
-
-                if (IsZipFileImport && Directory.Exists(PathToTempUnzipFolder))
-                {
-                    // remove unzipped temp files
-                    Directory.Delete(PathToTempUnzipFolder, true);
-                }
 
                 return BoolWithMessage.True();
 
             });
 
             return task;
+        }
+
+        private MapMetaData GenerateMetaData(List<string> filesCopied)
+        {
+            MapMetaData metaData = new MapMetaData()
+            {
+                AssetName = AssetToImport != null ? AssetToImport.ID : "",
+                CustomName = "",
+                IsHiddenByUser = false,
+                FilePaths = filesCopied,
+                OriginalImportPath = !IsZipFileImport ? PathToFileOrFolder : ""
+            };
+
+            // find valid map files
+            foreach (string filePath in filesCopied.Where(f => f.EndsWith(".umap")))
+            {
+                if (MapListItem.HasGameMode(filePath))
+                {
+                    MapListItem map = new MapListItem(filePath);
+                    metaData.MapFileDirectory = map.DirectoryPath;
+                    metaData.MapName = map.MapName;
+                    break;
+                }
+            }
+
+            if (metaData.AssetName == "")
+            {
+                metaData.AssetName = metaData.MapName;
+            }
+
+            if (AssetToImport != null && File.Exists(AssetToImport?.PathToDownloadedImage))
+            {
+                metaData.PathToImage = AssetToImport.PathToDownloadedImage;
+            }
+            else if (filesCopied.Any(f => f.Contains("preview.")))
+            {
+                // check files copied for a preview image
+                metaData.PathToImage = filesCopied.Where(f => f.Contains("preview.")).FirstOrDefault();
+            }
+
+            return metaData;
         }
     }
 }

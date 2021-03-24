@@ -1,4 +1,5 @@
-﻿using SessionModManagerCore.ViewModels;
+﻿using SessionMapSwitcherCore.Classes;
+using SessionModManagerCore.ViewModels;
 using System;
 using System.IO;
 
@@ -8,6 +9,7 @@ public class MapListItem : ViewModelBase
     private string _customName;
     private string _fullPath;
     private string _validationHint;
+    private string _pathToImage;
     private string _tooltip;
     private bool _isEnabled = true;
     private bool _isSelected = false;
@@ -45,6 +47,16 @@ public class MapListItem : ViewModelBase
                 return MapName;
             }
             return CustomName;
+        }
+    }
+
+    public string PathToImage
+    {
+        get { return _pathToImage; }
+        set
+        {
+            _pathToImage = value;
+            NotifyPropertyChanged();
         }
     }
 
@@ -144,6 +156,19 @@ public class MapListItem : ViewModelBase
     public string GameDefaultMapSetting { get; set; }
     public string GlobalDefaultGameModeSetting { get; set; }
 
+    public MapListItem()
+    {
+        FullPath = "";
+        MapName = "";
+    }
+
+    public MapListItem(string pathToMapFile)
+    {
+        FullPath = pathToMapFile;
+        MapName = Path.GetFileNameWithoutExtension(pathToMapFile);
+
+        Validate();
+    }
 
     public void Validate()
     {
@@ -171,8 +196,12 @@ public class MapListItem : ViewModelBase
     {
         try
         {
-            string umapContents = File.ReadAllText(fullPath);
+            if (!File.Exists(fullPath))
+            {
+                return false;
+            }
 
+            string umapContents = File.ReadAllText(fullPath);
             return umapContents.IndexOf("/Game/Data/PBP_InGameSessionGameMode", StringComparison.OrdinalIgnoreCase) >= 0;
         }
         catch (Exception)

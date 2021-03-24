@@ -15,7 +15,7 @@ namespace SessionMapSwitcherCore.Utils
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-        internal static List<string> CopyDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToExclude, bool doContainsSearch)
+        internal static List<string> CopyDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToExclude, bool doContainsSearch, IProgress<double> progress = null)
         {
             List<string> filesCopied = new List<string>();
 
@@ -40,7 +40,8 @@ namespace SessionMapSwitcherCore.Utils
 
             try
             {
-                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings, filesCopied);
+                int count = 0, totalCount = 0;
+                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings, ref totalCount, ref count, filesCopied, progress);
             }
             catch (Exception e)
             {
@@ -50,7 +51,7 @@ namespace SessionMapSwitcherCore.Utils
             return filesCopied;
         }
 
-        internal static void CopyDirectoryRecursively(string sourceDirName, string destDirName)
+        internal static void CopyDirectoryRecursively(string sourceDirName, string destDirName, IProgress<double> progress = null)
         {
             CopySettings settings = new CopySettings()
             {
@@ -61,7 +62,8 @@ namespace SessionMapSwitcherCore.Utils
 
             try
             {
-                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+                int count = 0, totalCount = 0;
+                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings, fileCount: ref totalCount, currentCount: ref count, copiedFiles: null, progress: progress);
             }
             catch (Exception e)
             {
@@ -69,7 +71,7 @@ namespace SessionMapSwitcherCore.Utils
             }
         }
 
-        internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToExclude, bool doContainsSearch)
+        internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName, List<string> filesToExclude, List<string> foldersToExclude, bool doContainsSearch, IProgress<double> progress = null)
         {
             if (filesToExclude == null)
             {
@@ -92,7 +94,8 @@ namespace SessionMapSwitcherCore.Utils
 
             try
             {
-                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+                int count = 0, totalCount = 0;
+                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings, fileCount: ref totalCount, currentCount: ref count, copiedFiles: null, progress: progress);
             }
             catch (Exception e)
             {
@@ -100,7 +103,7 @@ namespace SessionMapSwitcherCore.Utils
             }
         }
 
-        internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName)
+        internal static void MoveDirectoryRecursively(string sourceDirName, string destDirName, IProgress<double> progress = null)
         {
             CopySettings settings = new CopySettings()
             {
@@ -111,7 +114,8 @@ namespace SessionMapSwitcherCore.Utils
 
             try
             {
-                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings);
+                int count = 0, totalCount = 0;
+                CopyOrMoveDirectoryRecursively(sourceDirName, destDirName, settings, fileCount: ref totalCount, currentCount: ref count, copiedFiles: null, progress: progress);
             }
             catch (Exception e)
             {
@@ -119,7 +123,7 @@ namespace SessionMapSwitcherCore.Utils
             }
         }
 
-        private static void CopyOrMoveDirectoryRecursively(string sourceDirName, string destDirName, CopySettings settings, List<string> copiedFiles = null)
+        private static void CopyOrMoveDirectoryRecursively(string sourceDirName, string destDirName, CopySettings settings, ref int fileCount, ref int currentCount, List<string> copiedFiles = null, IProgress<double> progress = null)
         {
             if (copiedFiles == null)
             {
@@ -148,7 +152,14 @@ namespace SessionMapSwitcherCore.Utils
             }
 
             // Get the files in the directory and copy them to the new location.
+            if (fileCount == 0)
+            {
+                fileCount = GetAllFilesInDirectory(sourceDirName).Count;
+            }
+
             FileInfo[] files = dir.GetFiles();
+            progress?.Report((double)currentCount / (double)fileCount);
+
             foreach (FileInfo file in files)
             {
                 if (settings.ExcludeFile(file))
@@ -177,6 +188,8 @@ namespace SessionMapSwitcherCore.Utils
                     file.CopyTo(temppath, true);
                 }
 
+                currentCount++;
+                progress?.Report((double)currentCount / (double)fileCount);
                 copiedFiles.Add(temppath);
             }
 
@@ -193,7 +206,7 @@ namespace SessionMapSwitcherCore.Utils
                     }
 
                     string tempPath = Path.Combine(destDirName, subdir.Name);
-                    CopyOrMoveDirectoryRecursively(subdir.FullName, tempPath, settings, copiedFiles);
+                    CopyOrMoveDirectoryRecursively(subdir.FullName, tempPath, settings, ref fileCount, ref currentCount, copiedFiles, progress);
                 }
             }
         }
@@ -202,104 +215,140 @@ namespace SessionMapSwitcherCore.Utils
         /// <summary>
         /// Extract a zip file to a given path. Returns true on success.
         /// </summary>
-        public static BoolWithMessage ExtractZipFile(string pathToZip, string extractPath)
+        public static List<string> ExtractZipFile(string pathToZip, string extractPath, IProgress<double> progress = null)
         {
-            try
+            List<string> filesExtracted = new List<string>();
+            int entryCount = 1;
+            int currentCount = 0;
+
+            Logger.Info($"extracting .zip {pathToZip} ...");
+
+            using (ZipArchive archive = OpenRead(pathToZip))
             {
-                Logger.Info($"extracting .zip {pathToZip} ...");
+                Logger.Info("... Opened .zip for read");
 
-                using (ZipArchive archive = OpenRead(pathToZip))
+                entryCount = archive.Entries.Count;
+
+                foreach (ZipArchiveEntry entry in archive.Entries)
                 {
-                    Logger.Info("... Opened .zip for read");
+                    string fullFileName = Path.Combine(extractPath, entry.FullName).Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+                    string entryPath = Path.GetDirectoryName(fullFileName);
 
-                    foreach (ZipArchiveEntry entry in archive.Entries)
+                    Logger.Info($"... {fullFileName} -> {entryPath}");
+
+                    if (Directory.Exists(entryPath) == false)
                     {
-                        string fullFileName = Path.Combine(extractPath, entry.FullName);
-                        string entryPath = Path.GetDirectoryName(fullFileName);
-
-                        Logger.Info($"... {fullFileName} -> {entryPath}");
-
-                        if (Directory.Exists(entryPath) == false)
-                        {
-                            Logger.Info($"... creating missing directory {entryPath}");
-                            Directory.CreateDirectory(entryPath);
-                        }
-
-                        bool isFileToExtract = (Path.GetFileName(fullFileName) != "");
-
-                        Logger.Info($"... {fullFileName}, isFileToExtract: {isFileToExtract}");
-
-                        if (isFileToExtract)
-                        {
-                            Logger.Info($"...... extracting");
-                            using (Stream deflatedStream = entry.Open())
-                            {
-                                using (FileStream fileStream = File.Create(fullFileName))
-                                {
-                                    deflatedStream.CopyTo(fileStream);
-                                }
-                            }
-                            Logger.Info($"......... extracted!");
-                        }
+                        Logger.Info($"... creating missing directory {entryPath}");
+                        Directory.CreateDirectory(entryPath);
                     }
-                }
-            }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-                return new BoolWithMessage(false, e.Message);
-            }
 
-            return new BoolWithMessage(true);
-        }
+                    bool isFileToExtract = (Path.GetFileName(fullFileName) != "");
 
-        public static BoolWithMessage ExtractRarFile(string pathToRar, string extractPath)
-        {
-            try
-            {
-                Logger.Info($"extracting .rar {pathToRar} ...");
+                    Logger.Info($"... {fullFileName}, isFileToExtract: {isFileToExtract}");
 
-
-                using (RarArchive archive = RarArchive.Open(pathToRar))
-                {
-                    Logger.Info("... Opened .rar for read");
-
-                    foreach (RarArchiveEntry entry in archive.Entries.Where(entry => !entry.IsDirectory))
+                    if (isFileToExtract)
                     {
-                        Logger.Info($"...... extracting {entry.Key}");
-
-                        entry.WriteToDirectory(extractPath, new ExtractionOptions()
+                        Logger.Info($"...... extracting");
+                        using (Stream deflatedStream = entry.Open())
                         {
-                            ExtractFullPath = true,
-                            Overwrite = true
-                        });
-
+                            using (FileStream fileStream = File.Create(fullFileName))
+                            {
+                                deflatedStream.CopyTo(fileStream);
+                            }
+                        }
+                        filesExtracted.Add(fullFileName);
                         Logger.Info($"......... extracted!");
                     }
+
+                    currentCount++;
+                    progress?.Report((double)currentCount / (double)entryCount);
                 }
             }
-            catch (Exception e)
-            {
-                Logger.Error(e);
-                return new BoolWithMessage(false, e.Message);
-            }
 
-            return new BoolWithMessage(true);
+            return filesExtracted;
         }
 
-        public static BoolWithMessage ExtractCompressedFile(string pathToFile, string extractPath)
+        public static List<string> ExtractRarFile(string pathToRar, string extractPath, IProgress<double> progress = null)
+        {
+            List<string> filesExtracted = new List<string>();
+            Logger.Info($"extracting .rar {pathToRar} ...");
+            int entryCount = 1;
+            int currentCount = 0;
+
+            using (RarArchive archive = RarArchive.Open(pathToRar))
+            {
+                Logger.Info("... Opened .rar for read");
+                entryCount = archive.Entries.Count;
+
+                foreach (RarArchiveEntry entry in archive.Entries.Where(entry => !entry.IsDirectory))
+                {
+                    Logger.Info($"...... extracting {entry.Key}");
+
+                    entry.WriteToDirectory(extractPath, new ExtractionOptions()
+                    {
+                        ExtractFullPath = true,
+                        Overwrite = true
+                    });
+
+                    currentCount++;
+                    progress?.Report((double)currentCount / (double)entryCount);
+                    filesExtracted.Add(Path.Combine(extractPath, entry.Key));
+                    Logger.Info($"......... extracted!");
+                }
+            }
+
+            return filesExtracted;
+        }
+
+        public static List<string> ExtractCompressedFile(string pathToFile, string extractPath, IProgress<double> progress = null)
         {
             if (pathToFile.EndsWith(".zip"))
             {
-                return ExtractZipFile(pathToFile, extractPath);
+                return ExtractZipFile(pathToFile, extractPath, progress);
             }
             else if (pathToFile.EndsWith(".rar"))
             {
-                return ExtractRarFile(pathToFile, extractPath);
+                return ExtractRarFile(pathToFile, extractPath, progress);
             }
 
             Logger.Warn($"Unsupported file type: {pathToFile}");
-            return new BoolWithMessage(false, "Unsupported file type.");
+            return new List<string>();
+        }
+
+        public static bool CompressedFileHasFile(string pathToFile, string searchPattern)
+        {
+            bool hasFile = false;
+
+            if (pathToFile.EndsWith(".zip"))
+            {
+                using (ZipArchive archive = OpenRead(pathToFile))
+                {
+                    foreach (ZipArchiveEntry entry in archive.Entries)
+                    {
+                        if (entry.FullName.Contains(searchPattern))
+                        {
+                            hasFile = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            else if (pathToFile.EndsWith(".rar"))
+            {
+                using (RarArchive archive = RarArchive.Open(pathToFile))
+                {
+                    foreach (RarArchiveEntry entry in archive.Entries.Where(entry => !entry.IsDirectory))
+                    {
+                        if (entry.Key.Contains(searchPattern))
+                        {
+                            hasFile = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return hasFile;
         }
 
 
@@ -392,6 +441,8 @@ namespace SessionMapSwitcherCore.Utils
             }
 
         }
+
+
     }
 
 }

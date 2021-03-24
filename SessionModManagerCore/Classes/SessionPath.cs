@@ -2,12 +2,21 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 
 namespace SessionMapSwitcherCore.Classes
 {
     public static class SessionPath
     {
         public const string MapBackupFolderName = "Original_Session_Map";
+
+        public static string ToApplicationRoot
+        {
+            get
+            {
+                return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            }
+        }
 
         private static string _toSession = "";
         public static string ToSession

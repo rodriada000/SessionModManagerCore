@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using Newtonsoft.Json;
+using SessionMapSwitcherCore.ViewModels;
 
 namespace SessionModManagerCore.Classes
 {
@@ -16,6 +18,7 @@ namespace SessionModManagerCore.Classes
         /// <summary>
         /// Returns <see cref="ID"/> without the .zip or .rar extension
         /// </summary>
+        [JsonIgnore]
         public string IDWithoutExtension
         {
             get
@@ -28,6 +31,15 @@ namespace SessionModManagerCore.Classes
                 return ID.Replace(".zip", "").Replace(".rar", "");
             }
         }
+
+        public string PathToDownloadedImage
+        {
+            get
+            {
+                return Path.Combine(AssetStoreViewModel.AbsolutePathToThumbnails, IDWithoutExtension);
+            }
+        }
+        
 
         /// <summary>
         /// The display name of the asset
