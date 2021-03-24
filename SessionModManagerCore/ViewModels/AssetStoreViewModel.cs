@@ -6,6 +6,7 @@ using SessionModManagerCore.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -690,11 +691,11 @@ namespace SessionMapSwitcherCore.ViewModels
 
             if (string.IsNullOrWhiteSpace(SearchText) || SearchText.Length <= 2)
             {
-                FilteredAssetList = newList;
+                FilteredAssetList = newList.OrderByDescending(a => a.Asset.UpdatedDate).ToList();
             }
             else
             {
-                FilteredAssetList = newList.Where(a => a.Name.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0 || a.Description.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0).ToList();
+                FilteredAssetList = newList.Where(a => a.Name.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0 || a.Description.IndexOf(SearchText, StringComparison.InvariantCultureIgnoreCase) >= 0).OrderByDescending(a => a.Asset.UpdatedDate).ToList();
             }
 
             MessageService.Instance.ShowMessage("");
@@ -1147,7 +1148,7 @@ namespace SessionMapSwitcherCore.ViewModels
             if (assetToInstall.AssetCategory == AssetCategory.Maps.Value)
             {
                 // import map
-                ComputerImportViewModel importViewModel = new ComputerImportViewModel()
+                MapImportViewModel importViewModel = new MapImportViewModel()
                 {
                     IsZipFileImport = true,
                     PathInput = pathToDownload,

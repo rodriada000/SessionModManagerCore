@@ -17,7 +17,7 @@ namespace SessionModManagerCore.ViewModels
 
         private string _pathToFile;
         private const string _tempZipFolder = "Temp_Texture_Unzipped";
-        private static readonly List<string> StockFoldersToExclude = new List<string> { "Data" };
+        private static readonly List<string> StockFoldersToExclude = new List<string>();
         private List<InstalledTextureItemViewModel> _installedTextures;
         private InstalledTextureItemViewModel _selectedTexture;
         private Stream _modPreviewSource;
@@ -112,6 +112,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 _modPreviewSource = value;
                 NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(IsPreviewMissing));
             }
         }
 
@@ -125,9 +126,17 @@ namespace SessionModManagerCore.ViewModels
             {
                 _isLoadingImage = value;
                 NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(IsPreviewMissing));
             }
         }
 
+        public bool IsPreviewMissing
+        {
+            get
+            {
+                return (ModPreviewSource == null && !IsLoadingImage);
+            }
+        }
 
         public void ReplaceTextures()
         {
@@ -206,11 +215,14 @@ namespace SessionModManagerCore.ViewModels
             Logger.Info($"Extracting {PathToFile}...");
 
             // extract to temp location
-            BoolWithMessage didExtract = FileUtils.ExtractCompressedFile(PathToFile, PathToTempFolder);
-            if (didExtract.Result == false)
+            try
             {
-                Logger.Warn($"... failed to extract: {didExtract.Message}");
-                MessageChanged?.Invoke($"Failed to extract file: {didExtract.Message}");
+                FileUtils.ExtractCompressedFile(PathToFile, PathToTempFolder);
+            }
+            catch (Exception e)
+            {
+                Logger.Warn($"... failed to extract: {e.Message}");
+                MessageChanged?.Invoke($"Failed to extract file: {e.Message}");
                 return;
             }
 
@@ -232,7 +244,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 // if not replacing from Asset Store then just use name of compressed file being used to replace textures
                 newTextureMetaData.AssetName = Path.GetFileName(PathToFile);
-                newTextureMetaData.Name = Path.GetFileName(PathToFile);
+                newTextureMetaData.Name = Path.GetFileNameWithoutExtension(PathToFile);
             }
             else
             {
@@ -319,6 +331,29 @@ namespace SessionModManagerCore.ViewModels
                     newTextureMetaData.FilePaths.AddRange(otherFilesCopied);
                 }
 
+                if (string.IsNullOrWhiteSpace(newTextureMetaData.PathToImage))
+                {
+                    // check unzipped files for a preview img and copy over
+                    foreach (string filePath in Directory.GetFiles(PathToTempFolder, "*", SearchOption.AllDirectories))
+                    {
+                        if (filePath.Contains("preview."))
+                        {
+                            string targetPath = Path.Combine(MetaDataManager.FullPathToMetaImagesFolder, newTextureMetaData.AssetNameWithoutExtension);
+
+                            if (!Directory.Exists(MetaDataManager.FullPathToMetaImagesFolder))
+                            {
+                                Directory.CreateDirectory(MetaDataManager.FullPathToMetaImagesFolder);
+                            }
+
+                            File.Copy(filePath, targetPath, true);
+
+                            newTextureMetaData.PathToImage = targetPath;
+                            newTextureMetaData.FilePaths.Add(targetPath);
+                            break;
+                        }
+                    }
+                }
+
                 DeleteTempZipFolder();
             }
             catch (Exception e)
@@ -327,6 +362,7 @@ namespace SessionModManagerCore.ViewModels
                 MessageChanged?.Invoke($"Failed to copy texture files: {e.Message}");
                 return;
             }
+
 
             MetaDataManager.SaveTextureMetaData(newTextureMetaData);
             AssetToInstall = null; // texture asset replaced so nullify it since done with object
@@ -348,6 +384,7 @@ namespace SessionModManagerCore.ViewModels
         private List<string> CopyOtherSubfoldersInTempDir(List<string> filesToExclude)
         {
             List<string> filesCopied = new List<string>();
+
 
             foreach (string folder in Directory.GetDirectories(PathToTempFolder))
             {
@@ -3544,7 +3581,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 SelectedTexture = InstalledTextures.Where(t => t.MetaData?.AssetName == assetName).FirstOrDefault();
             }
-            
+
             if (SelectedTexture == null)
             {
                 SelectedTexture = InstalledTextures.FirstOrDefault();
@@ -3556,10 +3593,22 @@ namespace SessionModManagerCore.ViewModels
             foreach (InstalledTextureItemViewModel item in InstalledTextures)
             {
                 string pathToImage = Path.Combine(AssetStoreViewModel.AbsolutePathToThumbnails, item.MetaData.AssetNameWithoutExtension);
+                bool hasChanged = false;
+
+                if (!string.IsNullOrWhiteSpace(item.MetaData.PathToImage) && !File.Exists(item.MetaData.PathToImage))
+                {
+                    item.MetaData.PathToImage = "";
+                    hasChanged = true;
+                }
 
                 if (string.IsNullOrWhiteSpace(item.MetaData.PathToImage) && File.Exists(pathToImage))
                 {
                     item.MetaData.PathToImage = pathToImage;
+                    hasChanged = true;
+                }
+
+                if (hasChanged)
+                {
                     MetaDataManager.SaveTextureMetaData(item.MetaData);
                 }
             }

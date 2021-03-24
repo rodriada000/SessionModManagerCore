@@ -115,13 +115,17 @@ namespace SessionMapSwitcherCore.Classes
                 else
                 {
                     ProgressChanged("Extracting UnrealPak .zip files ...");
-                    BoolWithMessage isUnrealPakExtracted = FileUtils.ExtractZipFile(PathToDownloadedZip, SessionPath.ToPaks);
 
-                    if (isUnrealPakExtracted.Result == false)
+                    try
                     {
-                        ProgressChanged($"Failed to unzip file: {isUnrealPakExtracted.Message}. Cannot continue.");
+                        FileUtils.ExtractZipFile(PathToDownloadedZip, SessionPath.ToPaks);
+                    }
+                    catch(Exception e)
+                    {
+                        ProgressChanged($"Failed to unzip file: {e.Message}. Cannot continue.");
                         ExtractCompleted(false);
                         return;
+
                     }
                 }
 

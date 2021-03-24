@@ -33,11 +33,11 @@ namespace SessionModManagerCore.ViewModels
         private IMapSwitcher MapSwitcher { get; set; }
 
         private readonly string[] _hintMessages = new string[] { "Right-click list of maps and click 'Open Content Folder ...' to get to the Content folder easily",
-                                                                 "Download maps from online by clicking 'Import Map > From Online ...'",
+                                                                 "Download maps and mods from the Asset Store tab",
                                                                  "Hide maps in the list by right-clicking the map and clicking 'Hide Selected Map ...'",
                                                                  "Rename maps in the list by right-clicking the map and clicking 'Rename Selected Map ...'",
-                                                                 "Right-click anywhere and click 'View Help ...' to open the readme",
                                                                  "Use Project Watcher to auto-import your map after you cooked it in Unreal Engine",
+                                                                 "Creators: zip up your mods with a preview.png file to include a preview image for the map/mod",
                                                                };
 
         public string SessionPathTextInput
@@ -244,6 +244,7 @@ namespace SessionModManagerCore.ViewModels
             {
                 _mapPreviewSource = value;
                 NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(IsPreviewMissing));
             }
         }
 
@@ -257,9 +258,17 @@ namespace SessionModManagerCore.ViewModels
             {
                 _isLoadingImage = value;
                 NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(IsPreviewMissing));
             }
         }
 
+        public bool IsPreviewMissing
+        {
+            get
+            {
+                return (MapPreviewSource == null && !IsLoadingImage);
+            }
+        }
         #endregion
 
 
@@ -463,7 +472,7 @@ namespace SessionModManagerCore.ViewModels
 
             MapMetaData existingMetaData = MetaDataManager.LoadMapMetaData(selectedItem);
 
-            ComputerImportViewModel importViewModel = new ComputerImportViewModel()
+            MapImportViewModel importViewModel = new MapImportViewModel()
             {
                 IsZipFileImport = false,
                 PathInput = MetaDataManager.GetOriginalImportLocation(selectedItem)

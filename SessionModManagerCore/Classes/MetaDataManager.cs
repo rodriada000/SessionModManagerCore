@@ -129,6 +129,14 @@ namespace SessionMapSwitcherCore.Classes
             }
 
             // grab image from asset store if exists and path not set yet
+            bool hasChanged = false;
+            if (!string.IsNullOrWhiteSpace(savedMetaData.PathToImage) && !File.Exists(savedMetaData.PathToImage))
+            {
+                // remove image path if file does not exist
+                savedMetaData.PathToImage = "";
+                hasChanged = true;
+            }
+
             if (string.IsNullOrWhiteSpace(savedMetaData.PathToImage) && !string.IsNullOrEmpty(savedMetaData.AssetNameWithoutExtension))
             {
                 string pathToStoreThumbnail = Path.Combine(AssetStoreViewModel.AbsolutePathToThumbnails, savedMetaData.AssetNameWithoutExtension);
@@ -136,8 +144,13 @@ namespace SessionMapSwitcherCore.Classes
                 if (File.Exists(pathToStoreThumbnail))
                 {
                     savedMetaData.PathToImage = pathToStoreThumbnail;
-                    SaveMapMetaData(savedMetaData);
+                    hasChanged = true;
                 }
+            }
+
+            if (hasChanged)
+            {
+                SaveMapMetaData(savedMetaData);
             }
 
             map.IsHiddenByUser = savedMetaData.IsHiddenByUser;
