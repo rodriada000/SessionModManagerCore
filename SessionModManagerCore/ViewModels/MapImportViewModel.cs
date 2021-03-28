@@ -207,7 +207,7 @@ namespace SessionModManagerCore.ViewModels
                         return BoolWithMessage.False($"{PathToFileOrFolder} does not exist.");
                     }
 
-                    if (!FileUtils.CompressedFileHasFile(PathToFileOrFolder, ".umap"))
+                    if (!FileUtils.CompressedFileHasFile(PathToFileOrFolder, ".umap", FileUtils.SearchType.EndsWith))
                     {
                         return BoolWithMessage.False($"{PathToFileOrFolder} does not contain a valid .umap file to import.");
                     }
@@ -216,7 +216,7 @@ namespace SessionModManagerCore.ViewModels
 
                     try
                     {
-                        if (FileUtils.CompressedFileHasFile(PathToFileOrFolder, "Content/") || FileUtils.CompressedFileHasFile(PathToFileOrFolder, "Content\\"))
+                        if (FileUtils.CompressedFileHasFile(PathToFileOrFolder, "Content/", FileUtils.SearchType.StartsWith) || FileUtils.CompressedFileHasFile(PathToFileOrFolder, "Content\\", FileUtils.SearchType.StartsWith))
                         {
                             // extract files to SessionGame/ instead if the zipped up root folder is 'Content/'
                             filesCopied = FileUtils.ExtractCompressedFile(PathToFileOrFolder, SessionPath.ToSessionGame, progress);
@@ -224,6 +224,21 @@ namespace SessionModManagerCore.ViewModels
                         else
                         {
                             filesCopied = FileUtils.ExtractCompressedFile(PathToFileOrFolder, SessionPath.ToContent, progress);
+                        }
+
+                        string relativePathData = Path.Combine("Content", "Data");
+
+                        if (filesCopied.Any(f => f.Contains(relativePathData)))
+                        {
+                            Logger.Info("Checking for files extracted to Data folder ...");
+                            for (int i = filesCopied.Count-1; i >= 0; i--)
+                            {
+                                if (filesCopied[i].Contains(relativePathData) && File.Exists(filesCopied[i]))
+                                {
+                                    File.Delete(filesCopied[i]);
+                                    filesCopied.RemoveAt(i);
+                                }
+                            }
                         }
                     }
                     catch (Exception e)

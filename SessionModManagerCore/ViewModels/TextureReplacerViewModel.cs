@@ -17,11 +17,12 @@ namespace SessionModManagerCore.ViewModels
 
         private string _pathToFile;
         private const string _tempZipFolder = "Temp_Texture_Unzipped";
-        private static readonly List<string> StockFoldersToExclude = new List<string>();
+        private static readonly List<string> StockFoldersToExclude = new List<string>() { "Skeletons" };
         private List<InstalledTextureItemViewModel> _installedTextures;
         private InstalledTextureItemViewModel _selectedTexture;
         private Stream _modPreviewSource;
         private bool _isLoadingImage;
+        private bool _isReplaceButtonEnabled = true;
         public List<InstalledTextureItemViewModel> InstalledTextures
         {
             get
@@ -138,6 +139,20 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public bool IsReplaceButtonEnabled
+        {
+            get
+            {
+                return _isReplaceButtonEnabled;
+            }
+            set
+            {
+                _isReplaceButtonEnabled = value;
+                NotifyPropertyChanged();
+            }
+
+        }
+
         public void ReplaceTextures()
         {
             InitTexturePaths();
@@ -226,9 +241,21 @@ namespace SessionModManagerCore.ViewModels
                 return;
             }
 
+            string rootFolder = PathToTempFolder;
+            // change root folder to be where 'Customization' folder starts in unzipped files
+            foreach (string dir in Directory.GetDirectories(PathToTempFolder, "*", SearchOption.AllDirectories))
+            {
+                DirectoryInfo dirInfo = new DirectoryInfo(dir);
+                if (dirInfo.Name == "Customization")
+                {
+                    rootFolder = dirInfo.Parent.FullName;
+                    break;
+                }
+            }
+
             List<string> foundTextures = new List<string>();
 
-            string foundTextureName = FindTextureFileInUnzippedTempFolder(dirToSearch: PathToTempFolder, filesToExclude: foundTextures);
+            string foundTextureName = FindTextureFileInUnzippedTempFolder(dirToSearch: rootFolder, filesToExclude: foundTextures);
 
             // validate at least one texture file is in the zip
             if (foundTextureName == "")
@@ -293,8 +320,8 @@ namespace SessionModManagerCore.ViewModels
                 {
                     // a path to a game texture could not be found ...
                     // ... so assume the texture/material is custom; Copy to game directory with same folder structure as zip
-                    int index = textureFileInfo.DirectoryName.IndexOf(_tempZipFolder) + 1;
-                    targetFolder = textureFileInfo.DirectoryName.Substring(index + _tempZipFolder.Length);
+                    int index = textureFileInfo.DirectoryName.IndexOf(rootFolder) + 1;
+                    targetFolder = textureFileInfo.DirectoryName.Substring(index + rootFolder.Length);
 
                     targetFolder = Path.Combine(SessionPath.ToContent, targetFolder);
                 }
@@ -318,16 +345,16 @@ namespace SessionModManagerCore.ViewModels
                 MessageChanged?.Invoke($"Successfully replaced textures for {textureFileInfo.Name}!");
 
 
-                foundTextureName = FindTextureFileInUnzippedTempFolder(dirToSearch: PathToTempFolder, filesToExclude: foundTextures);
+                foundTextureName = FindTextureFileInUnzippedTempFolder(dirToSearch: rootFolder, filesToExclude: foundTextures);
             } while (foundTextureName != "");
 
 
             try
             {
                 // copy other files to Content
-                if (UnzippedTempFolderHasOtherFolders())
+                if (UnzippedTempFolderHasOtherFolders(rootFolder))
                 {
-                    List<string> otherFilesCopied = CopyOtherSubfoldersInTempDir(filesToExclude: foundTextures);
+                    List<string> otherFilesCopied = CopyOtherSubfoldersInTempDir(rootFolder, filesToExclude: foundTextures);
                     newTextureMetaData.FilePaths.AddRange(otherFilesCopied);
                 }
 
@@ -381,12 +408,11 @@ namespace SessionModManagerCore.ViewModels
         /// <summary>
         /// Copies other folders (not stock game folders) from unzipped temp folder into games Content folder
         /// </summary>
-        private List<string> CopyOtherSubfoldersInTempDir(List<string> filesToExclude)
+        private List<string> CopyOtherSubfoldersInTempDir(string rootFolder, List<string> filesToExclude)
         {
             List<string> filesCopied = new List<string>();
 
-
-            foreach (string folder in Directory.GetDirectories(PathToTempFolder))
+            foreach (string folder in Directory.GetDirectories(rootFolder))
             {
                 DirectoryInfo folderInfo = new DirectoryInfo(folder);
 
@@ -412,9 +438,9 @@ namespace SessionModManagerCore.ViewModels
         /// <summary>
         /// Return true if unzipped temp folder has subfolders other than the games stock folders e.g. 'Customization' folder
         /// </summary>
-        private bool UnzippedTempFolderHasOtherFolders()
+        private bool UnzippedTempFolderHasOtherFolders(string rootFolder)
         {
-            foreach (string folder in Directory.GetDirectories(PathToTempFolder))
+            foreach (string folder in Directory.GetDirectories(rootFolder))
             {
                 DirectoryInfo folderInfo = new DirectoryInfo(folder);
 

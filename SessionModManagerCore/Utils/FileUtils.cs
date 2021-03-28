@@ -315,7 +315,14 @@ namespace SessionMapSwitcherCore.Utils
             return new List<string>();
         }
 
-        public static bool CompressedFileHasFile(string pathToFile, string searchPattern)
+        public enum SearchType
+        {
+            StartsWith,
+            Contains,
+            EndsWith
+        }
+
+        public static bool CompressedFileHasFile(string pathToFile, string searchPattern, SearchType searchType = SearchType.Contains)
         {
             bool hasFile = false;
 
@@ -325,7 +332,17 @@ namespace SessionMapSwitcherCore.Utils
                 {
                     foreach (ZipArchiveEntry entry in archive.Entries)
                     {
-                        if (entry.FullName.Contains(searchPattern))
+                        if (searchType == SearchType.StartsWith && entry.FullName.StartsWith(searchPattern))
+                        {
+                            hasFile = true;
+                            break;
+                        }
+                        else if (searchType == SearchType.Contains && entry.FullName.Contains(searchPattern))
+                        {
+                            hasFile = true;
+                            break;
+                        }
+                        else if (searchType == SearchType.EndsWith && entry.FullName.EndsWith(searchPattern))
                         {
                             hasFile = true;
                             break;
@@ -339,7 +356,17 @@ namespace SessionMapSwitcherCore.Utils
                 {
                     foreach (RarArchiveEntry entry in archive.Entries.Where(entry => !entry.IsDirectory))
                     {
-                        if (entry.Key.Contains(searchPattern))
+                        if (searchType == SearchType.StartsWith && entry.Key.StartsWith(searchPattern))
+                        {
+                            hasFile = true;
+                            break;
+                        }
+                        else if (searchType == SearchType.Contains && entry.Key.Contains(searchPattern))
+                        {
+                            hasFile = true;
+                            break;
+                        }
+                        else if (searchType == SearchType.EndsWith && entry.Key.EndsWith(searchPattern))
                         {
                             hasFile = true;
                             break;

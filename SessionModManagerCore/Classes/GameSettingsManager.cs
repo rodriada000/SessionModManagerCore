@@ -10,6 +10,14 @@ using System.Reflection;
 
 namespace SessionMapSwitcherCore.Classes
 {
+    public enum VideoSettingsOptions
+    {
+        Low,
+        Medium,
+        High,
+        Epic
+    }
+
     public static class GameSettingsManager
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
@@ -21,11 +29,49 @@ namespace SessionMapSwitcherCore.Classes
 
         public static int ObjectCount { get; set; }
 
+        private static bool _enableVsync;
+        private static int _fullscreenMode;
+        private static int _textureQuality;
+        private static int _shadingQuality;
+        private static int _viewDistanceQuality;
+        private static int _antiAliasingQuality;
+        private static int _shadowQuality;
+        private static int _foliageQuality;
+        private static int _postProcessQuality;
+        private static int _effectsQuality;
+
+        public static int FrameRateLimit { get; set; }
+
+        public static int FullscreenMode { get => _fullscreenMode; set => _fullscreenMode = value; }
+
+        public static bool EnableVsync { get => _enableVsync; set => _enableVsync = value; }
+
+        public static string ResolutionSizeX { get; set; }
+        public static string ResolutionSizeY { get; set; }
+
+        public static int TextureQuality { get => _textureQuality; set => _textureQuality = value; }
+        public static int ShadingQuality { get => _shadingQuality; set => _shadingQuality = value; }
+        public static int ViewDistanceQuality { get => _viewDistanceQuality; set => _viewDistanceQuality = value; }
+        public static int AntiAliasingQuality { get => _antiAliasingQuality; set => _antiAliasingQuality = value; }
+        public static int ShadowQuality { get => _shadowQuality; set => _shadowQuality = value; }
+        public static int FoliageQuality { get => _foliageQuality; set => _foliageQuality = value; }
+        public static int PostProcessQuality { get => _postProcessQuality; set => _postProcessQuality = value; }
+        public static int EffectsQuality { get => _effectsQuality; set => _effectsQuality = value; }
+
+
         public static string PathToInventorySaveSlotFile
         {
             get
             {
                 return Path.Combine(SessionPath.ToSaveGamesFolder, "PlayerInventorySaveSlot.sav");
+            }
+        }
+
+        public static string PathToGameUserSettingsFile
+        {
+            get
+            {
+                return Path.Combine(SessionPath.ToLocalAppDataConfigFolder, "GameUserSettings.ini");
             }
         }
 
@@ -51,6 +97,8 @@ namespace SessionMapSwitcherCore.Classes
 
                 GetObjectCountFromFile();
 
+                GetVideoSettingsFromFile();
+
                 return BoolWithMessage.True();
             }
             catch (Exception e)
@@ -61,23 +109,6 @@ namespace SessionMapSwitcherCore.Classes
                 return BoolWithMessage.False($"Could not get game settings: {e.Message}");
             }
         }
-
-        //private static void GetGravityFromIniFile(IniData engineFile)
-        //{
-        //    string gravitySetting = null;
-        //    try
-        //    {
-        //        gravitySetting = engineFile["/Script/Engine.PhysicsSettings"]["DefaultGravityZ"];
-        //    }
-        //    catch (Exception) { };
-
-        //    if (String.IsNullOrWhiteSpace(gravitySetting))
-        //    {
-        //        gravitySetting = "-980";
-        //    }
-
-        //    double.TryParse(gravitySetting, out _gravity);
-        //}
 
         private static void GetRenderSettingsFromIniFile(IniData engineFile)
         {
@@ -464,6 +495,174 @@ namespace SessionMapSwitcherCore.Classes
         public static bool IsSkippingMovies()
         {
             return Directory.Exists(SessionPath.ToMovies.Replace("Movies", "Movies_SKIP")) && !Directory.Exists(SessionPath.ToMovies);
+        }
+
+        public static BoolWithMessage GetVideoSettingsFromFile()
+        {
+            if (SessionPath.IsSessionPathValid() == false)
+            {
+                return BoolWithMessage.False("Session Path invalid.");
+            }
+
+            if (!Directory.Exists(SessionPath.ToLocalAppDataConfigFolder) || !File.Exists(PathToGameUserSettingsFile))
+            {
+                return BoolWithMessage.True();
+            }
+
+            try
+            {
+                IniData settingsFile = null;
+                var parser = new FileIniDataParser();
+                parser.Parser.Configuration.AllowDuplicateKeys = true;
+                parser.Parser.Configuration.AllowCreateSectionsOnFly = true;
+
+                settingsFile = parser.ReadFile(PathToGameUserSettingsFile);
+
+                if (settingsFile["/Script/Engine.GameUserSettings"].ContainsKey("FrameRateLimit"))
+                {
+                    float.TryParse(settingsFile["/Script/Engine.GameUserSettings"]["FrameRateLimit"], out float frameRate);
+                    FrameRateLimit = (int)frameRate;
+                }
+
+                if (settingsFile["/Script/Engine.GameUserSettings"].ContainsKey("bUseVSync"))
+                {
+                    bool.TryParse(settingsFile["/Script/Engine.GameUserSettings"]["bUseVSync"], out _enableVsync);
+                }
+
+                if (settingsFile["/Script/Engine.GameUserSettings"].ContainsKey("ResolutionSizeX"))
+                {
+                    ResolutionSizeX = settingsFile["/Script/Engine.GameUserSettings"]["ResolutionSizeX"];
+                }
+
+                if (settingsFile["/Script/Engine.GameUserSettings"].ContainsKey("ResolutionSizeY"))
+                {
+                    ResolutionSizeY = settingsFile["/Script/Engine.GameUserSettings"]["ResolutionSizeY"];
+                }
+
+                FullscreenMode = 0;
+                if (settingsFile["/Script/Engine.GameUserSettings"].ContainsKey("FullscreenMode"))
+                {
+                    int.TryParse(settingsFile["/Script/Engine.GameUserSettings"]["FullscreenMode"], out _fullscreenMode);
+                }
+
+                if (settingsFile["ScalabilityGroups"].ContainsKey("sg.TextureQuality"))
+                {
+                    int.TryParse(settingsFile["ScalabilityGroups"]["sg.TextureQuality"], out _textureQuality);
+                }
+
+                if (settingsFile["ScalabilityGroups"].ContainsKey("sg.ShadingQuality"))
+                {
+                    int.TryParse(settingsFile["ScalabilityGroups"]["sg.ShadingQuality"], out _shadingQuality);
+                }
+
+                if (settingsFile["ScalabilityGroups"].ContainsKey("sg.ViewDistanceQuality"))
+                {
+                    int.TryParse(settingsFile["ScalabilityGroups"]["sg.ViewDistanceQuality"], out _viewDistanceQuality);
+                }
+
+                if (settingsFile["ScalabilityGroups"].ContainsKey("sg.AntiAliasingQuality"))
+                {
+                    int.TryParse(settingsFile["ScalabilityGroups"]["sg.AntiAliasingQuality"], out _antiAliasingQuality);
+                }
+
+                if (settingsFile["ScalabilityGroups"].ContainsKey("sg.ShadowQuality"))
+                {
+                    int.TryParse(settingsFile["ScalabilityGroups"]["sg.ShadowQuality"], out _shadowQuality);
+                }
+
+                if (settingsFile["ScalabilityGroups"].ContainsKey("sg.FoliageQuality"))
+                {
+                    int.TryParse(settingsFile["ScalabilityGroups"]["sg.FoliageQuality"], out _foliageQuality);
+                }
+
+                if (settingsFile["ScalabilityGroups"].ContainsKey("sg.PostProcessQuality"))
+                {
+                    int.TryParse(settingsFile["ScalabilityGroups"]["sg.PostProcessQuality"], out _postProcessQuality);
+                }
+
+                if (settingsFile["ScalabilityGroups"].ContainsKey("sg.EffectsQuality"))
+                {
+                    int.TryParse(settingsFile["ScalabilityGroups"]["sg.EffectsQuality"], out _effectsQuality);
+                }
+
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e.Message);
+                return BoolWithMessage.False(e.Message);
+            }
+
+            return BoolWithMessage.True();
+        }
+
+        public static BoolWithMessage SaveVideoSettingsToDisk()
+        {
+            if (SessionPath.IsSessionPathValid() == false)
+            {
+                return BoolWithMessage.False("Session Path invalid.");
+            }
+
+            if (!Directory.Exists(SessionPath.ToLocalAppDataConfigFolder) || !File.Exists(PathToGameUserSettingsFile))
+            {
+                return BoolWithMessage.False("Cannot save video settings due to missing config file. Make sure to have start the game at least once.");
+            }
+
+            try
+            {
+                IniData settingsFile = null;
+                var parser = new FileIniDataParser();
+                parser.Parser.Configuration.AllowDuplicateKeys = true;
+                parser.Parser.Configuration.AllowCreateSectionsOnFly = true;
+
+                settingsFile = parser.ReadFile(PathToGameUserSettingsFile);
+
+                settingsFile["/Script/Engine.GameUserSettings"]["FrameRateLimit"] = FrameRateLimit.ToString();
+                settingsFile["/Script/Engine.GameUserSettings"]["bUseVSync"] = EnableVsync.ToString();
+
+                settingsFile["/Script/Engine.GameUserSettings"].RemoveKey("LastUserConfirmedResolutionSizeX");
+                settingsFile["/Script/Engine.GameUserSettings"].RemoveKey("LastUserConfirmedResolutionSizeY");
+                settingsFile["/Script/Engine.GameUserSettings"].RemoveKey("LastConfirmedFullscreenMode");
+
+                if (ResolutionSizeX == null || ResolutionSizeY == null)
+                {
+                    settingsFile["/Script/Engine.GameUserSettings"].RemoveKey("ResolutionSizeX");
+                    settingsFile["/Script/Engine.GameUserSettings"].RemoveKey("ResolutionSizeY");
+                }
+                else
+                {
+                    settingsFile["/Script/Engine.GameUserSettings"]["ResolutionSizeX"] = ResolutionSizeX;
+                    settingsFile["/Script/Engine.GameUserSettings"]["ResolutionSizeY"] = ResolutionSizeY;
+                }
+
+                if (FullscreenMode == 0)
+                {
+                    settingsFile["/Script/Engine.GameUserSettings"].RemoveKey("FullscreenMode");
+                    settingsFile["/Script/Engine.GameUserSettings"].RemoveKey("PreferredFullscreenMode");
+                }
+                else
+                {
+                    settingsFile["/Script/Engine.GameUserSettings"]["FullscreenMode"] = FullscreenMode.ToString();
+                    settingsFile["/Script/Engine.GameUserSettings"]["PreferredFullscreenMode"] = FullscreenMode.ToString();
+                }
+
+                settingsFile["ScalabilityGroups"]["sg.TextureQuality"] = TextureQuality.ToString();
+                settingsFile["ScalabilityGroups"]["sg.ShadingQuality"] = ShadingQuality.ToString();
+                settingsFile["ScalabilityGroups"]["sg.ViewDistanceQuality"] = ViewDistanceQuality.ToString();
+                settingsFile["ScalabilityGroups"]["sg.AntiAliasingQuality"] = AntiAliasingQuality.ToString();
+                settingsFile["ScalabilityGroups"]["sg.ShadowQuality"] = ShadowQuality.ToString();
+                settingsFile["ScalabilityGroups"]["sg.FoliageQuality"] = FoliageQuality.ToString();
+                settingsFile["ScalabilityGroups"]["sg.PostProcessQuality"] = PostProcessQuality.ToString();
+                settingsFile["ScalabilityGroups"]["sg.EffectsQuality"] = EffectsQuality.ToString();
+
+                parser.WriteFile(PathToGameUserSettingsFile, settingsFile);
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e.Message);
+                return BoolWithMessage.False(e.Message);
+            }
+
+            return BoolWithMessage.True();
         }
     }
 }
