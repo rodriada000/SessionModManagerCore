@@ -25,7 +25,6 @@ namespace SessionMapSwitcherCore.Classes
         public static bool SkipIntroMovie { get; set; }
 
         public static bool EnableDBuffer { get; set; }
-        public static bool EnableLightPropagationVolume { get; set; }
 
         public static int ObjectCount { get; set; }
 
@@ -115,20 +114,6 @@ namespace SessionMapSwitcherCore.Classes
             string setting = null;
             bool parsedBool = false;
 
-            try
-            {
-                setting = engineFile["/Script/Engine.RendererSettings"]["r.LightPropagationVolume"];
-            }
-            catch (Exception) { };
-
-            if (String.IsNullOrWhiteSpace(setting))
-            {
-                setting = "false";
-            }
-
-            bool.TryParse(setting, out parsedBool);
-            EnableLightPropagationVolume = parsedBool;
-
 
             try
             {
@@ -183,7 +168,7 @@ namespace SessionMapSwitcherCore.Classes
         /// <summary>
         /// updates various settings in UserEngine.ini and rename 'Movies' folder to skip movies if enabled
         /// </summary>
-        public static BoolWithMessage ValidateAndUpdateGameSettings(bool skipMovie, bool enableLpv, bool enableDBuffer)
+        public static BoolWithMessage UpdateGameSettings(bool skipMovie, bool enableDBuffer)
         {
             if (SessionPath.IsSessionPathValid() == false)
             {
@@ -199,7 +184,12 @@ namespace SessionMapSwitcherCore.Classes
                 EzPzMapSwitcher.CreateDefaultUserEngineIniFile();
                 engineFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
 
-                engineFile["/Script/Engine.RendererSettings"]["r.LightPropagationVolume"] = enableLpv.ToString();
+                // as of July 6th 2021 update, LPV is deprecated so don't have to worry about it causing issues. ensure it is removed.
+                if (engineFile.Sections.Any(s => s.SectionName == "/Script/Engine.RendererSettings" && s.Keys.Any(k => k.KeyName == "r.LightPropagationVolume")))
+                {
+                    engineFile["/Script/Engine.RendererSettings"].RemoveKey("r.LightPropagationVolume");
+                }
+
                 engineFile["/Script/Engine.RendererSettings"]["r.DBuffer"] = enableDBuffer.ToString();
 
                 parser.WriteFile(SessionPath.ToUserEngineIniFile, engineFile);
@@ -208,7 +198,6 @@ namespace SessionMapSwitcherCore.Classes
 
                 // update in-memory static data members
                 SkipIntroMovie = skipMovie;
-                EnableLightPropagationVolume = enableLpv;
                 EnableDBuffer = enableDBuffer;
             }
             catch (Exception e)
