@@ -12,7 +12,6 @@ namespace SessionModManagerCore.ViewModels
         private string _objectCountText;
         private bool _skipMovieIsChecked;
         private bool _dBufferIsChecked;
-        private bool _lightPropagationVolumeIsChecked;
 
         private string _shadowQualityText;
         private string _antiAliasingText;
@@ -193,16 +192,6 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
-        public bool LightPropagationVolumeIsChecked
-        {
-            get { return _lightPropagationVolumeIsChecked; }
-            set
-            {
-                _lightPropagationVolumeIsChecked = value;
-                NotifyPropertyChanged();
-            }
-        }
-
 
         private List<string> _videoDropdown;
         public List<string> VideoSettingsDropdownOptions
@@ -296,7 +285,6 @@ namespace SessionModManagerCore.ViewModels
 
             ObjectCountText = GameSettingsManager.ObjectCount.ToString();
             SkipMovieIsChecked = GameSettingsManager.SkipIntroMovie;
-            LightPropagationVolumeIsChecked = GameSettingsManager.EnableLightPropagationVolume;
             DBufferIsChecked = GameSettingsManager.EnableDBuffer;
 
             ShadowQualityText = ((VideoSettingsOptions) GameSettingsManager.ShadowQuality).ToString();
@@ -334,7 +322,7 @@ namespace SessionModManagerCore.ViewModels
         {
             string returnMessage = "";
 
-            BoolWithMessage didSetSettings = GameSettingsManager.ValidateAndUpdateGameSettings(SkipMovieIsChecked, LightPropagationVolumeIsChecked, DBufferIsChecked);
+            BoolWithMessage didSetSettings = GameSettingsManager.UpdateGameSettings(SkipMovieIsChecked, DBufferIsChecked);
             BoolWithMessage didSetObjCount = BoolWithMessage.True(); // set to true by default in case the user does not have the file to modify
 
             BoolWithMessage didSetVideoSettings = ValidateAndUpdateVideoSettings();
