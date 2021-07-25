@@ -27,6 +27,8 @@ namespace SessionModManagerCore.ViewModels
         private bool _showInvalidMaps;
         private MapListItem _secondMapToLoad;
         private bool _loadSecondMapIsChecked;
+        private bool _rmsToolsuiteIsChecked;
+
         private Stream _mapPreviewSource;
         private bool _isLoadingImage;
 
@@ -122,45 +124,29 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
-        public void StartGameAndLoadSecondMap()
+        public bool RMSToolsuiteIsChecked
         {
-            Process.Start(SessionPath.ToSessionExe);
-
-            if (LoadSecondMapIsChecked == false)
+            get
             {
-                return; // do not continue as the second map does not need to be loaded
+                return _rmsToolsuiteIsChecked;
             }
-
-
-            Task loadTask = Task.Factory.StartNew(() =>
+            set
             {
-                MapListItem mapToLoadNext = SecondMapToLoad;
-
-                if (mapToLoadNext == null)
+                if (value != _rmsToolsuiteIsChecked)
                 {
-                    mapToLoadNext = AvailableMaps.Where(m => m.MapName == CurrentlyLoadedMapName).FirstOrDefault();
+                    _rmsToolsuiteIsChecked = value;
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.EnableRMSTools, value.ToString());
+                    NotifyPropertyChanged();
                 }
+            }
+        }
 
-                int timeToWaitInMilliseconds = 20000;
-
-                if (MapSwitcher is UnpackedMapSwitcher)
-                {
-                    // wait longer for unpacked games to load since they load slower
-                    timeToWaitInMilliseconds = 25000;
-                }
-
-                System.Threading.Thread.Sleep(timeToWaitInMilliseconds); // wait few seconds before loading the next map to let the game finish loading
-                LoadSelectedMap(mapToLoadNext);
-            });
-
-            loadTask.ContinueWith((result) =>
+        public bool RMSToolsuiteCheckboxIsVisible
+        {
+            get
             {
-                if (result.IsFaulted)
-                {
-                    Logger.Warn(result.Exception.GetBaseException(), "failed to load second map");
-                    return;
-                }
-            });
+                return RMSToolsuiteLoader.IsToolsuiteInstalled();
+            }
         }
 
         public string HintMessage
@@ -276,6 +262,17 @@ namespace SessionModManagerCore.ViewModels
         {
             SessionPathTextInput = SessionPath.ToSession;
             ShowInvalidMapsIsChecked = AppSettingsUtil.GetAppSetting(SettingKey.ShowInvalidMaps).Equals("true", StringComparison.OrdinalIgnoreCase);
+
+            string savedSetting = AppSettingsUtil.GetAppSetting(SettingKey.EnableRMSTools);
+            if (savedSetting == "")
+            {
+                RMSToolsuiteIsChecked = true; // default to true if no setting saved
+            }
+            else
+            {
+                RMSToolsuiteIsChecked = savedSetting.Equals("true", StringComparison.OrdinalIgnoreCase);
+            }
+
             InputControlsEnabled = true;
 
             SetRandomHintMessage();
@@ -295,6 +292,65 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
+        public void StartGameAndLoadSecondMap()
+        {
+            // check if RMS toolsuite is installed before starting game and then enable/disable it
+            if (RMSToolsuiteLoader.IsToolsuiteInstalled())
+            {
+                if (RMSToolsuiteIsChecked)
+                {
+                    RMSToolsuiteLoader.CopyFilesToEnvFolder();
+                }
+                else
+                {
+                    RMSToolsuiteLoader.DeleteFilesInEnvFolder();
+
+                }
+            }
+
+            Process.Start(SessionPath.ToSessionExe);
+
+            if (LoadSecondMapIsChecked == false)
+            {
+                return; // do not continue as the second map does not need to be loaded
+            }
+
+
+            Task loadTask = Task.Factory.StartNew(() =>
+            {
+                MapListItem mapToLoadNext = SecondMapToLoad;
+
+                if (mapToLoadNext == null)
+                {
+                    mapToLoadNext = AvailableMaps.Where(m => m.MapName == CurrentlyLoadedMapName).FirstOrDefault();
+                }
+
+                int timeToWaitInMilliseconds = 20000;
+
+                if (MapSwitcher is UnpackedMapSwitcher)
+                {
+                    // wait longer for unpacked games to load since they load slower
+                    timeToWaitInMilliseconds = 25000;
+                }
+
+                System.Threading.Thread.Sleep(timeToWaitInMilliseconds); // wait few seconds before loading the next map to let the game finish loading
+                LoadSelectedMap(mapToLoadNext);
+            });
+
+            loadTask.ContinueWith((result) =>
+            {
+                if (result.IsFaulted)
+                {
+                    Logger.Warn(result.Exception.GetBaseException(), "failed to load second map");
+                    return;
+                }
+            });
+        }
+
+        public void CheckForRMSTools()
+        {
+            NotifyPropertyChanged(nameof(RMSToolsuiteCheckboxIsVisible));
+        }
 
         /// <summary>
         /// Sets <see cref="SessionPath.ToSession"/> and saves the value to appSettings in the applications .config file

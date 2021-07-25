@@ -228,11 +228,16 @@ namespace SessionModManagerCore.ViewModels
             Directory.CreateDirectory(PathToTempFolder);
 
             Logger.Info($"Extracting {PathToFile}...");
+            MessageChanged?.Invoke($"Extracting mod files 0% ...");
+
+            string pathToFile = PathToFile;
+
 
             // extract to temp location
             try
             {
-                FileUtils.ExtractCompressedFile(PathToFile, PathToTempFolder);
+                IProgress<double> progress = new Progress<double>(percent => MessageChanged?.Invoke($"Extracting mod files {percent * 100:0.0}% ..."));
+                FileUtils.ExtractCompressedFile(pathToFile, PathToTempFolder, progress);
             }
             catch (Exception e)
             {
@@ -270,8 +275,8 @@ namespace SessionModManagerCore.ViewModels
             if (AssetToInstall == null)
             {
                 // if not replacing from Asset Store then just use name of compressed file being used to replace textures
-                newTextureMetaData.AssetName = Path.GetFileName(PathToFile);
-                newTextureMetaData.Name = Path.GetFileNameWithoutExtension(PathToFile);
+                newTextureMetaData.AssetName = Path.GetFileName(pathToFile);
+                newTextureMetaData.Name = Path.GetFileNameWithoutExtension(pathToFile);
             }
             else
             {
@@ -338,11 +343,11 @@ namespace SessionModManagerCore.ViewModels
                 catch (Exception e)
                 {
                     Logger.Error(e);
-                    MessageChanged?.Invoke($"Failed to copy texture files: {e.Message}");
+                    MessageChanged?.Invoke($"Failed to copy mod files: {e.Message}");
                     return;
                 }
 
-                MessageChanged?.Invoke($"Successfully replaced textures for {textureFileInfo.Name}!");
+                MessageChanged?.Invoke($"Successfully imported mod file {textureFileInfo.Name}!");
 
 
                 foundTextureName = FindTextureFileInUnzippedTempFolder(dirToSearch: rootFolder, filesToExclude: foundTextures);
@@ -386,13 +391,15 @@ namespace SessionModManagerCore.ViewModels
             catch (Exception e)
             {
                 Logger.Error(e);
-                MessageChanged?.Invoke($"Failed to copy texture files: {e.Message}");
+                MessageChanged?.Invoke($"Failed to copy mod files: {e.Message}");
                 return;
             }
 
 
             MetaDataManager.SaveTextureMetaData(newTextureMetaData);
             AssetToInstall = null; // texture asset replaced so nullify it since done with object
+
+            MessageChanged?.Invoke($"Successfully finished importing mod {new FileInfo(pathToFile).NameWithoutExtension()}!");
         }
 
         private void DeleteTempZipFolder()
@@ -3579,26 +3586,33 @@ namespace SessionModManagerCore.ViewModels
             }
         }
 
-        public void RemoveSelectedTexture()
+        public void RemoveSelectedMod()
         {
-            InstalledTextureItemViewModel textureToRemove = SelectedTexture;
+            InstalledTextureItemViewModel modToRemove = SelectedTexture;
 
-            if (textureToRemove == null)
+            if (modToRemove == null || modToRemove.MetaData == null)
             {
                 Logger.Warn("textureToRemove is null");
                 return;
             }
 
-            BoolWithMessage deleteResult = MetaDataManager.DeleteTextureFiles(textureToRemove.MetaData);
+            // check if removing RMS tools and delete loaded files before removing mod
+            if (modToRemove.MetaData.FilePaths.Any(f => f.Contains(RMSToolsuiteLoader.PathToToolsuite)) && RMSToolsuiteLoader.IsLoaded())
+            {
+                RMSToolsuiteLoader.DeleteFilesInEnvFolder();
+                AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.EnableRMSTools, ""); // clear out setting since not installed anymore
+            }
+
+            BoolWithMessage deleteResult = MetaDataManager.DeleteTextureFiles(modToRemove.MetaData);
 
             if (deleteResult.Result)
             {
-                MessageService.Instance.ShowMessage($"Successfully removed {textureToRemove.TextureName}!");
+                MessageService.Instance.ShowMessage($"Successfully removed {modToRemove.TextureName}!");
                 LoadInstalledTextures();
             }
             else
             {
-                MessageService.Instance.ShowMessage($"Failed to remove texture: {deleteResult.Message}");
+                MessageService.Instance.ShowMessage($"Failed to remove mod: {deleteResult.Message}");
             }
         }
 

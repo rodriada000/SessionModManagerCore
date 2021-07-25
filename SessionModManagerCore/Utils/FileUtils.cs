@@ -384,6 +384,11 @@ namespace SessionMapSwitcherCore.Utils
             return new ZipArchive(File.OpenRead(filename), ZipArchiveMode.Read);
         }
 
+        /// <summary>
+        /// Recursively get all files in a given directory
+        /// </summary>
+        /// <param name="directoryPath"></param>
+        /// <returns></returns>
         public static List<string> GetAllFilesInDirectory(string directoryPath)
         {
             List<string> allFiles = new List<string>();

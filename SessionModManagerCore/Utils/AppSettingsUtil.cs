@@ -22,7 +22,8 @@ namespace SessionMapSwitcherCore.Utils
         AssetStoreShoesChecked,
         AssetStoreMeshesChecked,
         AssetStoreCharactersChecked,
-        WindowState
+        WindowState,
+        EnableRMSTools
     }
 
     public class AppSettingsUtil
