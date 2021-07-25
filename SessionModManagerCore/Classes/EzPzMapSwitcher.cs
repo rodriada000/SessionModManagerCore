@@ -1,6 +1,7 @@
 ﻿using IniParser;
 using IniParser.Model;
 using SessionMapSwitcherCore.Classes.Interfaces;
+using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,9 +14,26 @@ namespace SessionMapSwitcherCore.Classes
     public class EzPzMapSwitcher : IMapSwitcher
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+        private List<string> _loadedMapFiles;
 
         public List<MapListItem> DefaultMaps { get; private set; }
         internal MapListItem FirstLoadedMap { get; set; }
+
+        public List<string> LoadedMapFiles
+        {
+            get
+            {
+                if (_loadedMapFiles == null)
+                {
+                    _loadedMapFiles = new List<string>();
+                }
+                return _loadedMapFiles;
+            }
+            set
+            {
+                _loadedMapFiles = value;
+            }
+        }
 
         public EzPzMapSwitcher()
         {
@@ -90,6 +108,7 @@ namespace SessionMapSwitcherCore.Classes
 
                     Logger.Info($"... copying {fileName} -> {fullTargetFilePath}");
                     File.Copy(fileName, fullTargetFilePath, overwrite: true);
+                    LoadedMapFiles.Add(fullTargetFilePath);
                 }
             }
 
@@ -179,11 +198,20 @@ namespace SessionMapSwitcherCore.Classes
                 return;
             }
 
-            foreach (string fileName in Directory.GetFiles(SessionPath.ToNYCFolder))
+            foreach (string fileName in LoadedMapFiles)
             {
+                if (RMSToolsuiteLoader.LoadedToolsuiteFiles.Contains(fileName))
+                {
+                    continue; // don't delete files associated with RMS
+                }
+
                 Logger.Info($"... deleting file {fileName}");
-                File.Delete(fileName);
+                if (File.Exists(fileName))
+                {
+                    File.Delete(fileName);
+                }
             }
+            LoadedMapFiles.Clear();
         }
 
         /// <summary>
