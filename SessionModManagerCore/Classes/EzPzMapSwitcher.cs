@@ -198,7 +198,13 @@ namespace SessionMapSwitcherCore.Classes
                 return;
             }
 
-            foreach (string fileName in LoadedMapFiles)
+            // check if RMS is loaded
+            if (RMSToolsuiteLoader.LoadedToolsuiteFiles.Count == 0)
+            {
+                RMSToolsuiteLoader.IsLoaded();
+            }
+
+            foreach (string fileName in Directory.GetFiles(SessionPath.ToNYCFolder))
             {
                 if (RMSToolsuiteLoader.LoadedToolsuiteFiles.Contains(fileName))
                 {
@@ -211,6 +217,7 @@ namespace SessionMapSwitcherCore.Classes
                     File.Delete(fileName);
                 }
             }
+
             LoadedMapFiles.Clear();
         }
 

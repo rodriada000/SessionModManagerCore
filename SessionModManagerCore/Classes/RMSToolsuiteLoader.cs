@@ -52,11 +52,15 @@ namespace SessionModManagerCore.Classes
             return Directory.Exists(PathToToolsuite) && Directory.GetFiles(PathToToolsuite).Length > 0;
         }
 
+        /// <summary>
+        /// Gets the currently loaded RMS files in the Art/Env/NYC folder and returns true if all files are found; false if any file missing
+        /// </summary>
         public static bool IsLoaded()
         {
             string pathToDataFolder = Path.Combine(PathToToolsuite, "data");
             List<string> filesThatShouldBeLoaded = FileUtils.GetAllFilesInDirectory(pathToDataFolder);
             string targetPath;
+            bool isLoaded = true;
 
             LoadedToolsuiteFiles.Clear();
 
@@ -65,13 +69,13 @@ namespace SessionModManagerCore.Classes
                 targetPath = file.Replace(pathToDataFolder, PathToContentArtFolder);
                 if (!File.Exists(targetPath))
                 {
-                    return false;
+                    isLoaded = false;
                 }
 
                 LoadedToolsuiteFiles.Add(targetPath);
             }
 
-            return true;
+            return isLoaded;
         }
 
         /// <summary>
