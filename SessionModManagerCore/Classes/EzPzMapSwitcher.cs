@@ -146,20 +146,22 @@ namespace SessionMapSwitcherCore.Classes
             {
                 // delete session map file / custom maps from game 
                 DeleteMapFilesFromNYCFolder();
+                string selectedMapPath;
 
-                CopyMapFilesToNYCFolder(map);
-
-                // update the ini file with the new map path
-                // .. when the game is running the map file is renamed to NYC01_Persistent so it can load when you leave the apartment
-                string selectedMapPath = "/Game/Art/Env/NYC/NYC01_Persistent";
-
-                if (SessionPath.IsSessionRunning() == false)
+                if (SessionPath.IsSessionRunning())
                 {
-                    selectedMapPath = $"/Game/Art/Env/NYC/{map.MapName}";
+                    // .. when the game is running the map file is renamed to NYC01_Persistent and copied to NYC folder so it can load when you leave the apartment
+                    CopyMapFilesToNYCFolder(map);
+
+                    // update the ini file with the new map path
+                    selectedMapPath = "/Game/Art/Env/NYC/NYC01_Persistent";
+                }
+                else
+                {
+                    selectedMapPath = map.MapPathForIni;
                 }
 
                 SetGameDefaultMapSetting(selectedMapPath);
-
 
                 return BoolWithMessage.True($"{map.MapName} Loaded!");
             }
