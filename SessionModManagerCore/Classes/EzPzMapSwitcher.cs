@@ -43,14 +43,14 @@ namespace SessionMapSwitcherCore.Classes
                 {
                     GameDefaultMapSetting ="/Game/Tutorial/Intro/MAP_EntryPoint",
                     MapName = "Session Default Map - Brooklyn Banks",
-                    PathToImage = Path.Combine(SessionPath.ToApplicationRoot, "Resources", "defaultMap1.png"),
+                    PathToImage = Path.Combine(SessionPath.ToApplicationResourcesFolder, "defaultMap1.png"),
                     IsDefaultMap = true
                 },
                 new MapListItem()
                 {
                     GameDefaultMapSetting = "/Game/Art/Env/GYM/crea-turePark/GYM_crea-turePark_Persistent.GYM_crea-turePark_Persistent",
                     GlobalDefaultGameModeSetting = "/Game/Data/PBP_InGameSessionGameMode.PBP_InGameSessionGameMode_C",
-                    PathToImage = Path.Combine(SessionPath.ToApplicationRoot, "Resources", "defaultMap2.png"),
+                    PathToImage = Path.Combine(SessionPath.ToApplicationResourcesFolder, "defaultMap2.png"),
                     MapName = "Crea-ture Dev Park",
                     IsDefaultMap = true
                 }
