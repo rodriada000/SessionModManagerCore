@@ -76,7 +76,7 @@ namespace MapSwitcherUnitTests
 
             MetaDataManager.SaveMapMetaData(testMetaData);
 
-            string pathToExpectedFile = Path.Combine(MetaDataManager.FullPathToMetaFolder, "MapName_Folder_MapName_meta.json");
+            string pathToExpectedFile = Path.Combine(SessionPath.FullPathToMetaFolder, "MapName_Folder_MapName_meta.json");
 
             Assert.IsTrue(File.Exists(pathToExpectedFile));
         }
@@ -98,7 +98,7 @@ namespace MapSwitcherUnitTests
 
             MetaDataManager.SaveMapMetaData(testMetaData);
 
-            string pathToSavedFile = Path.Combine(MetaDataManager.FullPathToMetaFolder, testMetaData.GetJsonFileName());
+            string pathToSavedFile = Path.Combine(SessionPath.FullPathToMetaFolder, testMetaData.GetJsonFileName());
 
             Assert.AreEqual(Newtonsoft.Json.JsonConvert.SerializeObject(testMetaData), File.ReadAllText(pathToSavedFile));
         }

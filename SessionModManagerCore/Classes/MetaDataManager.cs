@@ -13,34 +13,15 @@ namespace SessionMapSwitcherCore.Classes
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
-        public const string MetaFolderName = "MapSwitcherMetaData";
-
         public const string InstalledTextureFileName = "installed_textures.json";
-
-        public static string FullPathToMetaFolder
-        {
-            get
-            {
-                return Path.Combine(SessionPath.ToContent, MetaFolderName);
-            }
-        }
-
-        public static string FullPathToMetaImagesFolder
-        {
-            get
-            {
-                return Path.Combine(FullPathToMetaFolder, "images");
-            }
-        }
 
         public static string PathToInstalledTextureFile
         {
             get
             {
-                return Path.Combine(FullPathToMetaFolder, InstalledTextureFileName);
+                return Path.Combine(SessionPath.FullPathToMetaFolder, InstalledTextureFileName);
             }
         }
-
 
         internal static string GetOriginalImportLocation(MapListItem map)
         {
@@ -189,9 +170,9 @@ namespace SessionMapSwitcherCore.Classes
         /// </summary>
         internal static void CreateMetaDataFolder()
         {
-            if (Directory.Exists(FullPathToMetaFolder) == false)
+            if (Directory.Exists(SessionPath.FullPathToMetaFolder) == false)
             {
-                Directory.CreateDirectory(FullPathToMetaFolder);
+                Directory.CreateDirectory(SessionPath.FullPathToMetaFolder);
             }
         }
 
@@ -320,7 +301,7 @@ namespace SessionMapSwitcherCore.Classes
                     fileName = $"{mapItem.MapName}_meta.json";
                 }
 
-                string pathToFile = Path.Combine(FullPathToMetaFolder, fileName);
+                string pathToFile = Path.Combine(SessionPath.FullPathToMetaFolder, fileName);
 
                 string fileContents = File.ReadAllText(pathToFile);
 
@@ -360,7 +341,7 @@ namespace SessionMapSwitcherCore.Classes
                 CreateMetaDataFolder();
 
                 string fileName = metaData.GetJsonFileName();
-                string pathToFile = Path.Combine(FullPathToMetaFolder, fileName);
+                string pathToFile = Path.Combine(SessionPath.FullPathToMetaFolder, fileName);
 
 
                 string jsonToSave = JsonConvert.SerializeObject(metaData, Formatting.Indented);
@@ -456,7 +437,7 @@ namespace SessionMapSwitcherCore.Classes
             List<MapMetaData> maps = new List<MapMetaData>();
             CreateMetaDataFolder();
 
-            foreach (string file in Directory.GetFiles(FullPathToMetaFolder, "*_meta.json"))
+            foreach (string file in Directory.GetFiles(SessionPath.FullPathToMetaFolder, "*_meta.json"))
             {
                 MapMetaData foundMetaData = LoadMapMetaData(file);
 
@@ -492,7 +473,7 @@ namespace SessionMapSwitcherCore.Classes
                 }
 
                 // lastly delete meta data file
-                string pathToMetaData = Path.Combine(MetaDataManager.FullPathToMetaFolder, metaData.GetJsonFileName());
+                string pathToMetaData = Path.Combine(SessionPath.FullPathToMetaFolder, metaData.GetJsonFileName());
                 if (File.Exists(pathToMetaData))
                 {
                     File.Delete(pathToMetaData);

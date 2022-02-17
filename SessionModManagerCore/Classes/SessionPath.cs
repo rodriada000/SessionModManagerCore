@@ -9,12 +9,21 @@ namespace SessionMapSwitcherCore.Classes
     public static class SessionPath
     {
         public const string MapBackupFolderName = "Original_Session_Map";
+        public const string GameTexturesJsonFileName = "game_textures.json";
 
         public static string ToApplicationRoot
         {
             get
             {
                 return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            }
+        }
+
+        public static string ToApplicationResourcesFolder
+        {
+            get
+            {
+                return Path.Combine(ToApplicationRoot, "Resources");
             }
         }
 
@@ -182,6 +191,31 @@ namespace SessionMapSwitcherCore.Classes
                 return Path.Combine(new string[] { Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SessionGame", "Saved", "Config", "WindowsNoEditor" });
             }
         }
+
+        public static string FullPathToMetaFolder
+        {
+            get
+            {
+                return Path.Combine(ToContent, "MapSwitcherMetaData");
+            }
+        }
+
+        public static string FullPathToMetaImagesFolder
+        {
+            get
+            {
+                return Path.Combine(FullPathToMetaFolder, "images");
+            }
+        }
+
+        public static string ToMetaGameTexturesJsonFile
+        {
+            get
+            {
+                return Path.Combine(FullPathToMetaFolder, GameTexturesJsonFileName);
+            }
+        }
+
 
         public static bool IsSessionPathValid()
         {

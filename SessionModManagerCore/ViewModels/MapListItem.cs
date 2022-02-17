@@ -83,6 +83,23 @@ public class MapListItem : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Returns <see cref="FullPath"/> formatted to work for UserEngine.ini
+    /// e.g. "/Game/Path/To/Map"
+    /// </summary>
+    public string MapPathForIni
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(FullPath))
+            {
+                return "";
+            }
+
+            return FullPath.Replace(SessionPath.ToContent, "/Game").Replace("\\", "/").Replace(".umap", "");
+        }
+    }
+
     public string ValidationHint
     {
         get { return _validationHint; }
