@@ -103,13 +103,14 @@ namespace SessionModManagerCore.Classes {
                         string text = System.IO.File.ReadAllText(_file);
                         int html = text.IndexOf("<html", StringComparison.InvariantCultureIgnoreCase);
                         if (html >= 0 && html < 100) {
-                            int ilink = text.IndexOf("\"uc-download-link\"", StringComparison.InvariantCultureIgnoreCase);
+                            int ilink = text.IndexOf("<form id=\"downloadForm\"", StringComparison.InvariantCultureIgnoreCase);
                             if (ilink > 0) {
-                                int href = text.IndexOf("href=\"", ilink, StringComparison.InvariantCultureIgnoreCase);
+                                string action = "action=\"";
+                                int href = text.IndexOf(action, ilink, StringComparison.InvariantCultureIgnoreCase);
                                 if (href > 0) {
-                                    int hrefend = text.IndexOf('"', href + 6);
+                                    int hrefend = text.IndexOf('"', href + action.Length);
                                     if (hrefend > 0) {
-                                        string url = text.Substring(href + 6, hrefend - href - 6).Replace("&amp;", "&");
+                                        string url = text.Substring(href + action.Length, hrefend - href - action.Length).Replace("&amp;", "&");
                                         if (url.IndexOf("://") < 0) url = new Uri(_url).GetLeftPart(UriPartial.Authority) + url;
                                         System.Diagnostics.Debug.WriteLine("GDrive: redirecting to " + url);
                                         System.Diagnostics.Debug.WriteLine("GDrive: {0} cookies set", _cookies.Count);

@@ -223,7 +223,14 @@ namespace SessionModManagerCore.Classes
             {
                 if (bytesReceived > 0)
                 {
-                    item.DownloadSpeed = (((bytesReceived - item.LastBytes) / 1024.0) / interval.TotalSeconds).ToString("0.0") + "KB/s";
+                    double b = (bytesReceived - item.LastBytes) / 1024.0;
+                    string uom = "KB/s";
+                    if (b > 1024.0)
+                    {
+                        b /= 1024.0;
+                        uom = "MB/s";
+                    }
+                    item.DownloadSpeed = (b / interval.TotalSeconds).ToString("0.0") + uom;
                     item.LastBytes = bytesReceived;
                 }
 
