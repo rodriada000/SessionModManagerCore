@@ -59,7 +59,7 @@ namespace MapSwitcherUnitTests
             SessionPath.ToSession = TestPaths.ToSessionTestFolder;
 
 
-            GameSettingsManager.GetQuantityFileAddresses();
+            GameSettingsManager.GetFileAddressesOfHexString();
 
         }
     }

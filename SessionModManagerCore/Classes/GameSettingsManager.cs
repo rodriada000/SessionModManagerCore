@@ -22,6 +22,22 @@ namespace SessionMapSwitcherCore.Classes
     {
         private static readonly NLog.Logger Logger = NLog.LogManager.GetCurrentClassLogger();
 
+        /// <summary>
+        /// "DIYObjects" in hex. used to find start of list of DIY objects in inventory file
+        /// </summary>
+        public const string diyObjectHex = "44-49-59-4f-62-6a-65-63-74-73"; // == "DIYObjects"
+        public const int objectLen = 214; // yay magic numbers... approximate size each diy object takes..
+        /// <summary>
+        /// "PBP_Barrel_QuestTest" in hex. used to skip bad barrels so they don't get marked as visible
+        /// </summary>
+        public const string badBarrelHex = "50-42-50-5f-42-61-72-72-65-6c-5f-51-75-65-73-74-54-65-73-74";
+
+        public const string quantityHex = "51-75-61-6e-74-69-74-79-00-0c-00-00-00-49-6e-74-50-72-6f-70-65-72-74-79-00-04-00-00-00-00-00-00-00-00";
+        public const string isOwnedHex = "49-73-4f-77-6e-65-64-00-0d-00-00-00-42-6f-6f-6c-50-72-6f-70-65-72-74-79-00-00-00-00-00-00-00-00-00";
+        public const string isUnlockedHex = "49-73-55-6e-6c-6f-63-6b-65-64-00-0d-00-00-00-42-6f-6f-6c-50-72-6f-70-65-72-74-79-00-00-00-00-00-00-00-00-00";
+        public const string isVisibleHex = "49-73-56-69-73-69-62-6c-65-00-0d-00-00-00-42-6f-6f-6c-50-72-6f-70-65-72-74-79-00-00-00-00-00-00-00-00-00";
+
+
         public static bool SkipIntroMovie { get; set; }
 
         public static bool EnableDBuffer { get; set; }
@@ -230,7 +246,7 @@ namespace SessionMapSwitcherCore.Classes
 
             try
             {
-                List<int> fileAddresses = GetQuantityFileAddresses();
+                List<int> fileAddresses = GetFileAddressesOfHexString();
 
                 if (fileAddresses.Count == 0)
                 {
@@ -289,16 +305,28 @@ namespace SessionMapSwitcherCore.Classes
             }
 
             // as of Session 0.0.0.7 the quantity is saved in the player inventory .sav file. So we need to dynamically find all the addresses for each DIY item in the player inventory
-            List<int> addresses = GetQuantityFileAddresses();
+            // here we are getting start of of DIYObjects in the file so we don't modify anthing before (like gear)
+            int startAddress = GetFileAddressesOfHexString(diyObjectHex).FirstOrDefault();
 
-            if (!File.Exists(PathToInventorySaveSlotFile + ".smm.bak"))
+
+            IEnumerable<int> addresses = GetFileAddressesOfHexString(quantityHex).Where(a => a > startAddress);
+            IEnumerable<int> barrelAddresses = GetFileAddressesOfHexString(badBarrelHex).Where(a => a > startAddress);
+            IEnumerable<int> unlockedAddresses = GetFileAddressesOfHexString(isUnlockedHex).Where(a => a > startAddress);
+            IEnumerable<int> visibleAddresses = GetFileAddressesOfHexString(isVisibleHex).Where(a => a > startAddress);
+            IEnumerable<int> ownedAddresses = GetFileAddressesOfHexString(isOwnedHex).Where(a => a > startAddress);
+
+
+
+            if (!File.Exists(PathToInventorySaveSlotFile + ".smm.bak2"))
             {
                 // create a backup before modifying the file in case we break someones inventory....
-                File.Copy(PathToInventorySaveSlotFile, PathToInventorySaveSlotFile + ".smm.bak");
+                File.Copy(PathToInventorySaveSlotFile, PathToInventorySaveSlotFile + ".smm.bak2");
             }
 
             try
             {
+                byte[] unlockByte = StringToByteArray("01");
+
                 using (var stream = new FileStream(PathToInventorySaveSlotFile, FileMode.Open, FileAccess.ReadWrite))
                 {
                     // convert the base 10 int into a hex string (e.g. 10 => 'A' or 65535 => 'FF')
@@ -325,6 +353,29 @@ namespace SessionMapSwitcherCore.Classes
                         if (bytes.Length > 1)
                         {
                             stream.WriteByte(bytes[1]);
+                        }
+                        else
+                        {
+                            stream.WriteByte(0x00);
+                        }
+                    }
+
+                    // loop over IsOwned,IsVisible,IsUnlocked propertys and set to 1
+                    foreach (int address in unlockedAddresses.Union(visibleAddresses).Union(ownedAddresses))
+                    {
+                        // ignore addresses between bad barrel addresses
+                        if (barrelAddresses?.Count() > 0 && address >= barrelAddresses.Min() && address <= barrelAddresses.Max() + objectLen)
+                        {
+                            continue; // bad barrel - skip!
+                        }
+
+                        stream.Position = address;
+                        stream.WriteByte(unlockByte[0]);
+
+                        // when object count is less than 16 than the byte array will only have 1 byte so write null in next byte position
+                        if (unlockByte.Length > 1)
+                        {
+                            stream.WriteByte(unlockByte[1]);
                         }
                         else
                         {
@@ -362,7 +413,7 @@ namespace SessionMapSwitcherCore.Classes
             return bytes;
         }
 
-        public static List<int> GetQuantityFileAddresses()
+        public static List<int> GetFileAddressesOfHexString(string hexToFind = quantityHex)
         {
             List<int> foundQtyAddresses = new List<int>();
 
@@ -382,7 +433,7 @@ namespace SessionMapSwitcherCore.Classes
                 string hexString = BitConverter.ToString(fileBytes);
                 List<string> hexFileArray = hexString.Split('-').ToList();
 
-                string hexToFind = "51-75-61-6e-74-69-74-79-00-0c-00-00-00-49-6e-74-50-72-6f-70-65-72-74-79-00-04-00-00-00-00-00-00-00-00".ToUpper();
+                hexToFind = hexToFind.ToUpper();
                 List<string> hexArray = hexToFind.Split('-').ToList();
 
                 int address = 0;
