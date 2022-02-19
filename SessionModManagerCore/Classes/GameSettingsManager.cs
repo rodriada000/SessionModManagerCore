@@ -364,7 +364,7 @@ namespace SessionMapSwitcherCore.Classes
                     foreach (int address in unlockedAddresses.Union(visibleAddresses).Union(ownedAddresses))
                     {
                         // ignore addresses between bad barrel addresses
-                        if (address >= barrelAddresses.Min() && address <= barrelAddresses.Max() + objectLen)
+                        if (barrelAddresses?.Count() > 0 && address >= barrelAddresses.Min() && address <= barrelAddresses.Max() + objectLen)
                         {
                             continue; // bad barrel - skip!
                         }
