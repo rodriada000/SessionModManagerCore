@@ -45,14 +45,6 @@ namespace SessionMapSwitcherCore.Classes
                     MapName = "Session Default Map - Brooklyn Banks",
                     PathToImage = Path.Combine(SessionPath.ToApplicationResourcesFolder, "defaultMap1.png"),
                     IsDefaultMap = true
-                },
-                new MapListItem()
-                {
-                    GameDefaultMapSetting = "/Game/Art/Env/GYM/crea-turePark/GYM_crea-turePark_Persistent.GYM_crea-turePark_Persistent",
-                    GlobalDefaultGameModeSetting = "/Game/Data/PBP_InGameSessionGameMode.PBP_InGameSessionGameMode_C",
-                    PathToImage = Path.Combine(SessionPath.ToApplicationResourcesFolder, "defaultMap2.png"),
-                    MapName = "Crea-ture Dev Park",
-                    IsDefaultMap = true
                 }
             };
         }
@@ -86,25 +78,17 @@ namespace SessionMapSwitcherCore.Classes
                     string fullTargetFilePath = SessionPath.ToNYCFolder;
 
 
-                    if (SessionPath.IsSessionRunning())
-                    {
-                        // While Session is running the map files must be copied as NYC01_Persistent so when the user leaves the apartment the custom map is loaded
-                        fullTargetFilePath = Path.Combine(fullTargetFilePath, "NYC01_Persistent");
+                    // map files must be copied as NYC01_Persistent so the custom map is loaded
+                    fullTargetFilePath = Path.Combine(fullTargetFilePath, "NYC01_Persistent");
 
-                        if (fileName.Contains("_BuiltData"))
-                        {
-                            fullTargetFilePath += $"_BuiltData{fi.Extension}";
-                        }
-                        else
-                        {
-                            fullTargetFilePath += fi.Extension;
-                        }
+                    if (fileName.Contains("_BuiltData"))
+                    {
+                        fullTargetFilePath += $"_BuiltData{fi.Extension}";
                     }
                     else
                     {
-                        fullTargetFilePath = Path.Combine(fullTargetFilePath, fi.Name);
+                        fullTargetFilePath += fi.Extension;
                     }
-
 
                     Logger.Info($"... copying {fileName} -> {fullTargetFilePath}");
                     File.Copy(fileName, fullTargetFilePath, overwrite: true);
@@ -144,24 +128,14 @@ namespace SessionMapSwitcherCore.Classes
 
             try
             {
+                // For backwards compat, make sure this key is removed in UserEngine.ini
+                ClearGameDefaultMapSetting();
+
                 // delete session map file / custom maps from game 
                 DeleteMapFilesFromNYCFolder();
-                string selectedMapPath;
 
-                if (SessionPath.IsSessionRunning())
-                {
-                    // .. when the game is running the map file is renamed to NYC01_Persistent and copied to NYC folder so it can load when you leave the apartment
-                    CopyMapFilesToNYCFolder(map);
-
-                    // update the ini file with the new map path
-                    selectedMapPath = "/Game/Art/Env/NYC/NYC01_Persistent";
-                }
-                else
-                {
-                    selectedMapPath = map.MapPathForIni;
-                }
-
-                SetGameDefaultMapSetting(selectedMapPath);
+                // rename map files to NYC01_Persistent and copy to NYC folder
+                CopyMapFilesToNYCFolder(map);
 
                 return BoolWithMessage.True($"{map.MapName} Loaded!");
             }
@@ -177,8 +151,6 @@ namespace SessionMapSwitcherCore.Classes
             try
             {
                 DeleteMapFilesFromNYCFolder();
-
-                SetGameDefaultMapSetting(defaultMap.GameDefaultMapSetting, defaultMap.GlobalDefaultGameModeSetting);
 
                 return BoolWithMessage.True($"{defaultMap.MapName} Loaded!");
 
@@ -290,6 +262,42 @@ namespace SessionMapSwitcherCore.Classes
                 parser.WriteFile(SessionPath.ToUserEngineIniFile, iniFile);
 
                 Logger.Info($"... GameDefaultMap set to {defaultMapValue}");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+                return false;
+            }
+        }
+
+        public bool ClearGameDefaultMapSetting()
+        {
+            if (SessionPath.IsSessionPathValid() == false)
+            {
+                return false;
+            }
+
+            CreateDefaultUserEngineIniFile();
+
+            if (!File.Exists(SessionPath.ToUserEngineIniFile))
+            {
+                return false;
+            }
+
+            try
+            {
+                var parser = new FileIniDataParser();
+                parser.Parser.Configuration.AllowDuplicateKeys = true;
+                IniData iniFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
+                
+                if (iniFile.Sections.ContainsSection("/Script/EngineSettings.GameMapsSettings"))
+                {
+                    iniFile.Sections.RemoveSection("/Script/EngineSettings.GameMapsSettings");
+                }
+
+                parser.WriteFile(SessionPath.ToUserEngineIniFile, iniFile);
+
                 return true;
             }
             catch (Exception e)
