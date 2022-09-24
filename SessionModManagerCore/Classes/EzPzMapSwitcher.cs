@@ -1,10 +1,13 @@
 ﻿using IniParser;
 using IniParser.Model;
 using SessionMapSwitcherCore.Classes.Interfaces;
+using SessionMapSwitcherCore.Utils;
 using SessionModManagerCore.Classes;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text;
 
 namespace SessionMapSwitcherCore.Classes
 {
@@ -41,9 +44,26 @@ namespace SessionMapSwitcherCore.Classes
             {
                 new MapListItem()
                 {
-                    GameDefaultMapSetting ="/Game/Tutorial/Intro/MAP_EntryPoint",
-                    MapName = "Session Default Map - Brooklyn Banks",
+                    GameDefaultMapSetting ="NYC01_Persistent",
+                    FullPath = "NYC01_Persistent",
+                    MapName = "Default Map - New York City",
                     PathToImage = Path.Combine(SessionPath.ToApplicationResourcesFolder, "defaultMap1.png"),
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="PHL01_Persistent",
+                    FullPath = "PHL01_Persistent",
+                    MapName = "Default Map - Philadelphia",
+                    PathToImage = Path.Combine(SessionPath.ToApplicationResourcesFolder, "defaultMap2.png"),
+                    IsDefaultMap = true
+                },
+                new MapListItem()
+                {
+                    GameDefaultMapSetting ="SFC01_Persistent",
+                    FullPath = "SFC01_Persistent",
+                    MapName = "Default Map - San Francisco",
+                    PathToImage = Path.Combine(SessionPath.ToApplicationResourcesFolder, "defaultMap3.png"),
                     IsDefaultMap = true
                 }
             };
@@ -137,6 +157,9 @@ namespace SessionMapSwitcherCore.Classes
                 // rename map files to NYC01_Persistent and copy to NYC folder
                 CopyMapFilesToNYCFolder(map);
 
+                // make sure last played map is set to NYC01
+                UpdateTutorialsSaveSlot();
+
                 return BoolWithMessage.True($"{map.MapName} Loaded!");
             }
             catch (Exception e)
@@ -150,7 +173,12 @@ namespace SessionMapSwitcherCore.Classes
         {
             try
             {
+                // For backwards compat, make sure this key is removed in UserEngine.ini
+                ClearGameDefaultMapSetting();
+
                 DeleteMapFilesFromNYCFolder();
+
+                UpdateTutorialsSaveSlot(defaultMap.GameDefaultMapSetting);
 
                 return BoolWithMessage.True($"{defaultMap.MapName} Loaded!");
 
@@ -227,6 +255,62 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
+        /// <summary>
+        /// Sets last played map to NYC01_Persistent in tutorial save slot
+        /// </summary>
+        public void UpdateTutorialsSaveSlot(string lastPlayed = "NYC01_Persistent")
+        {
+            if (SessionPath.IsSessionPathValid() == false)
+            {
+                return;
+            }
+
+
+            if (!File.Exists(SessionPath.ToTutorialsSaveSlotFile))
+            {
+                return;
+            }
+
+            try
+            {
+                byte[] fileBytes = File.ReadAllBytes(SessionPath.ToTutorialsSaveSlotFile);
+                List<string> hexFileArray = BitConverter.ToString(fileBytes).Split('-').ToList();
+
+
+                List<string> lookFor = new List<string>() { "NYC01_Persistent", "PHL01_Persistent", "SFC01_Persistent" };
+
+                int address = 0;
+                foreach (string look in lookFor)
+                {
+                    address = 0;
+                    address = FileUtils.FindSequenceInArray(hexFileArray, FileUtils.StringToHexArray(look), address);
+
+                    if (address != -1)
+                    {
+                        break;
+                    }
+                }
+
+                if (address != -1)
+                {
+                    byte[] lastPlayedBytes = Encoding.Default.GetBytes(lastPlayed);
+
+                    for (int i = 0; i < lastPlayedBytes.Length; i++)
+                    {
+                        fileBytes[address + i] = lastPlayedBytes[i];
+                    }
+
+                    File.WriteAllBytes(SessionPath.ToTutorialsSaveSlotFile, fileBytes);
+
+                }
+
+
+            }
+            catch (Exception e)
+            {
+                Logger.Error(e);
+            }
+        }
 
         public bool SetGameDefaultMapSetting(string defaultMapValue, string defaultGameModeValue = "")
         {
@@ -290,7 +374,7 @@ namespace SessionMapSwitcherCore.Classes
                 var parser = new FileIniDataParser();
                 parser.Parser.Configuration.AllowDuplicateKeys = true;
                 IniData iniFile = parser.ReadFile(SessionPath.ToUserEngineIniFile);
-                
+
                 if (iniFile.Sections.ContainsSection("/Script/EngineSettings.GameMapsSettings"))
                 {
                     iniFile.Sections.RemoveSection("/Script/EngineSettings.GameMapsSettings");

@@ -325,7 +325,7 @@ namespace SessionMapSwitcherCore.Classes
 
             try
             {
-                byte[] unlockByte = StringToByteArray("01");
+                byte[] unlockByte = FileUtils.StringToByteArray("01");
 
                 using (var stream = new FileStream(PathToInventorySaveSlotFile, FileMode.Open, FileAccess.ReadWrite))
                 {
@@ -333,7 +333,7 @@ namespace SessionMapSwitcherCore.Classes
                     string hexValue = int.Parse(objectCountText).ToString("X");
 
                     // convert the hext string into a byte array that will be written to the file
-                    byte[] bytes = StringToByteArray(hexValue);
+                    byte[] bytes = FileUtils.StringToByteArray(hexValue);
 
                     if (hexValue.Length == 3)
                     {
@@ -396,23 +396,6 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
-        private static byte[] StringToByteArray(String hex)
-        {
-            // reference: https://stackoverflow.com/questions/311165/how-do-you-convert-a-byte-array-to-a-hexadecimal-string-and-vice-versa
-
-            if (hex.Length % 2 != 0)
-            {
-                // pad with '0' for odd length strings like 'A' so it becomes '0A' or '1A4' => '01A4'
-                hex = '0' + hex;
-            }
-
-            int numChars = hex.Length;
-            byte[] bytes = new byte[numChars / 2];
-            for (int i = 0; i < numChars; i += 2)
-                bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
-            return bytes;
-        }
-
         public static List<int> GetFileAddressesOfHexString(string hexToFind = quantityHex)
         {
             List<int> foundQtyAddresses = new List<int>();
@@ -440,7 +423,7 @@ namespace SessionMapSwitcherCore.Classes
 
                 do
                 {
-                    address = FindSequenceInArray(hexFileArray, hexArray, address);
+                    address = FileUtils.FindSequenceInArray(hexFileArray, hexArray, address);
 
                     if (address != -1)
                     {
@@ -456,35 +439,6 @@ namespace SessionMapSwitcherCore.Classes
                 Logger.Error(e, "Failed to get object count");
                 return foundQtyAddresses;
             }
-        }
-
-        public static int FindSequenceInArray(List<string> arrayToSearch, List<string> sequence, int startIndex = 0)
-        {
-            if (startIndex == 0)
-            {
-                startIndex = arrayToSearch.Count - 1;
-            }
-            // reference: https://stackoverflow.com/questions/55150204/find-subarray-in-array-in-c-sharp
-            // iterate backwards, stop if the rest of the array is shorter than needle (i >= needle.Length)
-            for (int i = startIndex; i >= sequence.Count - 1; i--)
-            {
-                bool found = true;
-                // also iterate backwards through needle, stop if elements do not match (!found)
-                for (int j = sequence.Count - 1; j >= 0 && found; j--)
-                {
-                    // compare needle's element with corresponding element of haystack
-                    found = arrayToSearch[i - (sequence.Count - 1 - j)] == sequence[j];
-                }
-
-                if (found)
-                {
-                    // result was found, i is now the index of the last found element, so subtract needle's length - 1
-                    return i - (sequence.Count - 1);
-                }
-            }
-
-            // not found, return -1
-            return -1;
         }
 
         public static bool DoesInventorySaveFileExist()
