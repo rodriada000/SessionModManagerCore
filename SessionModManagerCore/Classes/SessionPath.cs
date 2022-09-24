@@ -184,6 +184,14 @@ namespace SessionMapSwitcherCore.Classes
             }
         }
 
+        public static string ToTutorialsSaveSlotFile
+        {
+            get
+            {
+                return Path.Combine(ToSaveGamesFolder, "TutorialsSaveSlot.sav");
+            }
+        }
+
         public static string ToLocalAppDataConfigFolder
         {
             get

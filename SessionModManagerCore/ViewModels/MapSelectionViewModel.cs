@@ -614,7 +614,8 @@ namespace SessionModManagerCore.ViewModels
                 if (loadResult.Result)
                 {
                     SetIsSelectedForMapInList(map);
-                    SetCurrentlyLoadedMap();
+                    CurrentlyLoadedMapName = map.MapName;
+                    AppSettingsUtil.AddOrUpdateAppSettings(SettingKey.LastSelectedMap, map.MapName);
                 }
 
                 MessageService.Instance.ShowMessage(loadResult.Message);
@@ -642,25 +643,7 @@ namespace SessionModManagerCore.ViewModels
                 return;
             }
 
-            string iniValue = MapSwitcher.GetGameDefaultMapSetting();
-
-            if (MapSwitcher.GetDefaultSessionMaps().Any(m => m.GameDefaultMapSetting == iniValue))
-            {
-                CurrentlyLoadedMapName = MapSwitcher.GetDefaultSessionMaps().FirstOrDefault(m => m.GameDefaultMapSetting == iniValue).MapName;
-            }
-            else if (String.IsNullOrEmpty(iniValue) == false)
-            {
-                int startIndex = iniValue.LastIndexOf("/") + 1;
-
-                if (startIndex >= 0)
-                {
-                    CurrentlyLoadedMapName = iniValue.Substring(startIndex, iniValue.Length - startIndex);
-                }
-                else
-                {
-                    CurrentlyLoadedMapName = "Unknown.";
-                }
-            }
+            CurrentlyLoadedMapName = AppSettingsUtil.GetAppSetting(SettingKey.LastSelectedMap);
         }
 
         public void OpenFolderToSession()
